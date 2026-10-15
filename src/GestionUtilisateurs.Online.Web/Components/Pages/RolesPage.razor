@@ -4,22 +4,22 @@
 
 @if (!Store.IsAdmin)
 {
-    <EmptyState Icon="🔒" Title="Accès réservé" Message="La gestion des rôles et permissions est réservée aux administrateurs." />
+    <EmptyState Icon="🔒" Title="@L.T("Accès réservé")" Message="@L.T("La gestion des rôles et permissions est réservée aux administrateurs.")" />
 }
 else
 {
     <div class="page-head">
-        <p>Définissez ce que chaque rôle peut faire. Le compte technique « Administrateur de la base » possède tout (verrouillé). Modifiable uniquement ici, dans le menu « … ».</p>
+        <p>@L.T("Définissez ce que chaque rôle peut faire. Le compte technique « Administrateur de la base » possède tout (verrouillé). Modifiable uniquement ici, dans le menu « … ».")</p>
     </div>
 
     <div class="search-box cal-search">
         <span class="search-icon" aria-hidden="true">&#128269;</span>
-        <input type="search" placeholder="Rechercher une permission (libellé, groupe)…" aria-label="Rechercher une permission"
+        <input type="search" placeholder="@L.T("Rechercher une permission (libellé, groupe)…")" aria-label="@L.T("Rechercher une permission")"
                value="@_search" @oninput="OnSearch" />
     </div>
     @if (!string.IsNullOrWhiteSpace(_search))
     {
-        <div class="search-summary">@SearchCount permission(s) trouvée(s) pour « @_search.Trim() »</div>
+        <div class="search-summary">@L.F("{0} permission(s) trouvée(s) pour « {1} »", SearchCount, _search.Trim())</div>
     }
 
     @foreach (var group in Permissions.Toutes.GroupBy(d => d.Groupe))
@@ -28,12 +28,12 @@ else
         if (defs.Count == 0) continue;
         <div class="card" style="margin-bottom:12px">
             <h3>@group.Key</h3>
-            <div class="perm-matrix" role="table" aria-label="Permissions @group.Key">
+            <div class="perm-matrix" role="table" aria-label="@L.F("Permissions {0}", group.Key)">
                 <div class="perm-row perm-head" role="row">
                     <span class="perm-label"></span>
                     @foreach (var role in Roles.MatrixRoles)
                     {
-                        <span class="perm-cell perm-role" title="@role"><span class="perm-role-full">@role</span><span class="perm-role-short" aria-hidden="true">@RoleCourt(role)</span></span>
+                        <span class="perm-cell perm-role" title="@L.T(role)"><span class="perm-role-full">@L.T(role)</span><span class="perm-role-short" aria-hidden="true">@RoleCourt(role)</span></span>
                     }
                 </div>
                 @foreach (var def in defs)
@@ -44,7 +44,7 @@ else
                         {
                             var r = role; var k = def.Key;
                             <span class="perm-cell">
-                                <input type="checkbox" aria-label="@def.Label — @role"
+                                <input type="checkbox" aria-label="@def.Label — @L.T(role)"
                                        checked="@IsAllowed(r, k)" @onchange="() => Toggle(r, k)" />
                             </span>
                         }
@@ -55,16 +55,16 @@ else
     }
 
     <div class="card">
-        <span class="field-hint">Le droit « Gérer les rôles et permissions » ne peut pas être retiré aux administrateurs (verrou anti-blocage).</span>
+        <span class="field-hint">@L.T("Le droit « Gérer les rôles et permissions » ne peut pas être retiré aux administrateurs (verrou anti-blocage).")</span>
         <div class="form-actions" style="margin-top:10px">
-            <button class="btn btn-secondary" @onclick="ResetDefaults">Réinitialiser les défauts</button>
-            <button class="btn btn-primary" @onclick="Save" disabled="@_saving">@(_saving ? "Enregistrement…" : "Enregistrer")</button>
+            <button class="btn btn-secondary" @onclick="ResetDefaults">@L.T("Réinitialiser les défauts")</button>
+            <button class="btn btn-primary" @onclick="Save" disabled="@_saving">@(_saving ? L.T("Enregistrement…") : L.T("Enregistrer"))</button>
         </div>
     </div>
 
-    <ConfirmDialog Show="_confirmReset" Title="Réinitialiser les permissions"
-                   Message="Restaurer la matrice par défaut ? Vos personnalisations seront perdues."
-                   ConfirmLabel="Réinitialiser" Danger="true" OnConfirm="DoReset" OnCancel="() => _confirmReset = false" />
+    <ConfirmDialog Show="_confirmReset" Title="@L.T("Réinitialiser les permissions")"
+                   Message="@L.T("Restaurer la matrice par défaut ? Vos personnalisations seront perdues.")"
+                   ConfirmLabel="@L.T("Réinitialiser")" Danger="true" OnConfirm="DoReset" OnCancel="() => _confirmReset = false" />
 }
 
 @code {
@@ -125,7 +125,7 @@ else
         {
             var sets = _matrix.Select(kv => new RolePermissionSet { Role = kv.Key, Allowed = new Dictionary<string, bool>(kv.Value) }).ToList();
             var res = Store.SaveRolePermissions(sets);
-            if (res.Success) State.NotifySuccess("Permissions enregistrées.");
+            if (res.Success) State.NotifySuccess(L.T("Permissions enregistrées."));
             else State.NotifyError(res.Error);
         }
         finally { _saving = false; }
@@ -136,9 +136,9 @@ else
     /// <summary>Nom court des rôles pour l'en-tête du tableau sur téléphone.</summary>
     private static string RoleCourt(string role) => role switch
     {
-        Roles.Administrateur => "Admin",
-        Roles.Gestionnaire => "Gestion.",
-        Roles.Utilisateur => "Membre",
-        _ => role
+        Roles.Administrateur => L.T("Admin"),
+        Roles.Gestionnaire => L.T("Gestion."),
+        Roles.Utilisateur => L.T("Membre"),
+        _ => L.T(role)
     };
 }
