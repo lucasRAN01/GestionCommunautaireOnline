@@ -9,7 +9,7 @@ la surveillance et les sauvegardes automatiques).
 |---|---|---|
 | Supabase | Comptes, base de données, photos et documents | 500 Mo de base, 1 Go de fichiers, 5 Go de transfert par mois |
 | GitHub Pages | Héberge le site | 100 Go de transfert par mois, certificat HTTPS inclus (dépôt public) |
-| GitHub Actions | Publie le site, surveille Supabase, sauvegarde | Gratuit (dépôt public) ou 2 000 min/mois (dépôt privé) |
+| GitHub Actions | Publie le site, surveille Supabase, sauvegarde | Gratuit et illimité pour un dépôt public |
 
 ---
 
@@ -94,6 +94,31 @@ attendent sans erreur.
   **Actions > Déploiement du site > Run workflow**.
 - Lancez aussi une fois à la main **Actions > Veille Supabase** et
   **Actions > Sauvegarde** pour vérifier que les secrets sont bons.
+
+### Après une mise à jour du site
+
+Le navigateur garde l'application en cache pour qu'elle s'ouvre vite. Quand
+une nouvelle version est publiée, les membres voient apparaître en bas de
+l'écran un bandeau **« Nouvelle version disponible »** : un clic sur
+**Mettre à jour** recharge le site avec la nouvelle version. Le site vérifie
+s'il y a du nouveau à chaque ouverture, puis toutes les 30 minutes.
+
+Si un membre ne voit pas le bandeau (ancienne version d'avant ce bandeau),
+il suffit de fermer tous les onglets du site, ou l'application installée sur
+le téléphone, puis de le rouvrir.
+
+### Installer le site sur un téléphone
+
+Ouvrez l'adresse du site dans Chrome (Android) ou Safari (iPhone), puis
+**Ajouter à l'écran d'accueil** (ou **Installer l'application**). Le site
+s'ouvre alors comme une application, avec les mêmes comptes et les mêmes
+données que sur ordinateur. Il a besoin d'Internet pour enregistrer.
+
+L'application mobile hors ligne (fichier APK du dépôt *GestionUtilisateurs2*)
+est une application différente : ses données restent dans le téléphone et ne
+sont pas reliées au site. Si vous l'utilisez encore, activez son export
+automatique mensuel (**Paramètres > Actions**) et copiez de temps en temps
+les fichiers exportés hors du téléphone.
 
 ## 5. Premier administrateur
 
@@ -225,8 +250,13 @@ dépôt que vous avez créé).
   mini-guide déjà vu.
 - **Mise à jour toutes les 60 secondes.** Les modifications des autres
   membres apparaissent au plus tard une minute après.
-- **Export automatique mensuel désactivé** dans la version en ligne : il est
-  remplacé par les sauvegardes du serveur. L'export manuel reste disponible.
+- **Pas d'export automatique mensuel** dans la version en ligne : il est
+  remplacé par les sauvegardes hebdomadaires du serveur, et l'option n'est
+  plus proposée dans les paramètres. L'export Excel manuel reste disponible.
+- **Fichiers enregistrés par le navigateur.** Les exports arrivent dans le
+  dossier de téléchargement du navigateur. Les cartes de membre et les PDF
+  passent par la fenêtre d'impression : choisissez **Enregistrer au format
+  PDF**.
 - **Transfert mensuel non mesuré** par l'application : il se consulte dans
   le tableau de bord Supabase (lien sur la page Capacité).
 - **Pas d'e-mail** : ni confirmation d'inscription, ni réinitialisation du mot

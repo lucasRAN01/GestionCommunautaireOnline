@@ -78,7 +78,7 @@ public static class HelpCatalog
                 }),
                 new HelpSection("Bon à savoir", new[]
                 {
-                    "Vos informations sont stockées uniquement sur cet appareil.",
+                    "Vos informations sont enregistrées sur le serveur de la communauté et visibles selon les permissions de chaque rôle.",
                     "La photo et la signature apparaissent sur votre carte de membre."
                 })
             }),
@@ -94,7 +94,7 @@ public static class HelpCatalog
                 }),
                 new HelpSection("Bon à savoir", new[]
                 {
-                    "Le journal est local ; il n'est jamais envoyé à un serveur.",
+                    "Le journal est partagé : il est enregistré sur le serveur et consultable selon les permissions.",
                     "Une activité conservée trop longtemps peut être vidée depuis la gestion des données."
                 })
             }),
@@ -134,9 +134,9 @@ public static class HelpCatalog
                 {
                     "« Apparence » choisit le thème clair/sombre et la couleur principale.",
                     "« Configuration carte de membre » ajuste slogan et citation imprimés sur la carte.",
-                    "« Stockage » surveille l'espace utilisé et ajuste le quota d'alerte.",
-                    "« Export automatique » sauvegarde chaque mois toutes les données en local.",
-                    "« Ordre du menu » réorganise les cartes du menu « … »."
+                    "Le thème clair/sombre et les conseils au premier usage sont personnels : ils sont gardés dans votre navigateur.",
+                    "« Ordre du menu » (gestionnaires) réorganise les cartes du menu « … » pour toute la communauté.",
+                    "Les données sont sauvegardées chaque semaine sur le serveur ; l'export Excel reste disponible à tout moment."
                 }),
                 new HelpSection("Bon à savoir", new[]
                 {
@@ -178,14 +178,15 @@ public static class HelpCatalog
                 })
             }),
         new("comptes", "Comptes en ligne", "👤",
-            "Acceptez ou refusez les inscriptions et gérez l'accès de chaque membre.",
+            "Validez ou refusez les inscriptions et gérez l'accès de chaque membre.",
             new[]
             {
                 new HelpSection("Comment faire", new[]
                 {
                     "Chaque nouvelle inscription apparaît en haut de la liste avec le statut « en attente ».",
-                    "« Accepter » ouvre l'accès en choisissant le rôle ; « Refuser » le bloque.",
-                    "Un compte accepté peut être désactivé à tout moment, puis réactivé."
+                    "Choisissez le rôle puis « Valider » pour ouvrir l'accès, ou « Refuser » pour le bloquer.",
+                    "Un compte validé se désactive ou se réactive depuis sa fiche dans « Utilisateurs ».",
+                    "Mot de passe oublié : « Nouveau mot de passe » définit un mot de passe provisoire à transmettre au membre."
                 }),
                 new HelpSection("Bon à savoir", new[]
                 {
@@ -288,14 +289,14 @@ public static class HelpCatalog
                 })
             }),
         new("carte", "Carte de membre", "🪪",
-            "La carte d'adhérent : photo, QR code, signature, export PDF et HTML.",
+            "La carte d'adhérent : photo, QR code, signature et export PDF.",
             new[]
             {
                 new HelpSection("Comment faire", new[]
                 {
                     "La carte se compose d'une face avant (photo, identité, QR) et d'un dos (signature, citation).",
                     "Touchez le QR code pour l'agrandir et le faire scanner facilement.",
-                    "« Exporter en PDF » ou « Exporter en HTML » produit une carte utilisable hors application.",
+                    "« Exporter en PDF » ouvre la fenêtre d'impression : choisissez « Enregistrer au format PDF » pour obtenir une carte utilisable hors application.",
                     "Slogan et citation du dos se personnalisent dans les Paramètres."
                 })
             }),
@@ -349,14 +350,14 @@ public static class HelpCatalog
                 })
             }),
         new("guide", "Guide utilisateur", "🧭",
-            "Tout le fonctionnement de l'application expliqué pas à pas, avec captures d'écran.",
+            "Tout le fonctionnement de l'application expliqué pas à pas, module par module.",
             new[]
             {
                 new HelpSection("Comment faire", new[]
                 {
                     "Le sommaire en haut permet d'aller directement au module recherché.",
                     "Chaque fiche explique le rôle du module puis les actions principales.",
-                    "Les captures d'écran illustrent les écrans clés."
+                    "Quand une nouvelle version du site est publiée, un bandeau « Nouvelle version disponible » propose de mettre à jour en un clic."
                 })
             })
     };

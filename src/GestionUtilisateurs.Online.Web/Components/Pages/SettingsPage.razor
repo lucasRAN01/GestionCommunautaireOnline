@@ -291,6 +291,12 @@
             <button type="button" class="section-toggle" aria-label="Réduire ou agrandir la section Actions" aria-expanded="@(!IsCollapsed("actions"))" @onclick='() => ToggleSection("actions")'>@(IsCollapsed("actions") ? "▸" : "▾")</button>
         </div>
         <p class="muted">L'export et l'import des utilisateurs sont accessibles à l'administrateur et au gestionnaire.</p>
+        @if (Store.OnlineMode)
+        {
+            <p class="field-hint">Les données sont sauvegardées automatiquement sur le serveur chaque semaine. L'export Excel ci-dessous reste disponible à tout moment.</p>
+        }
+        else
+        {
         <div class="form-group">
             <label class="form-check" for="st-autoexport">
                 <input id="st-autoexport" type="checkbox" checked="@_autoExport" @onchange="OnAutoExportChanged" />
@@ -298,6 +304,7 @@
             </label>
             <span class="field-hint">Chaque mois, la sauvegarde complète (JSON) + la liste des utilisateurs (Excel) sont enregistrées dans Téléchargements. Dernier export : @LastAutoExportLabel.</span>
         </div>
+        }
         <div class="form-actions">
             <button class="btn btn-secondary" @onclick="ExportExcel">⇩ Exporter Excel</button>
             @if (Store.IsManager)
