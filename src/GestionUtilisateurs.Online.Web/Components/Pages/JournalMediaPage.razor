@@ -6,34 +6,34 @@
 
 @if (!Store.Can(Permissions.JournalMediaUse))
 {
-    <EmptyState Icon="🔒" Title="Accès réservé" Message="Le journal multimédia n'est pas autorisé pour votre rôle." />
+    <EmptyState Icon="🔒" Title="@L.T("Accès réservé")" Message="@L.T("Le journal multimédia n'est pas autorisé pour votre rôle.")" />
 }
 else
 {
     <div class="page-head">
-        <p>Photos, vidéos et enregistrements audio, partagés avec la communauté.</p>
+        <p>@L.T("Photos, vidéos et enregistrements audio, partagés avec la communauté.")</p>
     </div>
 
     <div class="search-box cal-search">
         <span class="search-icon" aria-hidden="true">&#128269;</span>
-        <input type="search" placeholder="Rechercher un média (titre, description, type)…" aria-label="Rechercher un média"
+        <input type="search" placeholder="@L.T("Rechercher un média (titre, description, type)…")" aria-label="@L.T("Rechercher un média")"
                value="@_search" @oninput="OnSearch" />
     </div>
     @if (!string.IsNullOrWhiteSpace(_search))
     {
-        <div class="search-summary">@Filtered.Count média(s) trouvé(s) pour « @_search.Trim() »</div>
+        <div class="search-summary">@L.F("{0} média(s) trouvé(s) pour « {1} »", Filtered.Count, _search.Trim())</div>
     }
 
-    <div class="chips-row" role="tablist" aria-label="Filtrer par type">
-        <button type="button" class="chip @(_type == "" ? "active" : "")" @onclick='() => _type = ""'>Tout</button>
-        <button type="button" class="chip @(_type == MediaTypes.Photo ? "active" : "")" @onclick='() => _type = MediaTypes.Photo'>🖼 Photos</button>
-        <button type="button" class="chip @(_type == MediaTypes.Video ? "active" : "")" @onclick='() => _type = MediaTypes.Video'>🎬 Vidéos</button>
-        <button type="button" class="chip @(_type == MediaTypes.Audio ? "active" : "")" @onclick='() => _type = MediaTypes.Audio'>🎙 Audios</button>
+    <div class="chips-row" role="tablist" aria-label="@L.T("Filtrer par type")">
+        <button type="button" class="chip @(_type == "" ? "active" : "")" @onclick='() => _type = ""'>@L.T("Tout")</button>
+        <button type="button" class="chip @(_type == MediaTypes.Photo ? "active" : "")" @onclick='() => _type = MediaTypes.Photo'>🖼 @L.T("Photos")</button>
+        <button type="button" class="chip @(_type == MediaTypes.Video ? "active" : "")" @onclick='() => _type = MediaTypes.Video'>🎬 @L.T("Vidéos")</button>
+        <button type="button" class="chip @(_type == MediaTypes.Audio ? "active" : "")" @onclick='() => _type = MediaTypes.Audio'>🎙 @L.T("Audios")</button>
     </div>
 
     @if (Filtered.Count == 0)
     {
-        <EmptyState Icon="🖼" Title="Journal vide" Message="Ajoutez la première photo, vidéo ou audio avec le bouton « + »." />
+        <EmptyState Icon="🖼" Title="@L.T("Journal vide")" Message="@L.T("Ajoutez la première photo, vidéo ou audio avec le bouton « + ».")" />
     }
     else
     {
@@ -61,12 +61,12 @@ else
                                 <div class="cal-detail-notes" style="margin-top:8px">@item.Description</div>
                             }
                             <div class="form-actions" style="margin-top:10px">
-                                <button class="btn btn-secondary btn-sm" @onclick="() => OpenViewer(item)">Agrandir</button>
+                                <button class="btn btn-secondary btn-sm" @onclick="() => OpenViewer(item)">@L.T("Agrandir")</button>
                                 @if (item.Type == MediaTypes.Video || item.Type == MediaTypes.Audio)
                                 {
-                                    <button type="button" class="btn btn-primary btn-sm" @onclick="() => PlayMedia(item)" @onclick:stopPropagation="true">▶ @(item.Type == MediaTypes.Video ? "Lire" : "Écouter")</button>
+                                    <button type="button" class="btn btn-primary btn-sm" @onclick="() => PlayMedia(item)" @onclick:stopPropagation="true">▶ @(item.Type == MediaTypes.Video ? L.T("Lire") : L.T("Écouter"))</button>
                                 }
-                                <button class="btn btn-secondary btn-sm" @onclick="() => Toggle(item.Id)">Réduire</button>
+                                <button class="btn btn-secondary btn-sm" @onclick="() => Toggle(item.Id)">@L.T("Réduire")</button>
                             </div>
                         </div>
                     }
@@ -85,68 +85,68 @@ else
                             <div class="media-sub">@MediaTypes.Label(item.Type) · @DataStore.FormatDateCourte(item.Date)</div>
                         </div>
                     }
-                    <button type="button" class="btn-icon danger" aria-label="Supprimer" @onclick:stopPropagation="true" @onclick="() => AskDelete(item)">🗑</button>
+                    <button type="button" class="btn-icon danger" aria-label="@L.T("Supprimer")" @onclick:stopPropagation="true" @onclick="() => AskDelete(item)">🗑</button>
                 </div>
             }
         </div>
     }
 
-    <button class="fab" aria-label="Ajouter au journal" @onclick="() => _showAdd = true">+</button>
+    <button class="fab" aria-label="@L.T("Ajouter au journal")" @onclick="() => _showAdd = true">+</button>
 
-    <Modal Show="_showAdd" Title="Ajouter au journal" OnClose="() => _showAdd = false">
+    <Modal Show="_showAdd" Title="@L.T("Ajouter au journal")" OnClose="() => _showAdd = false">
         <div class="sheet-options">
             <button class="sheet-option" @onclick="AddPhotoGallery">
                 <span class="sheet-icon" style="background:#05966924;color:#059669">🖼</span>
-                <span class="sheet-main"><strong>Photo (galerie)</strong><span>Choisir une image (max 5 Mo)</span></span>
+                <span class="sheet-main"><strong>@L.T("Photo (galerie)")</strong><span>@L.T("Choisir une image (max 5 Mo)")</span></span>
                 <span aria-hidden="true">›</span>
             </button>
             <button class="sheet-option" @onclick="AddPhotoCamera">
                 <span class="sheet-icon" style="background:#05966924;color:#059669">📷</span>
-                <span class="sheet-main"><strong>Photo (caméra)</strong><span>Photographier (max 5 Mo)</span></span>
+                <span class="sheet-main"><strong>@L.T("Photo (caméra)")</strong><span>@L.T("Photographier (max 5 Mo)")</span></span>
                 <span aria-hidden="true">›</span>
             </button>
             <button class="sheet-option" @onclick="AddVideoGallery">
                 <span class="sheet-icon" style="background:#0891b224;color:#0891b2">🎬</span>
-                <span class="sheet-main"><strong>Vidéo (galerie)</strong><span>Choisir une vidéo (max 20 Mo)</span></span>
+                <span class="sheet-main"><strong>@L.T("Vidéo (galerie)")</strong><span>@L.T("Choisir une vidéo (max 20 Mo)")</span></span>
                 <span aria-hidden="true">›</span>
             </button>
             <button class="sheet-option" @onclick="AddVideoCamera">
                 <span class="sheet-icon" style="background:#0891b224;color:#0891b2">📹</span>
-                <span class="sheet-main"><strong>Vidéo (caméra)</strong><span>Filmer (max 20 Mo)</span></span>
+                <span class="sheet-main"><strong>@L.T("Vidéo (caméra)")</strong><span>@L.T("Filmer (max 20 Mo)")</span></span>
                 <span aria-hidden="true">›</span>
             </button>
             <button class="sheet-option" @onclick="AddAudio">
                 <span class="sheet-icon" style="background:#7c3aed24;color:#7c3aed">🎙</span>
-                <span class="sheet-main"><strong>Audio</strong><span>Fichier importé MP3, M4A, WAV (max 10 Mo)</span></span>
+                <span class="sheet-main"><strong>@L.T("Audio")</strong><span>@L.T("Fichier importé MP3, M4A, WAV (max 10 Mo)")</span></span>
                 <span aria-hidden="true">›</span>
             </button>
         </div>
-        <span class="field-hint">La prise de son intégrée n'existe pas : importez un enregistrement audio.</span>
+        <span class="field-hint">@L.T("La prise de son intégrée n'existe pas : importez un enregistrement audio.")</span>
     </Modal>
 
-    <Modal Show="_staged != null" Title="@(MediaTypes.Label(_stagedType) + " — informations")" OnClose="CancelStaged">
+    <Modal Show="_staged != null" Title="@L.F("{0} — informations", MediaTypes.Label(_stagedType))" OnClose="CancelStaged">
         <ChildContent>
             @if (_staged != null)
             {
                 <p class="muted" style="margin-top:0">📎 @_staged.FileName · @FormatSize(_staged.Size)</p>
                 <div class="form-group">
-                    <label for="jm-titre">Titre *</label>
+                    <label for="jm-titre">@L.T("Titre *")</label>
                     <input id="jm-titre" type="text" value="@_titre" @oninput="e => _titre = e.Value?.ToString() ?? string.Empty" />
                 </div>
                 <div class="form-group">
-                    <label for="jm-desc">Description</label>
+                    <label for="jm-desc">@L.T("Description")</label>
                     <textarea id="jm-desc" rows="2" value="@_desc" @oninput="e => _desc = e.Value?.ToString() ?? string.Empty"></textarea>
                 </div>
                 <div class="form-group">
-                    <label for="jm-date">Date</label>
+                    <label for="jm-date">@L.T("Date")</label>
                     <DateInput Id="jm-date" Value="@_dateIso" ValueChanged="@(v => _dateIso = v)" />
                 </div>
                 <span class="form-error">@_stagedError</span>
             }
         </ChildContent>
         <FooterContent>
-            <button class="btn btn-secondary" @onclick="CancelStaged">Annuler</button>
-            <button class="btn btn-primary" @onclick="SaveStaged">Enregistrer</button>
+            <button class="btn btn-secondary" @onclick="CancelStaged">@L.T("Annuler")</button>
+            <button class="btn btn-primary" @onclick="SaveStaged">@L.T("Enregistrer")</button>
         </FooterContent>
     </Modal>
 
@@ -170,20 +170,20 @@ else
             @if (viewer.Type == MediaTypes.Video || viewer.Type == MediaTypes.Audio)
             {
                 <div class="form-actions" style="margin-top:12px">
-                    <button type="button" class="btn btn-primary btn-block" @onclick="() => PlayMedia(viewer)">▶ Ouvrir dans un nouvel onglet</button>
+                    <button type="button" class="btn btn-primary btn-block" @onclick="() => PlayMedia(viewer)">▶ @L.T("Ouvrir dans un nouvel onglet")</button>
                 </div>
             }
             @if (!string.IsNullOrWhiteSpace(viewer.Description))
             {
                 <div class="cal-detail-notes" style="margin-top:10px">@viewer.Description</div>
             }
-            <div class="storage-line" style="margin-top:8px"><span>Date</span><strong>@DataStore.FormatDateCourte(viewer.Date)</strong></div>
+            <div class="storage-line" style="margin-top:8px"><span>@L.T("Date")</span><strong>@DataStore.FormatDateCourte(viewer.Date)</strong></div>
         }
     </Modal>
 
-    <ConfirmDialog Show="_deleteTarget != null" Title="Supprimer du journal"
-                   Message="@(_deleteTarget == null ? "" : "Supprimer « " + _deleteTarget.Titre + " » ?")"
-                   ConfirmLabel="Supprimer" Danger="true" OnConfirm="ConfirmDelete" OnCancel="() => _deleteTarget = null" />
+    <ConfirmDialog Show="_deleteTarget != null" Title="@L.T("Supprimer du journal")"
+                   Message="@(_deleteTarget == null ? "" : L.F("Supprimer « {0} » ?", _deleteTarget.Titre))"
+                   ConfirmLabel="@L.T("Supprimer")" Danger="true" OnConfirm="ConfirmDelete" OnCancel="() => _deleteTarget = null" />
 }
 
 @code {
@@ -235,7 +235,7 @@ else
     {
         var fileName = (m.Titre == null ? "media" : m.Titre.Trim()) + (m.Type == MediaTypes.Video ? ".mp4" : m.Type == MediaTypes.Audio ? ".m4a" : ".bin");
         var ok = await Saver.OpenMediaFromDataUrlAsync(m.Data, m.Mime, fileName);
-        if (!ok) State.NotifyError("Impossible d'ouvrir le média : aucune application de lecture trouvée.");
+        if (!ok) State.NotifyError(L.T("Impossible d'ouvrir le média : aucune application de lecture trouvée."));
     }
 
     private async Task AddPhotoGallery()
@@ -346,7 +346,7 @@ else
             Date = DataStore.ToYmd(_dateIso)
         });
         if (!res.Success) { _stagedError = res.Error; return; }
-        State.NotifySuccess(MediaTypes.Label(_stagedType) + " ajouté au journal.");
+        State.NotifySuccess(L.F("{0} ajouté au journal.", MediaTypes.Label(_stagedType)));
         _staged = null;
     }
 
@@ -358,15 +358,15 @@ else
         _deleteTarget = null;
         if (t == null) return;
         var res = Store.DeleteMedia(t.Id);
-        if (res.Success) State.NotifySuccess("Élément supprimé.");
+        if (res.Success) State.NotifySuccess(L.T("Élément supprimé."));
         else State.NotifyError(res.Error);
     }
 
     private static string FormatSize(long bytes)
     {
-        if (bytes < 1024) return bytes + " o";
-        if (bytes < 1024 * 1024) return (bytes / 1024.0).ToString("0.0") + " Ko";
-        return (bytes / (1024.0 * 1024)).ToString("0.0") + " Mo";
+        if (bytes < 1024) return L.F("{0} o", bytes);
+        if (bytes < 1024 * 1024) return L.F("{0} Ko", (bytes / 1024.0).ToString("0.0"));
+        return L.F("{0} Mo", (bytes / (1024.0 * 1024)).ToString("0.0"));
     }
 
     public void Dispose() => Store.DataChanged -= Refresh;

@@ -4,33 +4,33 @@
 
 @if (!Store.Can(Permissions.MessagerieUse))
 {
-    <EmptyState Icon="🔒" Title="Accès réservé" Message="La messagerie interne n'est pas autorisée pour votre rôle." />
+    <EmptyState Icon="🔒" Title="@L.T("Accès réservé")" Message="@L.T("La messagerie interne n'est pas autorisée pour votre rôle.")" />
 }
 else if (_conversation == null)
 {
     <div class="page-head">
-        <p>Messagerie de la communauté : vos messages vous suivent sur tous vos appareils.</p>
+        <p>@L.T("Messagerie de la communauté : vos messages vous suivent sur tous vos appareils.")</p>
     </div>
     <div class="form-actions" style="margin-bottom:10px">
-        <button class="btn btn-primary btn-sm" @onclick="ShowNewMessage">✉ Nouveau message</button>
-        <button class="btn btn-secondary btn-sm" @onclick="ShowAnnonce">📢 Annonce</button>
+        <button class="btn btn-primary btn-sm" @onclick="ShowNewMessage">✉ @L.T("Nouveau message")</button>
+        <button class="btn btn-secondary btn-sm" @onclick="ShowAnnonce">📢 @L.T("Annonce")</button>
     </div>
     <div class="search-box cal-search">
         <span class="search-icon" aria-hidden="true">&#128269;</span>
-        <input type="search" placeholder="Rechercher une conversation (membre, annonce, texte)…" aria-label="Rechercher une conversation"
+        <input type="search" placeholder="@L.T("Rechercher une conversation (membre, annonce, texte)…")" aria-label="@L.T("Rechercher une conversation")"
                value="@_search" @oninput="OnSearch" />
     </div>
     @if (!string.IsNullOrWhiteSpace(_search))
     {
-        <div class="search-summary">@VisibleConversations.Count conversation(s) trouvée(s) pour « @_search.Trim() »</div>
+        <div class="search-summary">@L.F("{0} conversation(s) trouvée(s) pour « {1} »", VisibleConversations.Count, _search.Trim())</div>
     }
     @if (_conversations.Count == 0)
     {
-        <EmptyState Icon="✉" Title="Aucun message" Message="Écrivez le premier message ou publiez une annonce." />
+        <EmptyState Icon="✉" Title="@L.T("Aucun message")" Message="@L.T("Écrivez le premier message ou publiez une annonce.")" />
     }
     else if (VisibleConversations.Count == 0)
     {
-        <EmptyState Icon="✉" Title="Aucun résultat" Message="Aucune conversation ne correspond à cette recherche." />
+        <EmptyState Icon="✉" Title="@L.T("Aucun résultat")" Message="@L.T("Aucune conversation ne correspond à cette recherche.")" />
     }
     else
     {
@@ -44,7 +44,7 @@ else if (_conversation == null)
                     <span class="field-type-icon" aria-hidden="true">@(cid == DataStore.ConversationAnnonces ? "📢" : "💬")</span>
                     <div class="user-card-main">
                         <div class="user-card-name">@ConversationTitle(cid)</div>
-                        <div class="user-card-sub">@(dernier.Supprime ? "🗑 Message supprimé" : Truncate(dernier.Texte, 80))</div>
+                        <div class="user-card-sub">@(dernier.Supprime ? "🗑 " + L.T("Message supprimé") : Truncate(dernier.Texte, 80))</div>
                         <div class="user-card-meta">
                             <span class="text-muted" style="font-size:12px">@dernier.Expediteur · @DataStore.FormatDateHeure(dernier.Date)</span>
                             @if (nonLus > 0) { <Badge Text="@nonLus.ToString()" Kind="role" /> }
@@ -54,12 +54,12 @@ else if (_conversation == null)
             }
         </div>
     }
-    <button class="fab" aria-label="Écrire un nouveau message" @onclick="ShowNewMessage">+</button>
+    <button class="fab" aria-label="@L.T("Écrire un nouveau message")" @onclick="ShowNewMessage">+</button>
 }
 else
 {
     <div class="form-group" style="display:flex;align-items:center;gap:10px;margin-bottom:6px">
-        <button class="btn btn-secondary btn-sm" @onclick="CloseConversation">← Conversations</button>
+        <button class="btn btn-secondary btn-sm" @onclick="CloseConversation">← @L.T("Conversations")</button>
         <h2 style="margin:0;font-size:18px;font-weight:700">@ConversationTitle(_conversation)</h2>
     </div>
     <div class="msg-thread">
@@ -70,22 +70,22 @@ else
             {
                 <div class="msg-bubble msg-deleted">
                     <div class="msg-meta"><strong>@(m.SupprimePar ?? m.Expediteur)</strong> · @(string.IsNullOrWhiteSpace(m.SupprimeLe) ? DataStore.FormatDateHeure(m.Date) : DataStore.FormatDateHeure(m.SupprimeLe))</div>
-                    <div class="msg-text msg-text-deleted">🗑 Message supprimé</div>
+                    <div class="msg-text msg-text-deleted">🗑 @L.T("Message supprimé")</div>
                 </div>
             }
             else
             {
                 <div class="msg-bubble @(mine ? "msg-mine" : "msg-theirs")">
-                    <div class="msg-meta"><strong>@m.Expediteur</strong> · @DataStore.FormatDateHeure(m.Date)@(string.IsNullOrWhiteSpace(m.DateModification) ? "" : " · modifié")</div>
+                    <div class="msg-meta"><strong>@m.Expediteur</strong> · @DataStore.FormatDateHeure(m.Date)@(string.IsNullOrWhiteSpace(m.DateModification) ? "" : " · " + L.T("modifié"))</div>
                     <div class="msg-text">@m.Texte</div>
                     <div class="msg-actions">
                         @if (Store.CanEditMessage(m.Id))
                         {
-                            <button type="button" class="btn-icon msg-edit" aria-label="Modifier" @onclick="() => AskEdit(m)">✏️</button>
+                            <button type="button" class="btn-icon msg-edit" aria-label="@L.T("Modifier")" @onclick="() => AskEdit(m)">✏️</button>
                         }
                         @if (mine || Store.IsAdmin)
                         {
-                            <button type="button" class="btn-icon danger msg-del" aria-label="Supprimer" @onclick="() => AskDelete(m)">🗑</button>
+                            <button type="button" class="btn-icon danger msg-del" aria-label="@L.T("Supprimer")" @onclick="() => AskDelete(m)">🗑</button>
                         }
                     </div>
                 </div>
@@ -93,21 +93,21 @@ else
         }
     </div>
     <div class="msg-reply">
-        <input type="text" placeholder="Écrire un message…" aria-label="Répondre"
+        <input type="text" placeholder="@L.T("Écrire un message…")" aria-label="@L.T("Répondre")"
                value="@_reply" @oninput="e => _reply = e.Value?.ToString() ?? string.Empty" @onkeydown="OnReplyKey" />
-        <button class="btn btn-primary btn-sm" @onclick="SendReply" disabled="@string.IsNullOrWhiteSpace(_reply)">Envoyer</button>
+        <button class="btn btn-primary btn-sm" @onclick="SendReply" disabled="@string.IsNullOrWhiteSpace(_reply)">@L.T("Envoyer")</button>
     </div>
 }
 
-<Modal Title="@(_annonce ? "Publier une annonce" : "Nouveau message")" Show="_showNew" OnClose="() => _showNew = false">
+<Modal Title="@(_annonce ? L.T("Publier une annonce") : L.T("Nouveau message"))" Show="_showNew" OnClose="() => _showNew = false">
     <ChildContent>
         @if (!_annonce)
         {
             <div class="form-group">
-                <label>Destinataires</label>
+                <label>@L.T("Destinataires")</label>
                 <div class="search-box cal-search cal-opt-search">
                     <span class="search-icon" aria-hidden="true">&#128269;</span>
-                    <input type="search" placeholder="Écrire pour chercher un membre…" aria-label="Chercher un membre"
+                    <input type="search" placeholder="@L.T("Écrire pour chercher un membre…")" aria-label="@L.T("Chercher un membre")"
                            value="@_destSearch" @oninput="e => _destSearch = e.Value?.ToString() ?? string.Empty" />
                 </div>
                 <div class="check-group">
@@ -120,44 +120,44 @@ else
                     }
                     @if (FilteredDest.Count == 0)
                     {
-                        <div class="cal-no-events">Aucun membre trouvé pour « @_destSearch ».</div>
+                        <div class="cal-no-events">@L.F("Aucun membre trouvé pour « {0} ».", _destSearch)</div>
                     }
                 </div>
-                <span class="field-hint">Sans destinataire : le message part en annonce (tout le monde).</span>
+                <span class="field-hint">@L.T("Sans destinataire : le message part en annonce (tout le monde).")</span>
             </div>
         }
         else
         {
-            <p class="muted" style="margin-top:0">📢 Visible par tous les membres.</p>
+            <p class="muted" style="margin-top:0">📢 @L.T("Visible par tous les membres.")</p>
         }
         <div class="form-group">
-            <label for="msg-new-text">Message *</label>
+            <label for="msg-new-text">@L.T("Message *")</label>
             <textarea id="msg-new-text" rows="3" value="@_newTexte" @oninput="e => _newTexte = e.Value?.ToString() ?? string.Empty"></textarea>
         </div>
         <span class="form-error">@_newError</span>
     </ChildContent>
     <FooterContent>
-        <button class="btn btn-secondary" @onclick="() => _showNew = false">Annuler</button>
-        <button class="btn btn-primary" @onclick="SendNew">Envoyer</button>
+        <button class="btn btn-secondary" @onclick="() => _showNew = false">@L.T("Annuler")</button>
+        <button class="btn btn-primary" @onclick="SendNew">@L.T("Envoyer")</button>
     </FooterContent>
 </Modal>
 
-<ConfirmDialog Show="_deleteTarget != null" Title="Supprimer le message"
-               Message="Le message sera masqué, mais un journal « Message supprimé » restera visible dans la conversation."
-               ConfirmLabel="Supprimer" Danger="true" OnConfirm="ConfirmDelete" OnCancel="() => _deleteTarget = null" />
+<ConfirmDialog Show="_deleteTarget != null" Title="@L.T("Supprimer le message")"
+               Message="@L.T("Le message sera masqué, mais un journal « Message supprimé » restera visible dans la conversation.")"
+               ConfirmLabel="@L.T("Supprimer")" Danger="true" OnConfirm="ConfirmDelete" OnCancel="() => _deleteTarget = null" />
 
-<Modal Title="Modifier le message" Show="_editTarget != null" OnClose="() => _editTarget = null">
+<Modal Title="@L.T("Modifier le message")" Show="_editTarget != null" OnClose="() => _editTarget = null">
     <ChildContent>
         <div class="form-group">
-            <label for="msg-edit-text">Message *</label>
+            <label for="msg-edit-text">@L.T("Message *")</label>
             <textarea id="msg-edit-text" rows="3" value="@_editTexte" @oninput="e => _editTexte = e.Value?.ToString() ?? string.Empty"></textarea>
         </div>
-        <span class="field-hint">Modifiable pendant 5 minutes après l'envoi.</span>
+        <span class="field-hint">@L.T("Modifiable pendant 5 minutes après l'envoi.")</span>
         <span class="form-error">@_editError</span>
     </ChildContent>
     <FooterContent>
-        <button class="btn btn-secondary" @onclick="() => _editTarget = null">Annuler</button>
-        <button class="btn btn-primary" @onclick="ConfirmEdit">Enregistrer</button>
+        <button class="btn btn-secondary" @onclick="() => _editTarget = null">@L.T("Annuler")</button>
+        <button class="btn btn-primary" @onclick="ConfirmEdit">@L.T("Enregistrer")</button>
     </FooterContent>
 </Modal>
 
@@ -264,7 +264,7 @@ else
 
     private string ConversationTitle(string cid)
     {
-        if (cid == DataStore.ConversationAnnonces) return "📢 Annonces";
+        if (cid == DataStore.ConversationAnnonces) return "📢 " + L.T("Annonces");
         var parts = cid.StartsWith("mp:", StringComparison.OrdinalIgnoreCase)
             ? cid[3..].Split('+', StringSplitOptions.RemoveEmptyEntries)
             : new[] { cid };
@@ -272,7 +272,7 @@ else
             .Where(p => !p.Equals(Me, StringComparison.OrdinalIgnoreCase))
             .Select(p => Store.FindUserByIdentifier(p)?.NomComplet ?? p)
             .ToList();
-        return names.Count == 0 ? "Discussion" : string.Join(", ", names);
+        return names.Count == 0 ? L.T("Discussion") : string.Join(", ", names);
     }
 
     private static string Truncate(string s, int max)
@@ -292,7 +292,7 @@ else
         var res = Store.SendMessage(_annonce ? new List<string>() : _dest.ToList(), _newTexte);
         if (!res.Success) { _newError = res.Error; return; }
         _showNew = false;
-        State.NotifySuccess(_annonce ? "Annonce publiée." : "Message envoyé.");
+        State.NotifySuccess(_annonce ? L.T("Annonce publiée.") : L.T("Message envoyé."));
         RefreshList();
     }
 
@@ -332,7 +332,7 @@ else
         _deleteTarget = null;
         if (t == null) return;
         var res = Store.DeleteMessage(t.Id);
-        if (res.Success) { State.NotifySuccess("Message supprimé."); LoadThread(); RefreshList(); }
+        if (res.Success) { State.NotifySuccess(L.T("Message supprimé.")); LoadThread(); RefreshList(); }
         else State.NotifyError(res.Error);
     }
 
@@ -350,7 +350,7 @@ else
         var res = Store.UpdateMessage(t.Id, _editTexte);
         if (!res.Success) { _editError = res.Error; return; }
         _editTarget = null;
-        State.NotifySuccess("Message modifié.");
+        State.NotifySuccess(L.T("Message modifié."));
         LoadThread();
         RefreshList();
     }
