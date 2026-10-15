@@ -4,31 +4,31 @@
 
 @if (!Store.Can(Permissions.RappelsUse))
 {
-    <EmptyState Icon="🔒" Title="Accès réservé" Message="Les rappels ne sont pas autorisés pour votre rôle." />
+    <EmptyState Icon="🔒" Title="@L.T("Accès réservé")" Message="@L.T("Les rappels ne sont pas autorisés pour votre rôle.")" />
 }
 else
 {
     <div class="page-head">
-        <p>Calculés automatiquement : tâches, anniversaires, événements, cotisations. Touchez un rappel pour ouvrir la page concernée.</p>
+        <p>@L.T("Calculés automatiquement : tâches, anniversaires, événements, cotisations. Touchez un rappel pour ouvrir la page concernée.")</p>
     </div>
 
     <div class="search-box cal-search">
         <span class="search-icon" aria-hidden="true">&#128269;</span>
-        <input type="search" placeholder="Rechercher un rappel (titre, détail, catégorie)…" aria-label="Rechercher un rappel"
+        <input type="search" placeholder="@L.T("Rechercher un rappel (titre, détail, catégorie)…")" aria-label="@L.T("Rechercher un rappel")"
                value="@_search" @oninput="OnSearch" />
     </div>
     @if (!string.IsNullOrWhiteSpace(_search))
     {
-        <div class="search-summary">@_rappels.Count rappel(s) trouvé(s) pour « @_search.Trim() »</div>
+        <div class="search-summary">@L.F("{0} rappel(s) trouvé(s) pour « {1} »", _rappels.Count, _search.Trim())</div>
     }
 
     @if (_rappels.Count == 0)
     {
-        <EmptyState Icon="⏰" Title="Rien à signaler" Message="Aucun rappel pour le moment. Tout est à jour." />
+        <EmptyState Icon="⏰" Title="@L.T("Rien à signaler")" Message="@L.T("Aucun rappel pour le moment. Tout est à jour.")" />
     }
     else if (!FilteredRappels.Any())
     {
-        <EmptyState Icon="⏰" Title="Aucun résultat" Message="Aucun rappel ne correspond à cette recherche." />
+        <EmptyState Icon="⏰" Title="@L.T("Aucun résultat")" Message="@L.T("Aucun rappel ne correspond à cette recherche.")" />
     }
     else
     {
@@ -37,7 +37,7 @@ else
             <div class="cal-list-day" style="margin-bottom:14px">
                 <div class="cal-list-header">
                     <span class="cal-list-date">@group.Key</span>
-                    <span class="cal-list-count">@group.Count() rappel(s)</span>
+                    <span class="cal-list-count">@L.F("{0} rappel(s)", group.Count())</span>
                 </div>
                 <div class="cal-events">
                     @foreach (var r in group)
@@ -56,12 +56,12 @@ else
                         @if (_expanded == rappel.Id)
                         {
                             <div class="cal-detail-box">
-                                <div class="storage-line"><span>Priorité</span><strong>@(rappel.Priorite == CalendarEventTypes.PrioriteUrgente ? "Urgente" : rappel.Priorite == CalendarEventTypes.PrioriteImportante ? "Importante" : "Normale")</strong></div>
-                                <div class="storage-line"><span>Catégorie</span><strong>@rappel.Categorie</strong></div>
-                                <div class="storage-line"><span>Détail</span><strong>@rappel.Detail</strong></div>
+                                <div class="storage-line"><span>@L.T("Priorité")</span><strong>@(rappel.Priorite == CalendarEventTypes.PrioriteUrgente ? L.T("Urgente") : rappel.Priorite == CalendarEventTypes.PrioriteImportante ? L.T("Importante") : L.T("Normale"))</strong></div>
+                                <div class="storage-line"><span>@L.T("Catégorie")</span><strong>@rappel.Categorie</strong></div>
+                                <div class="storage-line"><span>@L.T("Détail")</span><strong>@rappel.Detail</strong></div>
                                 <div class="form-actions" style="margin-top:10px">
-                                    <button class="btn btn-primary btn-sm" @onclick="() => State.Navigate(rappel.PageCible)" @onclick:stopPropagation="true">Ouvrir la page <span aria-hidden="true">→</span></button>
-                                    <button class="btn btn-secondary btn-sm" @onclick="() => _expanded = null">Réduire</button>
+                                    <button class="btn btn-primary btn-sm" @onclick="() => State.Navigate(rappel.PageCible)" @onclick:stopPropagation="true">@L.T("Ouvrir la page") <span aria-hidden="true">→</span></button>
+                                    <button class="btn btn-secondary btn-sm" @onclick="() => _expanded = null">@L.T("Réduire")</button>
                                 </div>
                             </div>
                         }
