@@ -165,7 +165,7 @@
   "Modifier la tâche": "Edit task",
   "Supprimer la tâche": "Delete task",
   "Supprimer « {0} » ?": "Delete “{0}”?",
-  "Terminées": "Done",
+  "Terminées": "Completed",
   "L'échéance doit être au format JJ/MM/AAAA.": "The due date must be in DD/MM/YYYY format.",
   "Tâche créée.": "Task created.",
   "Tâche enregistrée.": "Task saved.",
