@@ -66,7 +66,7 @@ public partial class DataStore
         {
             if (u.Id == existingId) continue;
             var siennes = ClesDoublon(u).Select(k => k.Cle).ToHashSet();
-            var raisons = cles.Where(k => siennes.Contains(k.Cle)).Select(k => k.Raison).ToList();
+            var raisons = cles.Where(k => siennes.Contains(k.Cle)).Select(k => L.T(k.Raison)).ToList();
             if (raisons.Count > 0) result.Add((u, string.Join(", ", raisons)));
         }
         return result;
@@ -113,7 +113,7 @@ public partial class DataStore
             {
                 var r = Racine(g.Key);
                 var raison = raisons.Where(kv => Racine(kv.Key) == r).SelectMany(kv => kv.Value).Distinct();
-                return new DoublonGroupe(string.Join(", ", raison),
+                return new DoublonGroupe(string.Join(", ", raison.Select(L.T)),
                     g.OrderByDescending(EstCompteEnLigne).ThenBy(u => u.DateCreation).ToList());
             })
             .OrderBy(g => g.Membres[0].NomComplet)
@@ -129,7 +129,7 @@ public partial class DataStore
     /// <summary>Indique que deux fiches désignent bien deux personnes différentes (homonymes).</summary>
     public OperationResult MarquerPasDoublon(IEnumerable<string> userIds)
     {
-        if (!Can(Permissions.UsersManage)) return OperationResult.Fail("Action réservée à la gestion des utilisateurs.");
+        if (!Can(Permissions.UsersManage)) return OperationResult.Fail(L.T("Action réservée à la gestion des utilisateurs."));
         var ids = userIds.Distinct().ToList();
         _settings.PasDoublons ??= new List<string>();
         for (var i = 0; i < ids.Count; i++)
@@ -152,15 +152,15 @@ public partial class DataStore
     /// </summary>
     public OperationResult FusionnerUtilisateurs(string garderId, string retirerId)
     {
-        if (!Can(Permissions.UsersManage)) return OperationResult.Fail("Action réservée à la gestion des utilisateurs.");
-        if (garderId == retirerId) return OperationResult.Fail("Choisissez deux fiches différentes.");
+        if (!Can(Permissions.UsersManage)) return OperationResult.Fail(L.T("Action réservée à la gestion des utilisateurs."));
+        if (garderId == retirerId) return OperationResult.Fail(L.T("Choisissez deux fiches différentes."));
         var garder = _users.FirstOrDefault(u => u.Id == garderId);
         var retirer = _users.FirstOrDefault(u => u.Id == retirerId);
-        if (garder == null || retirer == null) return OperationResult.Fail("Fiche introuvable.");
+        if (garder == null || retirer == null) return OperationResult.Fail(L.T("Fiche introuvable."));
         if (EstCompteEnLigne(garder) && EstCompteEnLigne(retirer))
-            return OperationResult.Fail("Les deux fiches ont chacune un compte en ligne : désactivez plutôt le compte en trop depuis sa fiche.");
+            return OperationResult.Fail(L.T("Les deux fiches ont chacune un compte en ligne : désactivez plutôt le compte en trop depuis sa fiche."));
         if (retirer.Role == Roles.BaseAdmin || garder.Role == Roles.BaseAdmin)
-            return OperationResult.Fail("Le compte de l'administrateur de la base ne peut pas être fusionné.");
+            return OperationResult.Fail(L.T("Le compte de l'administrateur de la base ne peut pas être fusionné."));
 
         var ancien = retirer.Identifiant;
         var nouveau = garder.Identifiant;
