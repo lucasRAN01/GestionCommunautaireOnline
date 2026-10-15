@@ -1,0 +1,15 @@
+@inject LangueService Langues
+
+@* Choix de la langue de l'interface : personnel à chaque membre. *@
+<div class="lang-picker @CssClass" role="group" aria-label="@L.T("Langue")">
+    @foreach (var (code, nom) in L.Langues)
+    {
+        var c = code;
+        <button type="button" class="lang-chip @(L.Langue == c ? "active" : "")" aria-pressed="@(L.Langue == c ? "true" : "false")"
+                lang="@c" @onclick="() => Langues.ChoisirAsync(c)">@nom</button>
+    }
+</div>
+
+@code {
+    [Parameter] public string? CssClass { get; set; }
+}

@@ -29,6 +29,18 @@ public partial class DataStore
         public List<string> AideVu { get; set; } = new();
         public string? Theme { get; set; }
         public bool? Conseils { get; set; }
+        public string? Langue { get; set; }
+    }
+
+    /// <summary>Langue choisie par le membre (null tant qu'il n'a rien choisi).</summary>
+    public string? GetLangue(string? identifiant)
+        => string.IsNullOrWhiteSpace(identifiant) ? null : LoadPrefs(identifiant).Langue;
+
+    /// <summary>Enregistre la langue personnelle du membre (dans son navigateur, comme le thème).</summary>
+    public void SetLangue(string? identifiant, string langue)
+    {
+        if (string.IsNullOrWhiteSpace(identifiant)) return;
+        UpdatePrefs(identifiant, p => p.Langue = L.Normaliser(langue));
     }
 
     private static string PrefsKey(string identifiant) => K_PREFS_PREFIX + identifiant.Trim().ToLowerInvariant();
@@ -87,9 +99,9 @@ public partial class DataStore
     {
         var user = _users.FirstOrDefault(u => u.Id == userId);
         if (user == null)
-            return OperationResult.Fail("Votre fiche membre n'existe pas encore. Contactez un administrateur.");
+            return OperationResult.Fail(L.T("Votre fiche membre n'existe pas encore. Contactez un administrateur."));
         if (!user.Actif)
-            return OperationResult.Fail("Ce compte est désactivé. Contactez un administrateur.");
+            return OperationResult.Fail(L.T("Ce compte est désactivé. Contactez un administrateur."));
 
         _session = new SessionInfo
         {
@@ -112,7 +124,7 @@ public partial class DataStore
         string? relierAFicheId = null)
     {
         if (string.IsNullOrWhiteSpace(accountId))
-            return new UserOperationResult { Success = false, Error = "Compte introuvable." };
+            return new UserOperationResult { Success = false, Error = L.T("Compte introuvable.") };
 
         // Relier le compte à une fiche déjà saisie (même personne) au lieu d'en créer une seconde.
         var cible = string.IsNullOrWhiteSpace(relierAFicheId) ? null : _users.FirstOrDefault(u => u.Id == relierAFicheId);

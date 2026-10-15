@@ -4,37 +4,37 @@
 
 @if (!Store.Can(Permissions.PresenceManage))
 {
-    <EmptyState Icon="🔒" Title="Accès réservé" Message="Les réunions et la présence ne sont pas autorisées pour votre rôle." />
+    <EmptyState Icon="🔒" Title="@L.T("Accès réservé")" Message="@L.T("Les réunions et la présence ne sont pas autorisées pour votre rôle.")" />
 }
 else
 {
     <div class="page-head">
-        <p>Réunions, participants et feuilles de présence.</p>
+        <p>@L.T("Réunions, participants et feuilles de présence.")</p>
     </div>
 
     <div class="search-box cal-search">
         <span class="search-icon" aria-hidden="true">&#128269;</span>
-        <input type="search" placeholder="Rechercher une réunion (titre, lieu, participant, compte rendu)…" aria-label="Rechercher une réunion"
+        <input type="search" placeholder="@L.T("Rechercher une réunion (titre, lieu, participant, compte rendu)…")" aria-label="@L.T("Rechercher une réunion")"
                value="@_search" @oninput="OnSearch" />
     </div>
     @if (!string.IsNullOrWhiteSpace(_search))
     {
-        <div class="search-summary">@Filtered.Count réunion(s) trouvée(s) pour « @_search.Trim() »</div>
+        <div class="search-summary">@L.F("{0} réunion(s) trouvée(s) pour « {1} »", Filtered.Count, _search.Trim())</div>
     }
 
-    <div class="chips-row" role="tablist" aria-label="Filtrer les réunions">
-        <button type="button" class="chip @(_filter == "" ? "active" : "")" @onclick='() => _filter = ""'>Toutes</button>
-        <button type="button" class="chip @(_filter == "avenir" ? "active" : "")" @onclick='() => _filter = "avenir"'>À venir</button>
-        <button type="button" class="chip @(_filter == "passees" ? "active" : "")" @onclick='() => _filter = "passees"'>Passées</button>
+    <div class="chips-row" role="tablist" aria-label="@L.T("Filtrer les réunions")">
+        <button type="button" class="chip @(_filter == "" ? "active" : "")" @onclick='() => _filter = ""'>@L.T("Toutes")</button>
+        <button type="button" class="chip @(_filter == "avenir" ? "active" : "")" @onclick='() => _filter = "avenir"'>@L.T("À venir")</button>
+        <button type="button" class="chip @(_filter == "passees" ? "active" : "")" @onclick='() => _filter = "passees"'>@L.T("Passées")</button>
     </div>
 
     <div class="inline-actions" style="justify-content:flex-end;margin-bottom:10px">
-        <button class="btn btn-secondary btn-sm" @onclick="StartAdd">＋ Réunion</button>
+        <button class="btn btn-secondary btn-sm" @onclick="StartAdd">＋ @L.T("Réunion")</button>
     </div>
 
     @if (Filtered.Count == 0)
     {
-        <EmptyState Icon="👥" Title="Aucune réunion" Message="Créez la première réunion avec le bouton ci-dessus." />
+        <EmptyState Icon="👥" Title="@L.T("Aucune réunion")" Message="@L.T("Créez la première réunion avec le bouton ci-dessus.")" />
     }
     else
     {
@@ -49,7 +49,7 @@ else
                         <div class="user-card-name">@reunion.Titre</div>
                         <div class="user-card-sub">@DataStore.FormatDateCourte(reunion.Date)@(string.IsNullOrWhiteSpace(reunion.HeureDebut) ? "" : " · " + reunion.HeureDebut)@(string.IsNullOrWhiteSpace(reunion.Lieu) ? "" : " · " + reunion.Lieu)</div>
                         <div class="user-card-meta">
-                            <Badge Text="@(stats.Presents + "/" + stats.Total + " présent(s)")" Kind="@(stats.Presents == stats.Total && stats.Total > 0 ? "active" : "role")" />
+                            <Badge Text="@L.F("{0}/{1} présent(s)", stats.Presents, stats.Total)" Kind="@(stats.Presents == stats.Total && stats.Total > 0 ? "active" : "role")" />
                         </div>
                     </div>
                 </div>
@@ -65,24 +65,24 @@ else
             <div class="inline-actions" style="justify-content:space-between">
                 <h3 style="margin:0">@reunion.Titre</h3>
                 <div class="inline-actions">
-                    <button class="btn btn-secondary btn-sm" @onclick="() => _selected = null">Réduire</button>
+                    <button class="btn btn-secondary btn-sm" @onclick="() => _selected = null">@L.T("Réduire")</button>
                     <button class="btn btn-secondary btn-sm" @onclick="() => StartEdit(reunion)">✎</button>
-                    <button class="btn btn-secondary btn-sm" @onclick="CreateCalendarEvent">📅 Calendrier</button>
-                    <button class="btn-icon danger" aria-label="Supprimer" @onclick="() => AskDelete(reunion)">🗑</button>
+                    <button class="btn btn-secondary btn-sm" @onclick="CreateCalendarEvent">📅 @L.T("Calendrier")</button>
+                    <button class="btn-icon danger" aria-label="@L.T("Supprimer")" @onclick="() => AskDelete(reunion)">🗑</button>
                 </div>
             </div>
-            <div class="storage-line"><span>Date</span><strong>@DataStore.FormatDateCourte(reunion.Date)@(string.IsNullOrWhiteSpace(reunion.HeureDebut) ? "" : " · " + reunion.HeureDebut)@(reunion.HeureFin != null ? " → " + reunion.HeureFin : "")</strong></div>
-            <div class="storage-line"><span>Lieu</span><strong>@(string.IsNullOrWhiteSpace(reunion.Lieu) ? "—" : reunion.Lieu)</strong></div>
-            <div class="storage-line storage-total"><span>Présents</span><strong>@stats.Presents / @stats.Total (✗ @stats.Absents · ◐ @stats.Excuses · … @stats.NonPointes)</strong></div>
+            <div class="storage-line"><span>@L.T("Date")</span><strong>@DataStore.FormatDateCourte(reunion.Date)@(string.IsNullOrWhiteSpace(reunion.HeureDebut) ? "" : " · " + reunion.HeureDebut)@(reunion.HeureFin != null ? " → " + reunion.HeureFin : "")</strong></div>
+            <div class="storage-line"><span>@L.T("Lieu")</span><strong>@(string.IsNullOrWhiteSpace(reunion.Lieu) ? "—" : reunion.Lieu)</strong></div>
+            <div class="storage-line storage-total"><span>@L.T("Présents")</span><strong>@stats.Presents / @stats.Total (✗ @stats.Absents · ◐ @stats.Excuses · … @stats.NonPointes)</strong></div>
             @if (!string.IsNullOrWhiteSpace(reunion.CompteRendu))
             {
-                <div class="cal-detail-label">Compte rendu</div>
+                <div class="cal-detail-label">@L.T("Compte rendu")</div>
                 <div class="cal-detail-notes">@reunion.CompteRendu</div>
             }
-            <div class="divider-section">Feuille de présence (touchez pour pointer)</div>
+            <div class="divider-section">@L.T("Feuille de présence (touchez pour pointer)")</div>
             @if (reunion.Participants.Count == 0)
             {
-                <p class="muted">Aucun participant. Modifiez la réunion pour en ajouter.</p>
+                <p class="muted">@L.T("Aucun participant. Modifiez la réunion pour en ajouter.")</p>
             }
             @foreach (var p in reunion.Participants)
             {
@@ -93,43 +93,43 @@ else
                     <Avatar UserName="@MemberName(membre)" Seed="@membre" Size="sm" Photo="@MemberPhoto(membre)" />
                     <span class="cal-person-name">@MemberName(membre)</span>
                     <span class="cal-person-check" aria-hidden="true">@(statut.Length == 0 ? "…" : PresenceStatuts.Icon(statut))</span>
-                    <Badge Text="@(statut.Length == 0 ? "Non pointé" : PresenceStatuts.Label(statut))" Kind="@(statut == PresenceStatuts.Present ? "active" : "role")" />
+                    <Badge Text="@(statut.Length == 0 ? L.T("Non pointé") : PresenceStatuts.Label(statut))" Kind="@(statut == PresenceStatuts.Present ? "active" : "role")" />
                 </button>
             }
         </div>
     }
 
-    <button class="fab" aria-label="Ajouter une réunion" @onclick="StartAdd">+</button>
+    <button class="fab" aria-label="@L.T("Ajouter une réunion")" @onclick="StartAdd">+</button>
 
-    <Modal Title="@(_editId == null ? "Nouvelle réunion" : "Modifier la réunion")" Show="_showEditor" OnClose="CloseEditor">
+    <Modal Title="@(_editId == null ? L.T("Nouvelle réunion") : L.T("Modifier la réunion"))" Show="_showEditor" OnClose="CloseEditor">
         <ChildContent>
             <div class="form-group">
-                <label for="re-titre">Titre *</label>
+                <label for="re-titre">@L.T("Titre *")</label>
                 <input id="re-titre" type="text" value="@_titre" @oninput="e => _titre = e.Value?.ToString() ?? string.Empty" />
             </div>
             <div class="form-group">
-                <label for="re-date">Date *</label>
+                <label for="re-date">@L.T("Date *")</label>
                 <DateInput Id="re-date" Value="@_dateIso" ValueChanged="@(v => _dateIso = v)" />
             </div>
             <div class="cal-time-row">
                 <div class="form-group cal-time-col">
-                    <label for="re-debut">Début</label>
+                    <label for="re-debut">@L.T("Début")</label>
                     <input id="re-debut" type="time" placeholder="09:00" value="@_debut" @oninput="e => _debut = e.Value?.ToString() ?? string.Empty" />
                 </div>
                 <div class="form-group cal-time-col">
-                    <label for="re-fin">Fin</label>
+                    <label for="re-fin">@L.T("Fin")</label>
                     <input id="re-fin" type="time" placeholder="10:00" value="@_fin" @oninput="e => _fin = e.Value?.ToString() ?? string.Empty" />
                 </div>
             </div>
             <div class="form-group">
-                <label for="re-lieu">Lieu</label>
+                <label for="re-lieu">@L.T("Lieu")</label>
                 <input id="re-lieu" type="text" value="@_lieu" @oninput="e => _lieu = e.Value?.ToString() ?? string.Empty" />
             </div>
             <div class="form-group">
-                <label>Participants</label>
+                <label>@L.T("Participants")</label>
                 <div class="search-box cal-search cal-opt-search">
                     <span class="search-icon" aria-hidden="true">&#128269;</span>
-                    <input type="search" placeholder="Écrire pour chercher un membre…" aria-label="Chercher un membre"
+                    <input type="search" placeholder="@L.T("Écrire pour chercher un membre…")" aria-label="@L.T("Chercher un membre")"
                            value="@_participantSearch" @oninput="e => _participantSearch = e.Value?.ToString() ?? string.Empty" />
                 </div>
                 <div class="check-group">
@@ -142,25 +142,25 @@ else
                     }
                     @if (FilteredParticipants.Count == 0)
                     {
-                        <div class="cal-no-events">Aucun membre trouvé pour « @_participantSearch ».</div>
+                        <div class="cal-no-events">@L.F("Aucun membre trouvé pour « {0} ».", _participantSearch)</div>
                     }
                 </div>
             </div>
             <div class="form-group">
-                <label for="re-cr">Compte rendu</label>
+                <label for="re-cr">@L.T("Compte rendu")</label>
                 <textarea id="re-cr" rows="3" value="@_cr" @oninput="e => _cr = e.Value?.ToString() ?? string.Empty"></textarea>
             </div>
             <span class="form-error">@_error</span>
         </ChildContent>
         <FooterContent>
-            <button class="btn btn-secondary" @onclick="CloseEditor">Annuler</button>
-            <button class="btn btn-primary" @onclick="Save">Enregistrer</button>
+            <button class="btn btn-secondary" @onclick="CloseEditor">@L.T("Annuler")</button>
+            <button class="btn btn-primary" @onclick="Save">@L.T("Enregistrer")</button>
         </FooterContent>
     </Modal>
 
-    <ConfirmDialog Show="_deleteTarget != null" Title="Supprimer la réunion"
-                   Message="@(_deleteTarget == null ? "" : "Supprimer « " + _deleteTarget.Titre + " » et sa feuille de présence ?")"
-                   ConfirmLabel="Supprimer" Danger="true" OnConfirm="ConfirmDelete" OnCancel="() => _deleteTarget = null" />
+    <ConfirmDialog Show="_deleteTarget != null" Title="@L.T("Supprimer la réunion")"
+                   Message="@(_deleteTarget == null ? "" : L.F("Supprimer « {0} » et sa feuille de présence ?", _deleteTarget.Titre))"
+                   ConfirmLabel="@L.T("Supprimer")" Danger="true" OnConfirm="ConfirmDelete" OnCancel="() => _deleteTarget = null" />
 }
 
 @code {
@@ -274,7 +274,7 @@ else
         _error = "";
         if (string.IsNullOrWhiteSpace(_dateIso))
         {
-            _error = "La date est obligatoire (JJ/MM/AAAA).";
+            _error = L.T("La date est obligatoire (JJ/MM/AAAA).");
             return;
         }
         var draft = new Reunion
@@ -289,7 +289,7 @@ else
         };
         OperationResult res = _editId == null ? Store.AddReunion(draft) : Store.UpdateReunion(_editId, draft);
         if (!res.Success) { _error = res.Error; return; }
-        State.NotifySuccess(_editId == null ? "Réunion créée." : "Réunion enregistrée.");
+        State.NotifySuccess(_editId == null ? L.T("Réunion créée.") : L.T("Réunion enregistrée."));
         _showEditor = false;
         if (_editId != null) _selected = Store.Reunions.FirstOrDefault(r => r.Id == _editId);
     }
@@ -324,7 +324,7 @@ else
             Lieu = r.Lieu,
             PersonnesConcernees = r.Participants.ToList()
         });
-        if (res.Success) State.NotifySuccess("Événement ajouté au calendrier.");
+        if (res.Success) State.NotifySuccess(L.T("Événement ajouté au calendrier."));
         else State.NotifyError(res.Error);
     }
 
@@ -339,7 +339,7 @@ else
         if (res.Success)
         {
             if (_selected?.Id == t.Id) _selected = null;
-            State.NotifySuccess("Réunion supprimée.");
+            State.NotifySuccess(L.T("Réunion supprimée."));
         }
         else State.NotifyError(res.Error);
     }

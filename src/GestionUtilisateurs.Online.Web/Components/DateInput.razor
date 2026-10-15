@@ -1,21 +1,21 @@
 @* Saisie de date en français (jour / mois / année), indépendante de la locale du navigateur. *@
 <div class="date-fr @(Disabled ? "is-disabled" : "")">
-    <select id="@Id" class="date-fr-part date-fr-day" aria-label="Jour" value="@(_day == 0 ? "" : _day.ToString())" disabled="@Disabled" @onchange="OnDayChanged">
-        <option value="">Jour</option>
+    <select id="@Id" class="date-fr-part date-fr-day" aria-label="@L.T("Jour")" value="@(_day == 0 ? "" : _day.ToString())" disabled="@Disabled" @onchange="OnDayChanged">
+        <option value="">@L.T("Jour")</option>
         @for (var d = 1; d <= DaysInMonth; d++)
         {
             <option value="@d">@d.ToString("00")</option>
         }
     </select>
-    <select class="date-fr-part date-fr-month" aria-label="Mois" value="@(_month == 0 ? "" : _month.ToString())" disabled="@Disabled" @onchange="OnMonthChanged">
-        <option value="">Mois</option>
+    <select class="date-fr-part date-fr-month" aria-label="@L.T("Mois")" value="@(_month == 0 ? "" : _month.ToString())" disabled="@Disabled" @onchange="OnMonthChanged">
+        <option value="">@L.T("Mois")</option>
         @for (var m = 1; m <= 12; m++)
         {
-            <option value="@m">@Months[m - 1]</option>
+            <option value="@m">@L.Mois(m)</option>
         }
     </select>
-    <select class="date-fr-part date-fr-year" aria-label="Année" value="@(_year == 0 ? "" : _year.ToString())" disabled="@Disabled" @onchange="OnYearChanged">
-        <option value="">Année</option>
+    <select class="date-fr-part date-fr-year" aria-label="@L.T("Année")" value="@(_year == 0 ? "" : _year.ToString())" disabled="@Disabled" @onchange="OnYearChanged">
+        <option value="">@L.T("Année")</option>
         @for (var y = MaxYear; y >= MinYear; y--)
         {
             <option value="@y">@y</option>
@@ -31,12 +31,6 @@
     [Parameter] public string? Id { get; set; }
     [Parameter] public int MinYear { get; set; } = 1900;
     [Parameter] public int MaxYear { get; set; } = DateTime.Now.Year + 10;
-
-    private static readonly string[] Months =
-    {
-        "janvier", "février", "mars", "avril", "mai", "juin",
-        "juillet", "août", "septembre", "octobre", "novembre", "décembre"
-    };
 
     private int _day, _month, _year;
     private string _lastValue = "";

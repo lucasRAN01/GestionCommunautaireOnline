@@ -5,104 +5,104 @@
 @inject JavascriptBridge Js
 
 <div class="page-head">
-    <p>@(string.IsNullOrWhiteSpace(Store.Community.SousTitre) ? "Le récit vivant de notre communauté, chapitre par chapitre." : Store.Community.SousTitre)</p>
+    <p>@(string.IsNullOrWhiteSpace(Store.Community.SousTitre) ? L.T("Le récit vivant de notre communauté, chapitre par chapitre.") : Store.Community.SousTitre)</p>
 </div>
 
 <div class="search-box cal-search">
     <span class="search-icon" aria-hidden="true">&#128269;</span>
-    <input type="search" placeholder="Rechercher dans l'histoire (chapitre, texte)…" aria-label="Rechercher un chapitre"
+    <input type="search" placeholder="@L.T("Rechercher dans l'histoire (chapitre, texte)…")" aria-label="@L.T("Rechercher un chapitre")"
            value="@_search" @oninput="OnSearch" />
 </div>
 @if (!string.IsNullOrWhiteSpace(_search))
 {
-    <div class="search-summary">@SearchResults.Count chapitre(s) trouvé(s) pour « @_search.Trim() »</div>
+    <div class="search-summary">@L.F("{0} chapitre(s) trouvé(s) pour « {1} »", SearchResults.Count, _search.Trim())</div>
 }
 
 @if (_editing && CanEdit)
 {
     <div class="card" style="margin-bottom:12px">
-        <h3>Histoire de la communauté</h3>
+        <h3>@L.T("Histoire de la communauté")</h3>
         <div class="form-group">
-            <label for="cm-titre">Titre *</label>
+            <label for="cm-titre">@L.T("Titre *")</label>
             <input id="cm-titre" type="text" value="@_storyTitre" @oninput="e => _storyTitre = e.Value?.ToString() ?? string.Empty" />
         </div>
         <div class="form-group">
-            <label for="cm-soustitre">Sous-titre</label>
+            <label for="cm-soustitre">@L.T("Sous-titre")</label>
             <input id="cm-soustitre" type="text" value="@_storySousTitre" @oninput="e => _storySousTitre = e.Value?.ToString() ?? string.Empty" />
         </div>
         <div class="form-actions">
-            <button class="btn btn-secondary" @onclick="CancelStory">Annuler</button>
-            <button class="btn btn-primary" @onclick="SaveStory">Enregistrer</button>
+            <button class="btn btn-secondary" @onclick="CancelStory">@L.T("Annuler")</button>
+            <button class="btn btn-primary" @onclick="SaveStory">@L.T("Enregistrer")</button>
         </div>
     </div>
 
     <div class="card" style="margin-bottom:12px">
-        <h3>@(_chapterId == null ? "Ajouter un chapitre" : "Modifier le chapitre")</h3>
+        <h3>@(_chapterId == null ? L.T("Ajouter un chapitre") : L.T("Modifier le chapitre"))</h3>
         <div class="form-group">
-            <label for="cm-ch-titre">Titre du chapitre *</label>
-            <input id="cm-ch-titre" type="text" placeholder="Ex : La fondation" value="@_cTitre" @oninput="e => _cTitre = e.Value?.ToString() ?? string.Empty" />
+            <label for="cm-ch-titre">@L.T("Titre du chapitre *")</label>
+            <input id="cm-ch-titre" type="text" placeholder="@L.T("Ex : La fondation")" value="@_cTitre" @oninput="e => _cTitre = e.Value?.ToString() ?? string.Empty" />
         </div>
         <div class="form-group">
-            <label for="cm-ch-date">Date</label>
+            <label for="cm-ch-date">@L.T("Date")</label>
             <DateInput Id="cm-ch-date" Value="@_cDateIso" ValueChanged="@(v => _cDateIso = v)" />
-            <span class="field-hint">Affichée au format JJ/MM/AAAA.</span>
+            <span class="field-hint">@L.T("Affichée au format JJ/MM/AAAA.")</span>
         </div>
         <div class="form-group">
-            <label for="cm-ch-texte">Récit</label>
-            <textarea id="cm-ch-texte" rows="4" placeholder="Racontez ce moment de la communauté…" value="@_cTexte" @oninput="e => _cTexte = e.Value?.ToString() ?? string.Empty"></textarea>
+            <label for="cm-ch-texte">@L.T("Récit")</label>
+            <textarea id="cm-ch-texte" rows="4" placeholder="@L.T("Racontez ce moment de la communauté…")" value="@_cTexte" @oninput="e => _cTexte = e.Value?.ToString() ?? string.Empty"></textarea>
         </div>
         <div class="form-group">
-            <label>Image (facultatif, max 5 Mo)</label>
+            <label>@L.T("Image (facultatif, max 5 Mo)")</label>
             <div class="photo-control">
                 @if (!string.IsNullOrWhiteSpace(_cImage))
                 {
-                    <img class="settings-logo-preview" src="@_cImage" alt="Illustration du chapitre" />
+                    <img class="settings-logo-preview" src="@_cImage" alt="@L.T("Illustration du chapitre")" />
                 }
                 else
                 {
-                    <div class="photo-placeholder">Aucune image</div>
+                    <div class="photo-placeholder">@L.T("Aucune image")</div>
                 }
                 <div class="photo-actions">
-                    <button type="button" class="btn btn-secondary btn-sm" @onclick="PickChapterImage">🖼 Choisir</button>
-                    <button type="button" class="btn btn-secondary btn-sm" @onclick="CaptureChapterImage">📷 Photo</button>
+                    <button type="button" class="btn btn-secondary btn-sm" @onclick="PickChapterImage">🖼 @L.T("Choisir")</button>
+                    <button type="button" class="btn btn-secondary btn-sm" @onclick="CaptureChapterImage">📷 @L.T("Photo")</button>
                     @if (!string.IsNullOrWhiteSpace(_cImage))
                     {
-                        <button type="button" class="btn btn-secondary btn-sm" @onclick="() => _cImage = string.Empty">Retirer</button>
+                        <button type="button" class="btn btn-secondary btn-sm" @onclick="() => _cImage = string.Empty">@L.T("Retirer")</button>
                     }
                 </div>
             </div>
         </div>
         <span class="form-error">@_chapterError</span>
         <div class="form-actions">
-            <button class="btn btn-secondary" @onclick="CancelChapter">Annuler</button>
-            <button class="btn btn-primary" @onclick="SaveChapter">@(_chapterId == null ? "Ajouter" : "Enregistrer")</button>
+            <button class="btn btn-secondary" @onclick="CancelChapter">@L.T("Annuler")</button>
+            <button class="btn btn-primary" @onclick="SaveChapter">@(_chapterId == null ? L.T("Ajouter") : L.T("Enregistrer"))</button>
         </div>
     </div>
 }
 
 <div class="inline-actions" style="justify-content:space-between;margin-bottom:10px">
-    <p class="user-count">@Store.Community.Chapitres.Count chapitre(s)</p>
+    <p class="user-count">@L.F("{0} chapitre(s)", Store.Community.Chapitres.Count)</p>
     <div class="inline-actions">
         @if (CanEdit)
         {
-            <button class="btn btn-secondary btn-sm" @onclick="ToggleEdit">@(_editing ? "👁 Voir" : "✏️ Modifier")</button>
+            <button class="btn btn-secondary btn-sm" @onclick="ToggleEdit">@(_editing ? "👁 " + L.T("Voir") : "✏️ " + L.T("Modifier"))</button>
         }
         @if (!_editing && Store.Community.Chapitres.Count > 1)
         {
-            <button class="btn btn-secondary btn-sm" @onclick="Prev" disabled="@(_index <= 0)">‹ Préc.</button>
-            <button class="btn btn-secondary btn-sm" @onclick="Next" disabled="@(_index >= Store.Community.Chapitres.Count - 1)">Suiv. ›</button>
+            <button class="btn btn-secondary btn-sm" @onclick="Prev" disabled="@(_index <= 0)">‹ @L.T("Préc.")</button>
+            <button class="btn btn-secondary btn-sm" @onclick="Next" disabled="@(_index >= Store.Community.Chapitres.Count - 1)">@L.T("Suiv.") ›</button>
         }
     </div>
 </div>
 
 @if (CanEdit)
 {
-    <button class="fab" aria-label="Ajouter un chapitre" @onclick="FabAddChapter">+</button>
+    <button class="fab" aria-label="@L.T("Ajouter un chapitre")" @onclick="FabAddChapter">+</button>
 }
 
 @if (Store.Community.Chapitres.Count == 0)
 {
-    <EmptyState Icon="📖" Title="Histoire à écrire" Message="@(CanEdit ? "Ajoutez le premier chapitre avec le mode Modifier." : "La communauté n'a pas encore raconté son histoire.")" />
+    <EmptyState Icon="📖" Title="@L.T("Histoire à écrire")" Message="@(CanEdit ? L.T("Ajoutez le premier chapitre avec le mode Modifier.") : L.T("La communauté n'a pas encore raconté son histoire."))" />
 }
 else if (_editing && CanEdit)
 {
@@ -125,10 +125,10 @@ else if (_editing && CanEdit)
                         <img class="community-img" src="@c.Image" alt="@c.Titre" loading="lazy" />
                     }
                     <div class="community-actions">
-                        <button class="btn-icon" aria-label="Monter" disabled="@(idx == 0)" @onclick="() => Move(c.Id, -1)">↑</button>
-                        <button class="btn-icon" aria-label="Descendre" disabled="@(idx == Store.Community.Chapitres.Count - 1)" @onclick="() => Move(c.Id, 1)">↓</button>
-                        <button class="btn btn-secondary btn-sm" @onclick="() => StartEditChapter(c)">Modifier</button>
-                        <button class="btn-icon danger" aria-label="Supprimer" @onclick="() => AskDelete(c)">🗑</button>
+                        <button class="btn-icon" aria-label="@L.T("Monter")" disabled="@(idx == 0)" @onclick="() => Move(c.Id, -1)">↑</button>
+                        <button class="btn-icon" aria-label="@L.T("Descendre")" disabled="@(idx == Store.Community.Chapitres.Count - 1)" @onclick="() => Move(c.Id, 1)">↓</button>
+                        <button class="btn btn-secondary btn-sm" @onclick="() => StartEditChapter(c)">@L.T("Modifier")</button>
+                        <button class="btn-icon danger" aria-label="@L.T("Supprimer")" @onclick="() => AskDelete(c)">🗑</button>
                     </div>
                 </div>
             </div>
@@ -168,7 +168,7 @@ else
             <h3 class="community-title-lg">@current.Titre</h3>
             @if (!string.IsNullOrWhiteSpace(current.Image))
             {
-                <button type="button" class="community-img-btn" @onclick="() => _preview = current.Image" aria-label="Agrandir l'image">
+                <button type="button" class="community-img-btn" @onclick="() => _preview = current.Image" aria-label="@L.T("Agrandir l'image")">
                     <img class="community-img-lg" src="@current.Image" alt="@current.Titre" />
                 </button>
             }
@@ -177,12 +177,12 @@ else
                 @if (_expanded)
                 {
                     <div class="community-text-lg">@current.Texte</div>
-                    <button type="button" class="btn btn-secondary btn-sm" @onclick="() => _expanded = false">Réduire</button>
+                    <button type="button" class="btn btn-secondary btn-sm" @onclick="() => _expanded = false">@L.T("Réduire")</button>
                 }
                 else if (current.Texte.Length > 220)
                 {
                     <div class="community-text-lg">@current.Texte.Substring(0, 220)…</div>
-                    <button type="button" class="btn btn-secondary btn-sm" @onclick="() => _expanded = true">Lire la suite</button>
+                    <button type="button" class="btn btn-secondary btn-sm" @onclick="() => _expanded = true">@L.T("Lire la suite")</button>
                 }
                 else
                 {
@@ -194,21 +194,21 @@ else
             @for (var i = 0; i < chapters.Count; i++)
             {
                 var idx = i;
-                <button type="button" class="community-dot-btn @(idx == _index ? "active" : "")" aria-label="Chapitre @(idx + 1)" @onclick="() => GoTo(idx)">@(idx + 1)</button>
+                <button type="button" class="community-dot-btn @(idx == _index ? "active" : "")" aria-label="@L.F("Chapitre {0}", idx + 1)" @onclick="() => GoTo(idx)">@(idx + 1)</button>
             }
         </div>
     </div>
 }
 
-<ConfirmDialog Show="_deleteTarget != null" Title="Supprimer le chapitre"
-               Message="@(_deleteTarget == null ? "" : "Supprimer « " + _deleteTarget.Titre + " » de l'histoire ?")"
-               ConfirmLabel="Supprimer" Danger="true" OnConfirm="ConfirmDelete" OnCancel="() => _deleteTarget = null" />
+<ConfirmDialog Show="_deleteTarget != null" Title="@L.T("Supprimer le chapitre")"
+               Message="@(_deleteTarget == null ? "" : L.F("Supprimer « {0} » de l'histoire ?", _deleteTarget.Titre))"
+               ConfirmLabel="@L.T("Supprimer")" Danger="true" OnConfirm="ConfirmDelete" OnCancel="() => _deleteTarget = null" />
 
-<Modal Title="Illustration" Show="_preview != null" OnClose="() => _preview = null">
+<Modal Title="@L.T("Illustration")" Show="_preview != null" OnClose="() => _preview = null">
     @if (_preview != null)
     {
         <div class="image-viewer-wrap">
-            <img class="image-viewer-img" src="@_preview" alt="Illustration" />
+            <img class="image-viewer-img" src="@_preview" alt="@L.T("Illustration")" />
         </div>
     }
 </Modal>
@@ -254,7 +254,7 @@ else
     }
 
     private static string ChapterDateShort(CommunityChapter c)
-        => string.IsNullOrWhiteSpace(c.Date) ? "Date à venir" : DataStore.FormatDateCourte(c.Date);
+        => string.IsNullOrWhiteSpace(c.Date) ? L.T("Date à venir") : DataStore.FormatDateCourte(c.Date);
 
     private static string TruncateText(string s, int max)
     {
@@ -318,7 +318,7 @@ else
     {
         var res = Store.SaveCommunityStory(_storyTitre, _storySousTitre);
         if (!res.Success) State.NotifyError(res.Error);
-        else State.NotifySuccess("Histoire enregistrée.");
+        else State.NotifySuccess(L.T("Histoire enregistrée."));
     }
 
     private void CancelChapter()
@@ -365,7 +365,7 @@ else
         else
             res = Store.UpdateCommunityChapter(_chapterId, _cTitre, _cTexte, dateDisplay, string.IsNullOrWhiteSpace(_cImage) ? null : _cImage, string.IsNullOrWhiteSpace(_cImage));
         if (!res.Success) { _chapterError = res.Error; return; }
-        State.NotifySuccess(_chapterId == null ? "Chapitre ajouté." : "Chapitre enregistré.");
+        State.NotifySuccess(_chapterId == null ? L.T("Chapitre ajouté.") : L.T("Chapitre enregistré."));
         CancelChapter();
     }
 
@@ -377,7 +377,7 @@ else
         _deleteTarget = null;
         if (t == null) return;
         var res = Store.DeleteCommunityChapter(t.Id);
-        if (res.Success) State.NotifySuccess("Chapitre supprimé.");
+        if (res.Success) State.NotifySuccess(L.T("Chapitre supprimé."));
         else State.NotifyError(res.Error);
     }
 
@@ -410,7 +410,7 @@ else
 
     private static string ChapterDate(CommunityChapter c)
     {
-        if (string.IsNullOrWhiteSpace(c.Date)) return "Date à venir";
+        if (string.IsNullOrWhiteSpace(c.Date)) return L.T("Date à venir");
         var f = DataStore.FormatDateCourte(c.Date);
         return f == "—" ? c.Date : f;
     }

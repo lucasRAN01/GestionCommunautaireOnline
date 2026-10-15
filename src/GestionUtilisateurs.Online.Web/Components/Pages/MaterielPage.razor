@@ -4,35 +4,35 @@
 
 @if (!Store.Can(Permissions.MaterielManage))
 {
-    <EmptyState Icon="🔒" Title="Accès réservé" Message="Le matériel n'est pas autorisé pour votre rôle." />
+    <EmptyState Icon="🔒" Title="@L.T("Accès réservé")" Message="@L.T("Le matériel n'est pas autorisé pour votre rôle.")" />
 }
 else
 {
     <div class="page-head">
-        <p>Inventaire, stocks disponibles et prêts aux membres.</p>
+        <p>@L.T("Inventaire, stocks disponibles et prêts aux membres.")</p>
     </div>
 
     <div class="search-box cal-search">
         <span class="search-icon" aria-hidden="true">&#128269;</span>
-        <input type="search" placeholder="Rechercher un matériel (nom, catégorie, responsable, état)…" aria-label="Rechercher un matériel"
+        <input type="search" placeholder="@L.T("Rechercher un matériel (nom, catégorie, responsable, état)…")" aria-label="@L.T("Rechercher un matériel")"
                value="@_search" @oninput="OnSearch" />
     </div>
     @if (!string.IsNullOrWhiteSpace(_search))
     {
-        <div class="search-summary">@FilteredMateriels.Count matériel(s) trouvé(s) pour « @_search.Trim() »</div>
+        <div class="search-summary">@L.F("{0} matériel(s) trouvé(s) pour « {1} »", FilteredMateriels.Count, _search.Trim())</div>
     }
 
     <div class="inline-actions" style="justify-content:flex-end;margin-bottom:10px">
-        <button class="btn btn-secondary btn-sm" @onclick="StartAdd">＋ Matériel</button>
+        <button class="btn btn-secondary btn-sm" @onclick="StartAdd">＋ @L.T("Matériel")</button>
     </div>
 
     @if (Store.Materiels.Count == 0)
     {
-        <EmptyState Icon="🧰" Title="Aucun matériel" Message="Ajoutez le premier équipement à l'inventaire." />
+        <EmptyState Icon="🧰" Title="@L.T("Aucun matériel")" Message="@L.T("Ajoutez le premier équipement à l'inventaire.")" />
     }
     else if (FilteredMateriels.Count == 0)
     {
-        <EmptyState Icon="🧰" Title="Aucun résultat" Message="Aucun matériel ne correspond à cette recherche." />
+        <EmptyState Icon="🧰" Title="@L.T("Aucun résultat")" Message="@L.T("Aucun matériel ne correspond à cette recherche.")" />
     }
     else
     {
@@ -46,15 +46,15 @@ else
                     <span class="field-type-icon" aria-hidden="true">🧰</span>
                     <div class="user-card-main">
                         <div class="user-card-name">@mat.Nom</div>
-                        <div class="user-card-sub">@(string.IsNullOrWhiteSpace(mat.Categorie) ? "Sans catégorie" : mat.Categorie) · @dispo / @mat.QuantiteTotale disponible(s)</div>
+                        <div class="user-card-sub">@(string.IsNullOrWhiteSpace(mat.Categorie) ? L.T("Sans catégorie") : mat.Categorie) · @L.F("{0} / {1} disponible(s)", dispo, mat.QuantiteTotale)</div>
                         <div class="user-card-meta">
                             <Badge Text="@MaterielEtats.Label(mat.Etat)" Kind="@(mat.Etat == MaterielEtats.Bon ? "active" : "recent")" />
-                            @if (actifs.Count > 0) { <Badge Text="@(actifs.Count + " prêt(s)")" Kind="role" /> }
+                            @if (actifs.Count > 0) { <Badge Text="@L.F("{0} prêt(s)", actifs.Count)" Kind="role" /> }
                         </div>
                     </div>
                     <div class="user-card-actions" @onclick:stopPropagation="true">
-                        <button class="btn-icon" aria-label="Modifier" @onclick="() => StartEdit(mat)">✎</button>
-                        <button class="btn-icon danger" aria-label="Supprimer" @onclick="() => AskDelete(mat)">🗑</button>
+                        <button class="btn-icon" aria-label="@L.T("Modifier")" @onclick="() => StartEdit(mat)">✎</button>
+                        <button class="btn-icon danger" aria-label="@L.T("Supprimer")" @onclick="() => AskDelete(mat)">🗑</button>
                     </div>
                 </div>
             }
@@ -68,21 +68,21 @@ else
         var passes = Store.Prets.Where(p => p.MaterielId == mat.Id && !string.IsNullOrWhiteSpace(p.DateRetour)).OrderByDescending(p => p.DateRetour).Take(10).ToList();
         <div class="card" style="margin-top:12px">
             <div class="inline-actions" style="justify-content:space-between">
-                <h3 style="margin:0">@mat.Nom — @Store.DisponibleMateriel(mat.Id) / @mat.QuantiteTotale disponible(s)</h3>
-                <button class="btn btn-secondary btn-sm" @onclick="() => _selected = null">Réduire</button>
+                <h3 style="margin:0">@mat.Nom — @L.F("{0} / {1} disponible(s)", Store.DisponibleMateriel(mat.Id), mat.QuantiteTotale)</h3>
+                <button class="btn btn-secondary btn-sm" @onclick="() => _selected = null">@L.T("Réduire")</button>
             </div>
             @if (!string.IsNullOrWhiteSpace(mat.Description))
             {
                 <p class="muted" style="margin-top:0">@mat.Description</p>
             }
-            <div class="storage-line"><span>État</span><strong>@MaterielEtats.Label(mat.Etat)</strong></div>
-            <div class="storage-line"><span>Responsable</span><strong>@(string.IsNullOrWhiteSpace(mat.Responsable) ? "—" : MemberName(mat.Responsable))</strong></div>
+            <div class="storage-line"><span>@L.T("État")</span><strong>@MaterielEtats.Label(mat.Etat)</strong></div>
+            <div class="storage-line"><span>@L.T("Responsable")</span><strong>@(string.IsNullOrWhiteSpace(mat.Responsable) ? "—" : MemberName(mat.Responsable))</strong></div>
             <div class="form-actions" style="margin:10px 0">
-                <button class="btn btn-primary btn-sm" @onclick="StartLoan" disabled="@(Store.DisponibleMateriel(mat.Id) <= 0)">⤓ Prêter</button>
+                <button class="btn btn-primary btn-sm" @onclick="StartLoan" disabled="@(Store.DisponibleMateriel(mat.Id) <= 0)">⤓ @L.T("Prêter")</button>
             </div>
             @if (actifs.Count == 0)
             {
-                <p class="muted">Aucun prêt actif.</p>
+                <p class="muted">@L.T("Aucun prêt actif.")</p>
             }
             else
             {
@@ -90,14 +90,14 @@ else
                 {
                     var pret = p;
                     <div class="kv-row">
-                        <span class="kv-label">×@pret.Quantite → @MemberName(pret.MembreIdentifiant)<br /><span class="text-muted" style="font-size:12px">depuis le @DataStore.FormatDateCourte(pret.DatePret)</span></span>
-                        <span class="kv-value"><button class="btn btn-secondary btn-sm" @onclick="() => Return(pret.Id)">↩ Retour</button></span>
+                        <span class="kv-label">×@pret.Quantite → @MemberName(pret.MembreIdentifiant)<br /><span class="text-muted" style="font-size:12px">@L.F("depuis le {0}", DataStore.FormatDateCourte(pret.DatePret))</span></span>
+                        <span class="kv-value"><button class="btn btn-secondary btn-sm" @onclick="() => Return(pret.Id)">↩ @L.T("Retour")</button></span>
                     </div>
                 }
             }
             @if (passes.Count > 0)
             {
-                <div class="divider-section">Derniers retours</div>
+                <div class="divider-section">@L.T("Derniers retours")</div>
                 @foreach (var p in passes)
                 {
                     <div class="storage-line"><span>×@p.Quantite → @MemberName(p.MembreIdentifiant)</span><strong>@DataStore.FormatDateCourte(p.DateRetour)</strong></div>
@@ -106,67 +106,67 @@ else
         </div>
     }
 
-    <button class="fab" aria-label="Ajouter un matériel" @onclick="StartAdd">+</button>
+    <button class="fab" aria-label="@L.T("Ajouter un matériel")" @onclick="StartAdd">+</button>
 
-    <Modal Title="@(_editId == null ? "Nouveau matériel" : "Modifier le matériel")" Show="_showEditor" OnClose="CloseEditor">
+    <Modal Title="@(_editId == null ? L.T("Nouveau matériel") : L.T("Modifier le matériel"))" Show="_showEditor" OnClose="CloseEditor">
         <ChildContent>
             <div class="form-group">
-                <label for="ma-nom">Nom *</label>
+                <label for="ma-nom">@L.T("Nom *")</label>
                 <input id="ma-nom" type="text" value="@_nom" @oninput="e => _nom = e.Value?.ToString() ?? string.Empty" />
             </div>
             <div class="form-group">
-                <label for="ma-desc">Description</label>
+                <label for="ma-desc">@L.T("Description")</label>
                 <textarea id="ma-desc" rows="2" value="@_desc" @oninput="e => _desc = e.Value?.ToString() ?? string.Empty"></textarea>
             </div>
             <div class="form-group">
-                <label for="ma-cat">Catégorie</label>
-                <input id="ma-cat" type="text" placeholder="Ex : Sonorisation" value="@_cat" @oninput="e => _cat = e.Value?.ToString() ?? string.Empty" />
+                <label for="ma-cat">@L.T("Catégorie")</label>
+                <input id="ma-cat" type="text" placeholder="@L.T("Ex : Sonorisation")" value="@_cat" @oninput="e => _cat = e.Value?.ToString() ?? string.Empty" />
             </div>
             <div class="form-group">
-                <label for="ma-qte">Quantité totale *</label>
+                <label for="ma-qte">@L.T("Quantité totale *")</label>
                 <input id="ma-qte" type="text" inputmode="numeric" value="@_qte" @oninput="e => _qte = e.Value?.ToString() ?? string.Empty" />
             </div>
             <div class="form-group">
-                <label for="ma-etat">État</label>
+                <label for="ma-etat">@L.T("État")</label>
                 <select id="ma-etat" value="@_etat" @onchange="e => _etat = e.Value?.ToString() ?? MaterielEtats.Bon">
-                    <option value="@MaterielEtats.Bon">Bon</option>
-                    <option value="@MaterielEtats.Moyen">Moyen</option>
-                    <option value="@MaterielEtats.HorsService">Hors service</option>
+                    <option value="@MaterielEtats.Bon">@L.T("Bon")</option>
+                    <option value="@MaterielEtats.Moyen">@L.T("Moyen")</option>
+                    <option value="@MaterielEtats.HorsService">@L.T("Hors service")</option>
                 </select>
             </div>
             <div class="form-group">
-                <label>Responsable (facultatif)</label>
-                <MemberPicker Value="@_resp" ValueChanged="@((string v) => _resp = v)" AllowEmpty="true" Placeholder="Écrire pour chercher un membre…" />
+                <label>@L.T("Responsable (facultatif)")</label>
+                <MemberPicker Value="@_resp" ValueChanged="@((string v) => _resp = v)" AllowEmpty="true" Placeholder="@L.T("Écrire pour chercher un membre…")" />
             </div>
             <span class="form-error">@_error</span>
         </ChildContent>
         <FooterContent>
-            <button class="btn btn-secondary" @onclick="CloseEditor">Annuler</button>
-            <button class="btn btn-primary" @onclick="Save">Enregistrer</button>
+            <button class="btn btn-secondary" @onclick="CloseEditor">@L.T("Annuler")</button>
+            <button class="btn btn-primary" @onclick="Save">@L.T("Enregistrer")</button>
         </FooterContent>
     </Modal>
 
-    <Modal Title="Prêter du matériel" Show="_showLoan" OnClose="() => _showLoan = false">
+    <Modal Title="@L.T("Prêter du matériel")" Show="_showLoan" OnClose="() => _showLoan = false">
         <ChildContent>
             <div class="form-group">
-                <label>Membre *</label>
-                <MemberPicker Value="@_loanMembre" ValueChanged="@((string v) => _loanMembre = v)" Placeholder="Écrire pour chercher un membre…" />
+                <label>@L.T("Membre *")</label>
+                <MemberPicker Value="@_loanMembre" ValueChanged="@((string v) => _loanMembre = v)" Placeholder="@L.T("Écrire pour chercher un membre…")" />
             </div>
             <div class="form-group">
-                <label for="ma-loan-qte">Quantité * (max @_loanMax)</label>
+                <label for="ma-loan-qte">@L.F("Quantité * (max {0})", _loanMax)</label>
                 <input id="ma-loan-qte" type="text" inputmode="numeric" value="@_loanQte" @oninput="e => _loanQte = e.Value?.ToString() ?? string.Empty" />
             </div>
             <span class="form-error">@_loanError</span>
         </ChildContent>
         <FooterContent>
-            <button class="btn btn-secondary" @onclick="() => _showLoan = false">Annuler</button>
-            <button class="btn btn-primary" @onclick="SaveLoan">Prêter</button>
+            <button class="btn btn-secondary" @onclick="() => _showLoan = false">@L.T("Annuler")</button>
+            <button class="btn btn-primary" @onclick="SaveLoan">@L.T("Prêter")</button>
         </FooterContent>
     </Modal>
 
-    <ConfirmDialog Show="_deleteTarget != null" Title="Supprimer le matériel"
-                   Message="@(_deleteTarget == null ? "" : "Supprimer « " + _deleteTarget.Nom + " » et son historique de prêts ?")"
-                   ConfirmLabel="Supprimer" Danger="true" OnConfirm="ConfirmDelete" OnCancel="() => _deleteTarget = null" />
+    <ConfirmDialog Show="_deleteTarget != null" Title="@L.T("Supprimer le matériel")"
+                   Message="@(_deleteTarget == null ? "" : L.F("Supprimer « {0} » et son historique de prêts ?", _deleteTarget.Nom))"
+                   ConfirmLabel="@L.T("Supprimer")" Danger="true" OnConfirm="ConfirmDelete" OnCancel="() => _deleteTarget = null" />
 }
 
 @code {
@@ -252,12 +252,12 @@ else
     {
         _error = "";
         var qte = ParseQte(_qte);
-        if (qte < 1) { _error = "Quantité invalide."; return; }
+        if (qte < 1) { _error = L.T("Quantité invalide."); return; }
         OperationResult res = _editId == null
             ? Store.AddMateriel(new Materiel { Nom = _nom, Description = _desc, Categorie = _cat, QuantiteTotale = qte, Etat = _etat, Responsable = _resp })
             : Store.UpdateMateriel(_editId, new Materiel { Nom = _nom, Description = _desc, Categorie = _cat, QuantiteTotale = qte, Etat = _etat, Responsable = _resp });
         if (!res.Success) { _error = res.Error; return; }
-        State.NotifySuccess(_editId == null ? "Matériel ajouté." : "Matériel enregistré.");
+        State.NotifySuccess(_editId == null ? L.T("Matériel ajouté.") : L.T("Matériel enregistré."));
         _showEditor = false;
         if (_editId != null && _selected?.Id == _editId) _selected = Store.FindMateriel(_editId);
     }
@@ -273,7 +273,7 @@ else
         if (res.Success)
         {
             if (_selected?.Id == t.Id) _selected = null;
-            State.NotifySuccess("Matériel supprimé.");
+            State.NotifySuccess(L.T("Matériel supprimé."));
         }
         else State.NotifyError(res.Error);
     }
@@ -292,19 +292,19 @@ else
     {
         _loanError = "";
         if (_selected == null) return;
-        if (string.IsNullOrWhiteSpace(_loanMembre)) { _loanError = "Choisissez un membre."; return; }
+        if (string.IsNullOrWhiteSpace(_loanMembre)) { _loanError = L.T("Choisissez un membre."); return; }
         var qte = ParseQte(_loanQte);
-        if (qte < 1) { _loanError = "Quantité invalide."; return; }
+        if (qte < 1) { _loanError = L.T("Quantité invalide."); return; }
         var res = Store.AddPret(_selected.Id, _loanMembre, qte);
         if (!res.Success) { _loanError = res.Error; return; }
-        State.NotifySuccess("Prêt enregistré.");
+        State.NotifySuccess(L.T("Prêt enregistré."));
         _showLoan = false;
     }
 
     private void Return(string pretId)
     {
         var res = Store.ReturnPret(pretId);
-        if (res.Success) State.NotifySuccess("Retour enregistré.");
+        if (res.Success) State.NotifySuccess(L.T("Retour enregistré."));
         else State.NotifyError(res.Error);
     }
 

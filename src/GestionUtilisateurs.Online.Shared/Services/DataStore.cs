@@ -455,10 +455,10 @@ var usersNormalized = false;
             PasswordCipher.Verify(u.MotDePasse, password));
 
         if (user == null)
-            return OperationResult.Fail("Identifiant ou mot de passe incorrect.");
+            return OperationResult.Fail(L.T("Identifiant ou mot de passe incorrect."));
 
         if (!user.Actif)
-            return OperationResult.Fail("Ce compte est inactif. Contactez un administrateur.");
+            return OperationResult.Fail(L.T("Ce compte est inactif. Contactez un administrateur."));
 
         _session = new SessionInfo
         {
@@ -584,9 +584,9 @@ var usersNormalized = false;
     public OperationResult SaveManagedDataJson(string key, string json)
     {
         if (!IsBaseAdmin)
-            return OperationResult.Fail("Seul le gestionnaire de la base peut modifier directement ces données.");
+            return OperationResult.Fail(L.T("Seul le gestionnaire de la base peut modifier directement ces données."));
         if (string.IsNullOrWhiteSpace(json))
-            return OperationResult.Fail("La donnée JSON ne peut pas être vide.");
+            return OperationResult.Fail(L.T("La donnée JSON ne peut pas être vide."));
 
         try
         {
@@ -595,7 +595,7 @@ var usersNormalized = false;
                 case "users":
                 {
                     var users = Deserialize<List<UserAccount>>(json);
-                    if (users == null) return OperationResult.Fail("La liste des utilisateurs est invalide.");
+                    if (users == null) return OperationResult.Fail(L.T("La liste des utilisateurs est invalide."));
                     var identifiers = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
                     var ids = new HashSet<string>(StringComparer.Ordinal);
                     var matricules = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -613,11 +613,11 @@ var usersNormalized = false;
                         if (string.IsNullOrWhiteSpace(user.Signature)) user.Signature = null;
                         user.Champs ??= new Dictionary<string, FieldValue>();
                         if (string.IsNullOrWhiteSpace(user.Prenom) || string.IsNullOrWhiteSpace(user.Nom) || string.IsNullOrWhiteSpace(user.Identifiant))
-                            return OperationResult.Fail("Chaque utilisateur doit avoir un prénom, un nom et un identifiant.");
+                            return OperationResult.Fail(L.T("Chaque utilisateur doit avoir un prénom, un nom et un identifiant."));
                         if (!ids.Add(user.Id) || !identifiers.Add(user.Identifiant))
-                            return OperationResult.Fail("Les identifiants techniques et les identifiants de connexion doivent être uniques.");
+                            return OperationResult.Fail(L.T("Les identifiants techniques et les identifiants de connexion doivent être uniques."));
                         if (user.Matricule.Length > 0 && !matricules.Add(user.Matricule))
-                            return OperationResult.Fail("Les matricules doivent être uniques (« " + user.Matricule + " » en double).");
+                            return OperationResult.Fail(L.F("Les matricules doivent être uniques (« {0} » en double).", user.Matricule));
                         if (string.IsNullOrWhiteSpace(user.DateCreation)) user.DateCreation = DateTimeOffset.Now.ToString("O");
                     }
                     _users.Clear();
@@ -628,13 +628,13 @@ var usersNormalized = false;
                 case "fields":
                 {
                     var fields = Deserialize<List<FieldDefinition>>(json);
-                    if (fields == null) return OperationResult.Fail("La liste des champs est invalide.");
+                    if (fields == null) return OperationResult.Fail(L.T("La liste des champs est invalide."));
                     foreach (var field in fields)
                     {
                         field.Id = string.IsNullOrWhiteSpace(field.Id) ? Guid.NewGuid().ToString("N") : field.Id.Trim();
                         field.Label = (field.Label ?? "").Trim();
                         field.Options ??= new List<string>();
-                        if (string.IsNullOrWhiteSpace(field.Label)) return OperationResult.Fail("Chaque champ doit avoir un libellé.");
+                        if (string.IsNullOrWhiteSpace(field.Label)) return OperationResult.Fail(L.T("Chaque champ doit avoir un libellé."));
                     }
                     _fields.Clear();
                     _fields.AddRange(fields);
@@ -644,7 +644,7 @@ var usersNormalized = false;
                 case "activity":
                 {
                     var activity = Deserialize<List<ActivityEntry>>(json);
-                    if (activity == null) return OperationResult.Fail("Le journal est invalide.");
+                    if (activity == null) return OperationResult.Fail(L.T("Le journal est invalide."));
                     foreach (var entry in activity)
                     {
                         entry.Id = string.IsNullOrWhiteSpace(entry.Id) ? Guid.NewGuid().ToString("N") : entry.Id.Trim();
@@ -658,7 +658,7 @@ var usersNormalized = false;
                 case "archives":
                 {
                     var archive = Deserialize<List<ArchivedUser>>(json);
-                    if (archive == null) return OperationResult.Fail("Les archives sont invalides.");
+                    if (archive == null) return OperationResult.Fail(L.T("Les archives sont invalides."));
                     foreach (var item in archive)
                     {
                         item.User ??= new UserAccount();
@@ -675,7 +675,7 @@ var usersNormalized = false;
 case "settings":
                 {
                     var settings = Deserialize<AppSettings>(json);
-                    if (settings == null) return OperationResult.Fail("Les paramètres sont invalides.");
+                    if (settings == null) return OperationResult.Fail(L.T("Les paramètres sont invalides."));
                     settings.AppName = string.IsNullOrWhiteSpace(settings.AppName) ? "Gestion des utilisateurs" : settings.AppName.Trim();
                     settings.Theme = settings.Theme == "dark" ? "dark" : "light";
                     settings.Color = string.IsNullOrWhiteSpace(settings.Color) ? "#4f46e5" : settings.Color.Trim();
@@ -687,12 +687,12 @@ case "settings":
                 case "events":
                 {
                     var events = Deserialize<List<CalendarEvent>>(json);
-                    if (events == null) return OperationResult.Fail("La liste des événements est invalide.");
+                    if (events == null) return OperationResult.Fail(L.T("La liste des événements est invalide."));
                     foreach (var item in events)
                     {
                         item.Id = string.IsNullOrWhiteSpace(item.Id) ? Guid.NewGuid().ToString("N") : item.Id.Trim();
                         item.Titre = (item.Titre ?? "").Trim();
-                        if (string.IsNullOrWhiteSpace(item.Date)) return OperationResult.Fail("Chaque événement doit avoir une date.");
+                        if (string.IsNullOrWhiteSpace(item.Date)) return OperationResult.Fail(L.T("Chaque événement doit avoir une date."));
                     }
                     _events.Clear();
                     _events.AddRange(events);
@@ -702,13 +702,13 @@ case "settings":
                 case "documents":
                 {
                     var documents = Deserialize<List<DocumentItem>>(json);
-                    if (documents == null) return OperationResult.Fail("La liste des documents est invalide.");
+                    if (documents == null) return OperationResult.Fail(L.T("La liste des documents est invalide."));
                     foreach (var item in documents)
                     {
                         item.Id = string.IsNullOrWhiteSpace(item.Id) ? Guid.NewGuid().ToString("N") : item.Id.Trim();
                         item.Titre = (item.Titre ?? "").Trim();
                         item.Tags ??= new List<string>();
-                        if (string.IsNullOrWhiteSpace(item.Titre)) return OperationResult.Fail("Chaque document doit avoir un titre.");
+                        if (string.IsNullOrWhiteSpace(item.Titre)) return OperationResult.Fail(L.T("Chaque document doit avoir un titre."));
                     }
                     _documents.Clear();
                     _documents.AddRange(documents);
@@ -718,12 +718,12 @@ case "settings":
                 case "folders":
                 {
                     var folders = Deserialize<List<DocumentFolder>>(json);
-                    if (folders == null) return OperationResult.Fail("La liste des dossiers est invalide.");
+                    if (folders == null) return OperationResult.Fail(L.T("La liste des dossiers est invalide."));
                     foreach (var item in folders)
                     {
                         item.Id = string.IsNullOrWhiteSpace(item.Id) ? Guid.NewGuid().ToString("N") : item.Id.Trim();
                         item.Nom = (item.Nom ?? "").Trim();
-                        if (string.IsNullOrWhiteSpace(item.Nom)) return OperationResult.Fail("Chaque dossier doit avoir un nom.");
+                        if (string.IsNullOrWhiteSpace(item.Nom)) return OperationResult.Fail(L.T("Chaque dossier doit avoir un nom."));
                     }
                     _folders.Clear();
                     _folders.AddRange(folders);
@@ -733,7 +733,7 @@ case "settings":
                 case "community":
                 {
                     var story = Deserialize<CommunityStory>(json);
-                    if (story == null) return OperationResult.Fail("L'histoire de la communauté est invalide.");
+                    if (story == null) return OperationResult.Fail(L.T("L'histoire de la communauté est invalide."));
                     story.Titre = string.IsNullOrWhiteSpace(story.Titre) ? "Histoire de notre communauté" : story.Titre.Trim();
                     story.SousTitre ??= "";
                     story.Chapitres ??= new List<CommunityChapter>();
@@ -751,7 +751,7 @@ case "settings":
                 case "permissions":
                 {
                     var permissions = Deserialize<List<RolePermissionSet>>(json);
-                    if (permissions == null) return OperationResult.Fail("Les permissions sont invalides.");
+                    if (permissions == null) return OperationResult.Fail(L.T("Les permissions sont invalides."));
                     var check = ValidatePermissionSets(permissions);
                     if (!check.Success) return check;
                     _permissions = permissions;
@@ -761,7 +761,7 @@ case "settings":
                 case "messages":
                 {
                     var messages = Deserialize<List<Message>>(json);
-                    if (messages == null) return OperationResult.Fail("La messagerie est invalide.");
+                    if (messages == null) return OperationResult.Fail(L.T("La messagerie est invalide."));
                     foreach (var m in messages)
                     {
                         m.Id = string.IsNullOrWhiteSpace(m.Id) ? Guid.NewGuid().ToString("N") : m.Id.Trim();
@@ -781,14 +781,14 @@ case "settings":
                 case "taches":
                 {
                     var taches = Deserialize<List<Tache>>(json);
-                    if (taches == null) return OperationResult.Fail("La liste des tâches est invalide.");
+                    if (taches == null) return OperationResult.Fail(L.T("La liste des tâches est invalide."));
                     foreach (var t in taches)
                     {
                         t.Id = string.IsNullOrWhiteSpace(t.Id) ? Guid.NewGuid().ToString("N") : t.Id.Trim();
                         t.Titre = (t.Titre ?? "").Trim();
                         t.Description ??= "";
                         t.Assignes ??= new List<string>();
-                        if (string.IsNullOrWhiteSpace(t.Titre)) return OperationResult.Fail("Chaque tâche doit avoir un titre.");
+                        if (string.IsNullOrWhiteSpace(t.Titre)) return OperationResult.Fail(L.T("Chaque tâche doit avoir un titre."));
                     }
                     _taches.Clear();
                     _taches.AddRange(taches);
@@ -798,7 +798,7 @@ case "settings":
                 case "cotisations":
                 {
                     var cotisations = Deserialize<List<Cotisation>>(json);
-                    if (cotisations == null) return OperationResult.Fail("Les cotisations sont invalides.");
+                    if (cotisations == null) return OperationResult.Fail(L.T("Les cotisations sont invalides."));
                     _cotisations.Clear();
                     _cotisations.AddRange(cotisations);
                     SaveCotisations();
@@ -807,7 +807,7 @@ case "settings":
                 case "tresorerie":
                 {
                     var treso = Deserialize<List<TransactionTresorerie>>(json);
-                    if (treso == null) return OperationResult.Fail("La trésorerie est invalide.");
+                    if (treso == null) return OperationResult.Fail(L.T("La trésorerie est invalide."));
                     _tresorerie.Clear();
                     _tresorerie.AddRange(treso);
                     SaveTresorerie();
@@ -816,7 +816,7 @@ case "settings":
                 case "materiels":
                 {
                     var materiels = Deserialize<List<Materiel>>(json);
-                    if (materiels == null) return OperationResult.Fail("Le matériel est invalide.");
+                    if (materiels == null) return OperationResult.Fail(L.T("Le matériel est invalide."));
                     _materiels.Clear();
                     _materiels.AddRange(materiels);
                     SaveMateriels();
@@ -825,7 +825,7 @@ case "settings":
                 case "prets":
                 {
                     var prets = Deserialize<List<PretMateriel>>(json);
-                    if (prets == null) return OperationResult.Fail("Les prêts sont invalides.");
+                    if (prets == null) return OperationResult.Fail(L.T("Les prêts sont invalides."));
                     _prets.Clear();
                     _prets.AddRange(prets);
                     SavePrets();
@@ -834,7 +834,7 @@ case "settings":
                 case "reunions":
                 {
                     var reunions = Deserialize<List<Reunion>>(json);
-                    if (reunions == null) return OperationResult.Fail("Les réunions sont invalides.");
+                    if (reunions == null) return OperationResult.Fail(L.T("Les réunions sont invalides."));
                     _reunions.Clear();
                     _reunions.AddRange(reunions);
                     SaveReunions();
@@ -843,7 +843,7 @@ case "settings":
                 case "situations":
                 {
                     var situations = Deserialize<List<Situation>>(json);
-                    if (situations == null) return OperationResult.Fail("Les situations sont invalides.");
+                    if (situations == null) return OperationResult.Fail(L.T("Les situations sont invalides."));
                     _situations.Clear();
                     _situations.AddRange(situations);
                     SaveSituations();
@@ -852,7 +852,7 @@ case "settings":
                 case "votes":
                 {
                     var votes = Deserialize<List<Vote>>(json);
-                    if (votes == null) return OperationResult.Fail("Les votes sont invalides.");
+                    if (votes == null) return OperationResult.Fail(L.T("Les votes sont invalides."));
                     _votes.Clear();
                     _votes.AddRange(votes);
                     SaveVotes();
@@ -861,23 +861,23 @@ case "settings":
                 case "journal_media":
                 {
                     var media = Deserialize<List<MediaItem>>(json);
-                    if (media == null) return OperationResult.Fail("Le journal multimédia est invalide.");
+                    if (media == null) return OperationResult.Fail(L.T("Le journal multimédia est invalide."));
                     _journalMedia.Clear();
                     _journalMedia.AddRange(media);
                     SaveJournalMedia();
                     break;
                 }
                 default:
-                    return OperationResult.Fail("Collection de données inconnue.");
+                    return OperationResult.Fail(L.T("Collection de données inconnue."));
             }
         }
         catch (JsonException ex)
         {
-            return OperationResult.Fail("JSON invalide : " + ex.Message);
+            return OperationResult.Fail(L.F("JSON invalide : {0}", ex.Message));
         }
         catch (Exception ex)
         {
-            return OperationResult.Fail("Impossible d'enregistrer la donnée : " + ex.Message);
+            return OperationResult.Fail(L.F("Impossible d'enregistrer la donnée : {0}", ex.Message));
         }
 
         LogActivity(ActivityTypes.Update, "Modification directe de la collection « " + key + " » par le DBA.");
@@ -917,7 +917,7 @@ case "settings":
         if (_users.Any(u => u.Identifiant.Equals(draft.Identifiant.Trim(), StringComparison.OrdinalIgnoreCase)))
         {
             if (!autoIdentifiant)
-                return new UserOperationResult { Success = false, Error = "Cet identifiant existe déjà. Aucun utilisateur n'a été ajouté." };
+                return new UserOperationResult { Success = false, Error = L.T("Cet identifiant existe déjà. Aucun utilisateur n'a été ajouté.") };
             var suffix = 2;
             var baseId = draft.Identifiant;
             while (_users.Any(u => u.Identifiant.Equals(baseId + "." + suffix, StringComparison.OrdinalIgnoreCase)))
@@ -935,7 +935,7 @@ case "settings":
         draft.DateNaissance = NormalizeYmd(draft.DateNaissance);
         draft.Matricule = (draft.Matricule ?? "").Trim();
         if (draft.Matricule.Length > 0 && _users.Any(u => (u.Matricule ?? "").Trim().Equals(draft.Matricule, StringComparison.OrdinalIgnoreCase)))
-            return new UserOperationResult { Success = false, Error = "Ce matricule existe déjà. Aucun utilisateur n'a été ajouté." };
+            return new UserOperationResult { Success = false, Error = L.T("Ce matricule existe déjà. Aucun utilisateur n'a été ajouté.") };
         if (string.IsNullOrEmpty(draft.DateCreation))
             draft.DateCreation = DateTimeOffset.Now.ToString("O");
         // Matricule automatique quand un format est réglé et que rien n'a été saisi.
@@ -972,13 +972,13 @@ case "settings":
     public UserOperationResult UpdateUser(string userId, UserAccount draft, bool passwordChanged)
     {
         var idx = _users.FindIndex(u => u.Id == userId);
-        if (idx < 0) return new UserOperationResult { Success = false, Error = "Utilisateur introuvable." };
+        if (idx < 0) return new UserOperationResult { Success = false, Error = L.T("Utilisateur introuvable.") };
 
         var existing = _users[idx];
         var current = GetCurrentUser();
 
         if (existing.Role == Roles.BaseAdmin && !IsBaseAdmin)
-            return new UserOperationResult { Success = false, Error = "Seul le gestionnaire de la base peut modifier ce compte." };
+            return new UserOperationResult { Success = false, Error = L.T("Seul le gestionnaire de la base peut modifier ce compte.") };
         if (existing.Role == Roles.BaseAdmin)
         {
             // Le compte technique garde son rôle, son statut et son identifiant via
@@ -990,7 +990,7 @@ case "settings":
         if (current?.Role == Roles.Utilisateur)
         {
             if (current.Id != userId)
-                return new UserOperationResult { Success = false, Error = "Vous pouvez modifier uniquement vos propres informations." };
+                return new UserOperationResult { Success = false, Error = L.T("Vous pouvez modifier uniquement vos propres informations.") };
             draft.Identifiant = existing.Identifiant;
             draft.Role = existing.Role;
             draft.Actif = existing.Actif;
@@ -1000,9 +1000,9 @@ case "settings":
         var guard = LastAdminGuard(existing);
         if (guard != null)
         {
-            if (!existing.Actif) return new UserOperationResult { Success = false, Error = "Le dernier administrateur est inactif et ne peut être modifié." };
-            if (!draft.Actif) return new UserOperationResult { Success = false, Error = "Impossible de désactiver le dernier administrateur." };
-            if (draft.Role != existing.Role) return new UserOperationResult { Success = false, Error = "Impossible de changer le rôle du dernier administrateur." };
+            if (!existing.Actif) return new UserOperationResult { Success = false, Error = L.T("Le dernier administrateur est inactif et ne peut être modifié.") };
+            if (!draft.Actif) return new UserOperationResult { Success = false, Error = L.T("Impossible de désactiver le dernier administrateur.") };
+            if (draft.Role != existing.Role) return new UserOperationResult { Success = false, Error = L.T("Impossible de changer le rôle du dernier administrateur.") };
         }
 
         existing.Prenom = (draft.Prenom ?? "").Trim();
@@ -1020,7 +1020,7 @@ case "settings":
         existing.ResponsableTelephone = (draft.ResponsableTelephone ?? "").Trim();
         var matricule = (draft.Matricule ?? "").Trim();
         if (matricule.Length > 0 && _users.Any(u => u.Id != userId && (u.Matricule ?? "").Trim().Equals(matricule, StringComparison.OrdinalIgnoreCase)))
-            return new UserOperationResult { Success = false, Error = "Ce matricule existe déjà." };
+            return new UserOperationResult { Success = false, Error = L.T("Ce matricule existe déjà.") };
         existing.Matricule = matricule;
         if (passwordChanged && !string.IsNullOrEmpty(draft.MotDePasse))
         {
@@ -1038,13 +1038,13 @@ case "settings":
     public OperationResult DeleteUser(string userId, string? actorUserId = null)
     {
         var target = FindUser(userId);
-        if (target == null) return OperationResult.Fail("Utilisateur introuvable.");
+        if (target == null) return OperationResult.Fail(L.T("Utilisateur introuvable."));
         if (actorUserId == userId)
-            return OperationResult.Fail("Impossible de supprimer votre propre compte.");
+            return OperationResult.Fail(L.T("Impossible de supprimer votre propre compte."));
         if (target.Role == Roles.BaseAdmin && !IsBaseAdmin)
-            return OperationResult.Fail("Seul le gestionnaire de la base peut supprimer ce compte.");
+            return OperationResult.Fail(L.T("Seul le gestionnaire de la base peut supprimer ce compte."));
         if (LastAdminGuard(target) != null)
-            return OperationResult.Fail("Impossible de supprimer le dernier administrateur.");
+            return OperationResult.Fail(L.T("Impossible de supprimer le dernier administrateur."));
 
         _users.Remove(target);
         _archive.Insert(0, new ArchivedUser
@@ -1063,13 +1063,13 @@ case "settings":
 public OperationResult SetUserActive(string userId, bool active)
     {
         var target = FindUser(userId);
-        if (target == null) return OperationResult.Fail("Utilisateur introuvable.");
+        if (target == null) return OperationResult.Fail(L.T("Utilisateur introuvable."));
         if (target.Role == Roles.BaseAdmin && !IsAdmin)
-            return OperationResult.Fail("Seul l'administrateur ou le gestionnaire de la base peut modifier ce compte.");
+            return OperationResult.Fail(L.T("Seul l'administrateur ou le gestionnaire de la base peut modifier ce compte."));
         if (!active)
         {
             var guard = LastAdminGuard(target);
-            if (guard != null) return OperationResult.Fail("Impossible de désactiver le dernier administrateur actif.");
+            if (guard != null) return OperationResult.Fail(L.T("Impossible de désactiver le dernier administrateur actif."));
         }
         target.Actif = active;
         SaveUsers();
@@ -1082,9 +1082,9 @@ public OperationResult SetUserActive(string userId, bool active)
     public OperationResult ResetPassword(string userId)
     {
         var target = FindUser(userId);
-        if (target == null) return OperationResult.Fail("Utilisateur introuvable.");
+        if (target == null) return OperationResult.Fail(L.T("Utilisateur introuvable."));
         if (target.Role == Roles.BaseAdmin && !IsBaseAdmin)
-            return OperationResult.Fail("Seul le gestionnaire de la base peut réinitialiser ce mot de passe.");
+            return OperationResult.Fail(L.T("Seul le gestionnaire de la base peut réinitialiser ce mot de passe."));
         target.MotDePasse = PasswordCipher.Encrypt(DEFAULT_PASSWORD);
         SaveUsers();
         LogActivity(ActivityTypes.PasswordReset,
@@ -1102,7 +1102,7 @@ public OperationResult SetUserActive(string userId, bool active)
     public OperationResult PurgeUser(string archiveUserId)
     {
         var idx = _archive.FindIndex(a => a.User.Id == archiveUserId);
-        if (idx < 0) return OperationResult.Fail("Utilisateur archivé introuvable.");
+        if (idx < 0) return OperationResult.Fail(L.T("Utilisateur archivé introuvable."));
         var archived = _archive[idx];
         _archive.RemoveAt(idx);
         SaveArchive();
@@ -1114,7 +1114,7 @@ public OperationResult SetUserActive(string userId, bool active)
     public OperationResult RestoreArchivedUser(string archiveUserId)
     {
         var idx = _archive.FindIndex(a => a.User.Id == archiveUserId);
-        if (idx < 0) return OperationResult.Fail("Utilisateur archivé introuvable.");
+        if (idx < 0) return OperationResult.Fail(L.T("Utilisateur archivé introuvable."));
         var archived = _archive[idx];
         var draft = CloneImportUser(archived.User);
         // Garder l'identifiant d'origine : une fiche reliée à un compte en ligne le
@@ -1124,7 +1124,7 @@ public OperationResult SetUserActive(string userId, bool active)
             : archived.User.Id;
 
         if (_users.Any(u => u.Identifiant.Equals(draft.Identifiant.Trim(), StringComparison.OrdinalIgnoreCase)))
-            return OperationResult.Fail("Un utilisateur actif porte déjà cet identifiant. Restauration impossible.");
+            return OperationResult.Fail(L.T("Un utilisateur actif porte déjà cet identifiant. Restauration impossible."));
 
         _users.Add(draft);
         _archive.RemoveAt(idx);
@@ -1158,9 +1158,9 @@ public OperationResult SetUserActive(string userId, bool active)
     {
         draft.Titre = (draft.Titre ?? "").Trim();
         if (string.IsNullOrWhiteSpace(draft.Titre))
-            return OperationResult.Fail("Le titre de l'événement est obligatoire.");
+            return OperationResult.Fail(L.T("Le titre de l'événement est obligatoire."));
         if (string.IsNullOrWhiteSpace(draft.Date))
-            return OperationResult.Fail("La date de l'événement est obligatoire.");
+            return OperationResult.Fail(L.T("La date de l'événement est obligatoire."));
 
         draft.Id = Guid.NewGuid().ToString("N");
         if (string.IsNullOrEmpty(draft.DateCreation))
@@ -1170,7 +1170,7 @@ public OperationResult SetUserActive(string userId, bool active)
         _events.Add(draft);
         _events.Sort((a, b) => SortKey(a).CompareTo(SortKey(b)));
         SaveEvents();
-        LogActivity(ActivityTypes.CalendarCreate, "Ajout de l'événement « " + draft.Titre + " » (" + CalendarEventTypes.Label(draft.Type) + ")");
+        LogActivity(ActivityTypes.CalendarCreate, "Ajout de l'événement « " + draft.Titre + " » (" + L.EnFrancais(() => CalendarEventTypes.Label(draft.Type)) + ")");
         DataChanged?.Invoke();
         return OperationResult.Ok();
     }
@@ -1178,13 +1178,13 @@ public OperationResult SetUserActive(string userId, bool active)
     public OperationResult UpdateEvent(string eventId, CalendarEvent draft)
     {
         var idx = _events.FindIndex(e => e.Id == eventId);
-        if (idx < 0) return OperationResult.Fail("Événement introuvable.");
+        if (idx < 0) return OperationResult.Fail(L.T("Événement introuvable."));
 
         draft.Titre = (draft.Titre ?? "").Trim();
         if (string.IsNullOrWhiteSpace(draft.Titre))
-            return OperationResult.Fail("Le titre de l'événement est obligatoire.");
+            return OperationResult.Fail(L.T("Le titre de l'événement est obligatoire."));
         if (string.IsNullOrWhiteSpace(draft.Date))
-            return OperationResult.Fail("La date de l'événement est obligatoire.");
+            return OperationResult.Fail(L.T("La date de l'événement est obligatoire."));
 
         var existing = _events[idx];
         var oldTitle = existing.Titre;
@@ -1214,7 +1214,7 @@ public OperationResult SetUserActive(string userId, bool active)
     public OperationResult DeleteEvent(string eventId)
     {
         var idx = _events.FindIndex(e => e.Id == eventId);
-        if (idx < 0) return OperationResult.Fail("Événement introuvable.");
+        if (idx < 0) return OperationResult.Fail(L.T("Événement introuvable."));
         var evt = _events[idx];
         _events.RemoveAt(idx);
         SaveEvents();
@@ -1244,12 +1244,12 @@ public OperationResult SetUserActive(string userId, bool active)
     {
         draft.Nom = (draft.Nom ?? "").Trim();
         if (string.IsNullOrWhiteSpace(draft.Nom))
-            return OperationResult.Fail("Le nom du dossier est obligatoire.");
+            return OperationResult.Fail(L.T("Le nom du dossier est obligatoire."));
         if (!string.IsNullOrWhiteSpace(draft.ParentId) && FindFolder(draft.ParentId) == null)
-            return OperationResult.Fail("Le dossier parent est introuvable.");
+            return OperationResult.Fail(L.T("Le dossier parent est introuvable."));
         if (_folders.Any(f => string.Equals(f.ParentId ?? "", draft.ParentId ?? "", StringComparison.Ordinal)
             && f.Nom.Equals(draft.Nom, StringComparison.OrdinalIgnoreCase)))
-            return OperationResult.Fail("Un dossier porte déjà ce nom à cet emplacement.");
+            return OperationResult.Fail(L.T("Un dossier porte déjà ce nom à cet emplacement."));
 
         draft.Id = Guid.NewGuid().ToString("N");
         if (string.IsNullOrEmpty(draft.DateCreation))
@@ -1268,13 +1268,13 @@ public OperationResult SetUserActive(string userId, bool active)
     public OperationResult RenameFolder(string folderId, string newName, string? color = null)
     {
         var folder = FindFolder(folderId);
-        if (folder == null) return OperationResult.Fail("Dossier introuvable.");
+        if (folder == null) return OperationResult.Fail(L.T("Dossier introuvable."));
         newName = (newName ?? "").Trim();
         if (string.IsNullOrWhiteSpace(newName))
-            return OperationResult.Fail("Le nom du dossier est obligatoire.");
+            return OperationResult.Fail(L.T("Le nom du dossier est obligatoire."));
         if (_folders.Any(f => f.Id != folderId && string.Equals(f.ParentId ?? "", folder.ParentId ?? "", StringComparison.Ordinal)
             && f.Nom.Equals(newName, StringComparison.OrdinalIgnoreCase)))
-            return OperationResult.Fail("Un dossier porte déjà ce nom à cet emplacement.");
+            return OperationResult.Fail(L.T("Un dossier porte déjà ce nom à cet emplacement."));
 
         var old = folder.Nom;
         folder.Nom = newName;
@@ -1292,7 +1292,7 @@ public OperationResult SetUserActive(string userId, bool active)
     public OperationResult DeleteFolder(string folderId)
     {
         var folder = FindFolder(folderId);
-        if (folder == null) return OperationResult.Fail("Dossier introuvable.");
+        if (folder == null) return OperationResult.Fail(L.T("Dossier introuvable."));
 
         foreach (var doc in _documents.Where(d => d.FolderId == folderId))
             doc.FolderId = folder.ParentId;
@@ -1311,13 +1311,13 @@ public OperationResult SetUserActive(string userId, bool active)
     {
         draft.Titre = (draft.Titre ?? "").Trim();
         if (string.IsNullOrWhiteSpace(draft.Titre))
-            return OperationResult.Fail("Le titre du document est obligatoire.");
+            return OperationResult.Fail(L.T("Le titre du document est obligatoire."));
         if (string.IsNullOrWhiteSpace(draft.Data))
-            return OperationResult.Fail("Le fichier du document est manquant.");
+            return OperationResult.Fail(L.T("Le fichier du document est manquant."));
         if (!string.IsNullOrWhiteSpace(draft.FolderId) && FindFolder(draft.FolderId) == null)
-            return OperationResult.Fail("Le dossier de destination est introuvable.");
+            return OperationResult.Fail(L.T("Le dossier de destination est introuvable."));
         if (!string.IsNullOrWhiteSpace(draft.UtilisateurId) && FindUserByIdentifier(draft.UtilisateurId) == null)
-            return OperationResult.Fail("L'utilisateur associé est introuvable.");
+            return OperationResult.Fail(L.T("L'utilisateur associé est introuvable."));
 
         draft.Id = Guid.NewGuid().ToString("N");
         var now = DateTimeOffset.Now.ToString("O");
@@ -1339,14 +1339,14 @@ public OperationResult SetUserActive(string userId, bool active)
     public OperationResult UpdateDocument(string documentId, DocumentItem draft)
     {
         var existing = FindDocument(documentId);
-        if (existing == null) return OperationResult.Fail("Document introuvable.");
+        if (existing == null) return OperationResult.Fail(L.T("Document introuvable."));
         draft.Titre = (draft.Titre ?? "").Trim();
         if (string.IsNullOrWhiteSpace(draft.Titre))
-            return OperationResult.Fail("Le titre du document est obligatoire.");
+            return OperationResult.Fail(L.T("Le titre du document est obligatoire."));
         if (!string.IsNullOrWhiteSpace(draft.FolderId) && FindFolder(draft.FolderId) == null)
-            return OperationResult.Fail("Le dossier de destination est introuvable.");
+            return OperationResult.Fail(L.T("Le dossier de destination est introuvable."));
         if (!string.IsNullOrWhiteSpace(draft.UtilisateurId) && FindUserByIdentifier(draft.UtilisateurId) == null)
-            return OperationResult.Fail("L'utilisateur associé est introuvable.");
+            return OperationResult.Fail(L.T("L'utilisateur associé est introuvable."));
 
         var oldTitle = existing.Titre;
         existing.Titre = draft.Titre;
@@ -1369,7 +1369,7 @@ public OperationResult SetUserActive(string userId, bool active)
     public OperationResult SetDocumentFavorite(string documentId, bool favori)
     {
         var doc = FindDocument(documentId);
-        if (doc == null) return OperationResult.Fail("Document introuvable.");
+        if (doc == null) return OperationResult.Fail(L.T("Document introuvable."));
         doc.Favori = favori;
         doc.DateModification = DateTimeOffset.Now.ToString("O");
         SaveDocuments();
@@ -1381,7 +1381,7 @@ public OperationResult SetUserActive(string userId, bool active)
     public OperationResult MoveDocuments(IEnumerable<string> documentIds, string? folderId)
     {
         if (!string.IsNullOrWhiteSpace(folderId) && FindFolder(folderId) == null)
-            return OperationResult.Fail("Le dossier de destination est introuvable.");
+            return OperationResult.Fail(L.T("Le dossier de destination est introuvable."));
         var count = 0;
         foreach (var id in documentIds.Distinct())
         {
@@ -1392,7 +1392,7 @@ public OperationResult SetUserActive(string userId, bool active)
             doc.ModifiePar = GetCurrentUser()?.Identifiant ?? "inconnu";
             count++;
         }
-        if (count == 0) return OperationResult.Fail("Aucun document à déplacer.");
+        if (count == 0) return OperationResult.Fail(L.T("Aucun document à déplacer."));
         SaveDocuments();
         var dest = string.IsNullOrWhiteSpace(folderId) ? "la racine" : "« " + (FindFolder(folderId)?.Nom ?? "?") + " »";
         LogActivity(ActivityTypes.DocumentUpdate, "Déplacement de " + count + " document(s) vers " + dest);
@@ -1412,7 +1412,7 @@ public OperationResult SetUserActive(string userId, bool active)
             doc.DateSuppression = DateTimeOffset.Now.ToString("O");
             count++;
         }
-        if (count == 0) return OperationResult.Fail("Aucun document à supprimer.");
+        if (count == 0) return OperationResult.Fail(L.T("Aucun document à supprimer."));
         SaveDocuments();
         LogActivity(ActivityTypes.DocumentDelete, "Suppression de " + count + " document(s) (corbeille)");
         DataChanged?.Invoke();
@@ -1434,7 +1434,7 @@ public OperationResult SetUserActive(string userId, bool active)
             doc.DateModification = DateTimeOffset.Now.ToString("O");
             count++;
         }
-        if (count == 0) return OperationResult.Fail("Aucun document à restaurer.");
+        if (count == 0) return OperationResult.Fail(L.T("Aucun document à restaurer."));
         SaveDocuments();
         LogActivity(ActivityTypes.DocumentRestore, "Restauration de " + count + " document(s) depuis la corbeille");
         DataChanged?.Invoke();
@@ -1445,7 +1445,7 @@ public OperationResult SetUserActive(string userId, bool active)
     public OperationResult PurgeDocument(string documentId)
     {
         var doc = FindDocument(documentId);
-        if (doc == null) return OperationResult.Fail("Document introuvable.");
+        if (doc == null) return OperationResult.Fail(L.T("Document introuvable."));
         _documents.Remove(doc);
         SaveDocuments();
         LogActivity(ActivityTypes.DocumentDelete, "Suppression définitive du document « " + doc.Titre + " »");
@@ -1457,7 +1457,7 @@ public OperationResult SetUserActive(string userId, bool active)
     public OperationResult EmptyTrash()
     {
         var count = _documents.Count(d => d.Supprime);
-        if (count == 0) return OperationResult.Fail("La corbeille est déjà vide.");
+        if (count == 0) return OperationResult.Fail(L.T("La corbeille est déjà vide."));
         _documents.RemoveAll(d => d.Supprime);
         SaveDocuments();
         LogActivity(ActivityTypes.DocumentDelete, "Vidage de la corbeille (" + count + " document(s) supprimé(s) définitivement)");
@@ -1476,16 +1476,16 @@ public OperationResult SetUserActive(string userId, bool active)
     public OperationResult AddField(FieldDefinition field)
     {
         if (string.IsNullOrWhiteSpace(field.Label))
-            return OperationResult.Fail("Le libellé du champ est obligatoire.");
+            return OperationResult.Fail(L.T("Le libellé du champ est obligatoire."));
         if (FieldTypeInfo.SupportsOptions(field.Type) && field.Options.All(string.IsNullOrWhiteSpace))
             return OperationResult.Fail(field.Type == FieldType.ChoixMultiple
-                ? "Un choix doit contenir au moins une option."
-                : "Une liste doit contenir au moins une option.");
+                ? L.T("Un choix doit contenir au moins une option.")
+                : L.T("Une liste doit contenir au moins une option."));
         field.Id = Guid.NewGuid().ToString("N");
         field.Ordre = (_fields.Count == 0) ? 0 : _fields.Max(f => f.Ordre) + 1;
         _fields.Add(field);
         SaveFields();
-        LogActivity(ActivityTypes.FieldsChange, "Ajout du champ « " + field.Label + " » (" + FieldTypeInfo.Label(field.Type) + ")");
+        LogActivity(ActivityTypes.FieldsChange, "Ajout du champ « " + field.Label + " » (" + L.EnFrancais(() => FieldTypeInfo.Label(field.Type)) + ")");
         DataChanged?.Invoke();
         return OperationResult.Ok();
     }
@@ -1493,13 +1493,13 @@ public OperationResult SetUserActive(string userId, bool active)
     public OperationResult UpdateField(FieldDefinition field)
     {
         var idx = _fields.FindIndex(f => f.Id == field.Id);
-        if (idx < 0) return OperationResult.Fail("Champ introuvable.");
+        if (idx < 0) return OperationResult.Fail(L.T("Champ introuvable."));
         if (string.IsNullOrWhiteSpace(field.Label))
-            return OperationResult.Fail("Le libellé du champ est obligatoire.");
+            return OperationResult.Fail(L.T("Le libellé du champ est obligatoire."));
         if (FieldTypeInfo.SupportsOptions(field.Type) && field.Options.All(string.IsNullOrWhiteSpace))
             return OperationResult.Fail(field.Type == FieldType.ChoixMultiple
-                ? "Un choix doit contenir au moins une option."
-                : "Une liste doit contenir au moins une option.");
+                ? L.T("Un choix doit contenir au moins une option.")
+                : L.T("Une liste doit contenir au moins une option."));
         var existing = _fields[idx];
         if (existing.SystemField)
         {
@@ -1523,9 +1523,9 @@ public OperationResult SetUserActive(string userId, bool active)
     public (OperationResult result, List<string> fileKeys) DeleteField(string fieldId)
     {
         var field = _fields.FirstOrDefault(f => f.Id == fieldId);
-        if (field == null) return (OperationResult.Fail("Champ introuvable."), new List<string>());
+        if (field == null) return (OperationResult.Fail(L.T("Champ introuvable.")), new List<string>());
         if (field.SystemField)
-            return (OperationResult.Fail("Ce champ est lié au compte et ne peut pas être supprimé."), new List<string>());
+            return (OperationResult.Fail(L.T("Ce champ est lié au compte et ne peut pas être supprimé.")), new List<string>());
 
         var fileKeys = new List<string>();
         foreach (var user in _users)
@@ -1583,8 +1583,8 @@ public OperationResult SetUserActive(string userId, bool active)
         {
             if (!errors.ContainsKey(key)) errors[key] = msg;
         }
-if (string.IsNullOrWhiteSpace(draft.Prenom)) Add("prenom", "Le prénom est obligatoire.");
-        if (string.IsNullOrWhiteSpace(draft.Nom)) Add("nom", "Le nom est obligatoire.");
+if (string.IsNullOrWhiteSpace(draft.Prenom)) Add("prenom", L.T("Le prénom est obligatoire."));
+        if (string.IsNullOrWhiteSpace(draft.Nom)) Add("nom", L.T("Le nom est obligatoire."));
 
         var isSimpleUser = draft.Role == "Utilisateur";
 
@@ -1592,17 +1592,17 @@ if (string.IsNullOrWhiteSpace(draft.Prenom)) Add("prenom", "Le prénom est oblig
         // généré automatiquement pour les comptes « Utilisateur ».
         if (!isSimpleUser)
         {
-            if (string.IsNullOrWhiteSpace(draft.Identifiant)) Add("identifiant", "L'identifiant est obligatoire.");
+            if (string.IsNullOrWhiteSpace(draft.Identifiant)) Add("identifiant", L.T("L'identifiant est obligatoire."));
             else if (_users.Any(u => u.Id != existingId && u.Identifiant.Equals(draft.Identifiant.Trim(), StringComparison.OrdinalIgnoreCase)))
-                Add("identifiant", "Cet identifiant existe déjà.");
+                Add("identifiant", L.T("Cet identifiant existe déjà."));
         }
 
         // E-mail et téléphone facultatifs ; e-mail validé s'il est renseigné.
         if (!string.IsNullOrWhiteSpace(draft.Email))
         {
-            if (!IsEmailValid(draft.Email)) Add("email", "Le format de l'adresse e-mail est invalide.");
+            if (!IsEmailValid(draft.Email)) Add("email", L.T("Le format de l'adresse e-mail est invalide."));
             else if (_users.Any(u => u.Id != existingId && u.Email.Equals(draft.Email.Trim(), StringComparison.OrdinalIgnoreCase)))
-                Add("email", "Cette adresse e-mail existe déjà.");
+                Add("email", L.T("Cette adresse e-mail existe déjà."));
         }
 
         // Membre de moins de 18 ans : un responsable légal (nom) est demandé.
@@ -1611,12 +1611,12 @@ if (string.IsNullOrWhiteSpace(draft.Prenom)) Add("prenom", "Le prénom est oblig
             && string.IsNullOrWhiteSpace(draft.ResponsableLegal)
             && !(existingId != null && _users.FirstOrDefault(u => u.Id == existingId) is { } fiche
                  && Lies(fiche, LiensFamille.Parent).Any(p => !p.EstMineur)))
-            Add("responsable", "Moins de 18 ans : indiquez le responsable légal (parent ou tuteur), ou reliez un parent dans la section Famille de sa fiche.");
+            Add("responsable", L.T("Moins de 18 ans : indiquez le responsable légal (parent ou tuteur), ou reliez un parent dans la section Famille de sa fiche."));
 
         // Matricule facultatif mais unique s'il est renseigné.
         if (!string.IsNullOrWhiteSpace(draft.Matricule)
             && _users.Any(u => u.Id != existingId && (u.Matricule ?? "").Trim().Equals(draft.Matricule.Trim(), StringComparison.OrdinalIgnoreCase)))
-            Add("matricule", "Ce matricule existe déjà.");
+            Add("matricule", L.T("Ce matricule existe déjà."));
 
         // Téléphone : format malgache « +261 » (7 à 10 chiffres, espaces éventuels).
         var phoneDigits = new string((draft.Telephone ?? "").Where(char.IsDigit).ToArray());
@@ -1624,7 +1624,7 @@ if (string.IsNullOrWhiteSpace(draft.Prenom)) Add("prenom", "Le prénom est oblig
         {
             var normalized = NormalizePhone(draft.Telephone);
             if (!IsPhoneValid(normalized))
-                Add("telephone", "Le numéro doit être au format « +261 xx xxx xx » (ex. +261 32 12 345 67).");
+                Add("telephone", L.T("Le numéro doit être au format « +261 xx xxx xx » (ex. +261 32 12 345 67)."));
         }
 
         // En ligne, le mot de passe est celui du compte Supabase : rien à saisir sur la fiche.
@@ -1632,16 +1632,16 @@ if (string.IsNullOrWhiteSpace(draft.Prenom)) Add("prenom", "Le prénom est oblig
         {
             if (!isSimpleUser)
             {
-                if (string.IsNullOrWhiteSpace(draft.MotDePasse)) Add("password", "Le mot de passe est obligatoire.");
-                else if (draft.MotDePasse.Length < 6) Add("password", "Le mot de passe doit contenir au moins 6 caractères.");
-                if (string.IsNullOrWhiteSpace(confirmPassword)) Add("confirmPassword", "Veuillez confirmer le mot de passe.");
-                else if (draft.MotDePasse != confirmPassword) Add("confirmPassword", "Les mots de passe ne correspondent pas.");
+                if (string.IsNullOrWhiteSpace(draft.MotDePasse)) Add("password", L.T("Le mot de passe est obligatoire."));
+                else if (draft.MotDePasse.Length < 6) Add("password", L.T("Le mot de passe doit contenir au moins 6 caractères."));
+                if (string.IsNullOrWhiteSpace(confirmPassword)) Add("confirmPassword", L.T("Veuillez confirmer le mot de passe."));
+                else if (draft.MotDePasse != confirmPassword) Add("confirmPassword", L.T("Les mots de passe ne correspondent pas."));
             }
         }
         else if (passwordProvided && !isSimpleUser && !OnlineMode)
         {
-            if (draft.MotDePasse.Length < 6) Add("password", "Le mot de passe doit contenir au moins 6 caractères.");
-            if (draft.MotDePasse != confirmPassword) Add("confirmPassword", "Les mots de passe ne correspondent pas.");
+            if (draft.MotDePasse.Length < 6) Add("password", L.T("Le mot de passe doit contenir au moins 6 caractères."));
+            if (draft.MotDePasse != confirmPassword) Add("confirmPassword", L.T("Les mots de passe ne correspondent pas."));
         }
 
         // Champs personnalisés obligatoires + validation de type
@@ -1653,7 +1653,7 @@ if (string.IsNullOrWhiteSpace(draft.Prenom)) Add("prenom", "Le prénom est oblig
 
             if (string.IsNullOrWhiteSpace(val.Texte) && !val.Booleen && val.Nombre == null && val.Fichier == null)
             {
-                if (f.Requis) Add(key, "Le champ « " + f.Label + " » est obligatoire.");
+                if (f.Requis) Add(key, L.F("Le champ « {0} » est obligatoire.", f.Label));
                 continue;
             }
 
@@ -1662,35 +1662,35 @@ if (string.IsNullOrWhiteSpace(draft.Prenom)) Add("prenom", "Le prénom est oblig
                 case FieldType.Nombre:
                     if (val.Nombre == null && string.IsNullOrWhiteSpace(val.Texte))
                     {
-                        if (f.Requis) Add(key, "Veuillez saisir un nombre.");
+                        if (f.Requis) Add(key, L.T("Veuillez saisir un nombre."));
                     }
                     else if (val.Nombre != null && string.IsNullOrWhiteSpace(val.Texte) == false)
                     {
-                        if (f.Requis) Add(key, "Valeur de nombre invalide.");
+                        if (f.Requis) Add(key, L.T("Valeur de nombre invalide."));
                     }
                     break;
                 case FieldType.Liste:
                     if (!string.IsNullOrWhiteSpace(val.Texte) && !f.Options.Contains(val.Texte))
-                        Add(key, "La valeur sélectionnée n'est pas valide.");
+                        Add(key, L.T("La valeur sélectionnée n'est pas valide."));
                     break;
                 case FieldType.ChoixMultiple:
                     foreach (var opt in (val.Texte ?? "").Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries))
                     {
                         if (!f.Options.Contains(opt))
                         {
-                            Add(key, "Une valeur cochée n'est pas valide.");
+                            Add(key, L.T("Une valeur cochée n'est pas valide."));
                             break;
                         }
                     }
                     break;
                 case FieldType.Email:
                     if (!string.IsNullOrWhiteSpace(val.Texte) && !IsEmailValid(val.Texte))
-                        Add(key, "Adresse e-mail invalide.");
+                        Add(key, L.T("Adresse e-mail invalide."));
                     break;
                 case FieldType.PieceJointe:
                 case FieldType.Image:
                     if (val.Fichier != null && val.Fichier.Taille > MAX_FILE_BYTES)
-                        Add(key, "Le fichier « " + val.Fichier.Nom + " » dépasse la taille maximale de 5 Mo.");
+                        Add(key, L.F("Le fichier « {0} » dépasse la taille maximale de 5 Mo.", val.Fichier.Nom));
                     break;
             }
         }
@@ -1785,8 +1785,8 @@ if (string.IsNullOrWhiteSpace(draft.Prenom)) Add("prenom", "Le prénom est oblig
     public static string FormatDateHeure(string? iso)
     {
         if (string.IsNullOrWhiteSpace(iso)) return "—";
-        if (DateTimeOffset.TryParse(iso, out var d)) return d.ToString("dd/MM/yyyy à HH:mm");
-        if (DateTime.TryParse(iso, out var dt)) return dt.ToString("dd/MM/yyyy à HH:mm");
+        if (DateTimeOffset.TryParse(iso, out var d)) return L.F("{0} à {1}", d.ToString("dd/MM/yyyy"), d.ToString("HH:mm"));
+        if (DateTime.TryParse(iso, out var dt)) return L.F("{0} à {1}", dt.ToString("dd/MM/yyyy"), dt.ToString("HH:mm"));
         return iso;
     }
 
@@ -2041,7 +2041,7 @@ if (string.IsNullOrWhiteSpace(draft.Prenom)) Add("prenom", "Le prénom est oblig
             var root = doc.RootElement;
 
             if (root.ValueKind != JsonValueKind.Object && root.ValueKind != JsonValueKind.Array)
-                return new ImportResult { Success = false, Error = "Le fichier ne contient pas un objet/tableau JSON valide." };
+                return new ImportResult { Success = false, Error = L.T("Le fichier ne contient pas un objet/tableau JSON valide.") };
 
             var elements = new List<JsonElement>();
             if (root.ValueKind == JsonValueKind.Array)
@@ -2049,10 +2049,10 @@ if (string.IsNullOrWhiteSpace(draft.Prenom)) Add("prenom", "Le prénom est oblig
             else if (root.TryGetProperty("users", out var usersProp) && usersProp.ValueKind == JsonValueKind.Array)
                 elements.AddRange(usersProp.EnumerateArray());
             else
-                return new ImportResult { Success = false, Error = "Impossible de trouver la liste « users » dans le fichier." };
+                return new ImportResult { Success = false, Error = L.T("Impossible de trouver la liste « users » dans le fichier.") };
 
             if (elements.Count == 0)
-                return new ImportResult { Success = false, Error = "Le fichier ne contient aucun utilisateur." };
+                return new ImportResult { Success = false, Error = L.T("Le fichier ne contient aucun utilisateur.") };
 
             var users = new List<UserAccount>();
             var idx = 0;
@@ -2060,7 +2060,7 @@ if (string.IsNullOrWhiteSpace(draft.Prenom)) Add("prenom", "Le prénom est oblig
             {
                 idx++;
                 if (el.ValueKind != JsonValueKind.Object)
-                    return new ImportResult { Success = false, Error = "Utilisateur n°" + idx + ": entrée JSON invalide." };
+                    return new ImportResult { Success = false, Error = L.F("Utilisateur n°{0}: entrée JSON invalide.", idx) };
 
                 var u = new UserAccount
                 {
@@ -2082,15 +2082,15 @@ if (string.IsNullOrWhiteSpace(draft.Prenom)) Add("prenom", "Le prénom est oblig
                 };
 
                 if (string.IsNullOrWhiteSpace(u.Prenom) || string.IsNullOrWhiteSpace(u.Nom))
-                    return new ImportResult { Success = false, Error = "Utilisateur n°" + idx + ": prénom et nom sont obligatoires." };
+                    return new ImportResult { Success = false, Error = L.F("Utilisateur n°{0}: prénom et nom sont obligatoires.", idx) };
                 if (string.IsNullOrWhiteSpace(u.Identifiant))
                 {
                     if (u.Role != Roles.Utilisateur)
-                        return new ImportResult { Success = false, Error = "Utilisateur n°" + idx + ": l'identifiant est obligatoire pour ce rôle." };
+                        return new ImportResult { Success = false, Error = L.F("Utilisateur n°{0}: l'identifiant est obligatoire pour ce rôle.", idx) };
                     u.Identifiant = GenerateIdentifiant(u.Prenom, u.Nom);
                 }
                 if (!string.IsNullOrWhiteSpace(u.Email) && !IsEmailValid(u.Email))
-                    return new ImportResult { Success = false, Error = "Utilisateur n°" + idx + ": adresse e-mail « " + u.Email + " » invalide." };
+                    return new ImportResult { Success = false, Error = L.F("Utilisateur n°{0}: adresse e-mail « {1} » invalide.", idx, u.Email) };
 
                 // Statut compatible ancien (string) + nouveau (bool)
                 var statut = Get(el, "statut");
@@ -2122,11 +2122,11 @@ if (string.IsNullOrWhiteSpace(draft.Prenom)) Add("prenom", "Le prénom est oblig
         }
         catch (JsonException ex)
         {
-            return new ImportResult { Success = false, Error = "Le fichier JSON est invalide : " + ex.Message };
+            return new ImportResult { Success = false, Error = L.F("Le fichier JSON est invalide : {0}", ex.Message) };
         }
         catch (Exception ex)
         {
-            return new ImportResult { Success = false, Error = "Erreur de lecture du fichier : " + ex.Message };
+            return new ImportResult { Success = false, Error = L.F("Erreur de lecture du fichier : {0}", ex.Message) };
         }
     }
 
@@ -2155,7 +2155,7 @@ if (string.IsNullOrWhiteSpace(draft.Prenom)) Add("prenom", "Le prénom est oblig
     public (OperationResult result, int count) ApplyImport(List<UserAccount> imported)
     {
         if (imported == null || imported.Count == 0)
-            return (OperationResult.Fail("Aucun utilisateur à importer."), 0);
+            return (OperationResult.Fail(L.T("Aucun utilisateur à importer.")), 0);
 
         var seen = new HashSet<string>(_users.Select(u => u.Identifiant.ToLowerInvariant()));
         // Même personne déjà présente (même e-mail, téléphone ou matricule) : pas de doublon.
@@ -2175,11 +2175,11 @@ if (string.IsNullOrWhiteSpace(draft.Prenom)) Add("prenom", "Le prénom est oblig
         }
 
         if (added == 0)
-            return (OperationResult.Fail("Aucun nouvel utilisateur à importer : ils existent déjà (même identifiant, e-mail, téléphone ou matricule)."), 0);
+            return (OperationResult.Fail(L.T("Aucun nouvel utilisateur à importer : ils existent déjà (même identifiant, e-mail, téléphone ou matricule).")), 0);
 
         // S'assurer qu'un administrateur actif existe après l'import
         if (!_users.Any(u => Roles.IsAdmin(u.Role) && u.Actif))
-            return (OperationResult.Fail("L'import supprimerait le dernier administrateur actif : opération annulée."), 0);
+            return (OperationResult.Fail(L.T("L'import supprimerait le dernier administrateur actif : opération annulée.")), 0);
 
         SaveUsers();
         try { SyncAllUserDateEvents(); } catch { }
@@ -2447,12 +2447,12 @@ if (string.IsNullOrWhiteSpace(draft.Prenom)) Add("prenom", "Le prénom est oblig
             var key = StorageKey(ds.Key);
             if (key.Length == 0) continue;
             var v = _storage.Get(key);
-            list.Add(new StorageUsageItem(ds.Key, ds.Label, ds.Description, v == null ? 0 : key.Length + v.Length));
+            list.Add(new StorageUsageItem(ds.Key, L.T(ds.Label), L.T(ds.Description), v == null ? 0 : key.Length + v.Length));
         }
         // Session de connexion (clé interne) : comptabilisée dans le total.
         var session = _storage.Get(K_SESSION);
-        list.Add(new StorageUsageItem("session", "Session de connexion",
-            "État de la session courante (expiration).", session == null ? 0 : K_SESSION.Length + session.Length));
+        list.Add(new StorageUsageItem("session", L.T("Session de connexion"),
+            L.T("État de la session courante (expiration)."), session == null ? 0 : K_SESSION.Length + session.Length));
         return list;
     }
 
@@ -2487,7 +2487,7 @@ if (string.IsNullOrWhiteSpace(draft.Prenom)) Add("prenom", "Le prénom est oblig
 
     public OperationResult AddCommunityChapter(string titre, string texte, string dateIso, string? imageDataUrl)
     {
-        if (string.IsNullOrWhiteSpace(titre)) return OperationResult.Fail("Le titre du chapitre est obligatoire.");
+        if (string.IsNullOrWhiteSpace(titre)) return OperationResult.Fail(L.T("Le titre du chapitre est obligatoire."));
         _community.Chapitres.Add(new CommunityChapter
         {
             Id = Guid.NewGuid().ToString("N"),
@@ -2505,8 +2505,8 @@ if (string.IsNullOrWhiteSpace(draft.Prenom)) Add("prenom", "Le prénom est oblig
     public OperationResult UpdateCommunityChapter(string id, string titre, string texte, string dateIso, string? imageDataUrl, bool removeImage)
     {
         var c = _community.Chapitres.FirstOrDefault(x => x.Id == id);
-        if (c == null) return OperationResult.Fail("Chapitre introuvable.");
-        if (string.IsNullOrWhiteSpace(titre)) return OperationResult.Fail("Le titre du chapitre est obligatoire.");
+        if (c == null) return OperationResult.Fail(L.T("Chapitre introuvable."));
+        if (string.IsNullOrWhiteSpace(titre)) return OperationResult.Fail(L.T("Le titre du chapitre est obligatoire."));
         c.Titre = titre.Trim();
         c.Texte = (texte ?? "").Trim();
         c.Date = (dateIso ?? "").Trim();
@@ -2521,7 +2521,7 @@ if (string.IsNullOrWhiteSpace(draft.Prenom)) Add("prenom", "Le prénom est oblig
     public OperationResult DeleteCommunityChapter(string id)
     {
         var removed = _community.Chapitres.RemoveAll(x => x.Id == id);
-        if (removed == 0) return OperationResult.Fail("Chapitre introuvable.");
+        if (removed == 0) return OperationResult.Fail(L.T("Chapitre introuvable."));
         SaveCommunity();
         LogActivity(ActivityTypes.Delete, "Suppression d'un chapitre de l'histoire de la communauté");
         DataChanged?.Invoke();
@@ -2609,12 +2609,12 @@ if (string.IsNullOrWhiteSpace(draft.Prenom)) Add("prenom", "Le prénom est oblig
     public OperationResult SaveRolePermissions(List<RolePermissionSet> sets)
     {
         if (!IsAdmin)
-            return OperationResult.Fail("Seul un administrateur peut modifier les rôles et permissions.");
+            return OperationResult.Fail(L.T("Seul un administrateur peut modifier les rôles et permissions."));
         var check = ValidatePermissionSets(sets);
         if (!check.Success) return check;
         var admin = sets.First(s => s.Role == Models.Roles.Administrateur);
         if (!admin.Allowed.GetValueOrDefault(Models.Permissions.RolesManage))
-            return OperationResult.Fail("Impossible de retirer « Gérer les rôles et permissions » aux administrateurs (verrou anti-blocage).");
+            return OperationResult.Fail(L.T("Impossible de retirer « Gérer les rôles et permissions » aux administrateurs (verrou anti-blocage)."));
         _permissions = sets.Select(s => new RolePermissionSet
         {
             Role = s.Role,
@@ -2629,19 +2629,19 @@ if (string.IsNullOrWhiteSpace(draft.Prenom)) Add("prenom", "Le prénom est oblig
     private static OperationResult ValidatePermissionSets(List<RolePermissionSet>? sets)
     {
         if (sets == null)
-            return OperationResult.Fail("La matrice des permissions est invalide.");
+            return OperationResult.Fail(L.T("La matrice des permissions est invalide."));
         var knownRoles = new HashSet<string>(Models.Roles.MatrixRoles);
         var knownKeys = new HashSet<string>(Models.Permissions.Toutes.Select(d => d.Key));
         if (sets.Count != knownRoles.Count || !sets.All(s => knownRoles.Contains(s.Role)))
-            return OperationResult.Fail("La matrice doit contenir exactement les rôles : "
-                + string.Join(", ", Models.Roles.MatrixRoles) + ".");
+            return OperationResult.Fail(L.F("La matrice doit contenir exactement les rôles : {0}.",
+                string.Join(", ", Models.Roles.MatrixRoles)));
         foreach (var s in sets)
         {
             if (s.Allowed == null)
-                return OperationResult.Fail("Permissions manquantes pour le rôle « " + s.Role + " ».");
+                return OperationResult.Fail(L.F("Permissions manquantes pour le rôle « {0} ».", s.Role));
             var unknown = s.Allowed.Keys.Where(k => !knownKeys.Contains(k)).ToList();
             if (unknown.Count > 0)
-                return OperationResult.Fail("Permission inconnue : " + string.Join(", ", unknown) + ".");
+                return OperationResult.Fail(L.F("Permission inconnue : {0}.", string.Join(", ", unknown)));
         }
         return OperationResult.Ok();
     }
@@ -2750,12 +2750,12 @@ if (string.IsNullOrWhiteSpace(draft.Prenom)) Add("prenom", "Le prénom est oblig
     public (SyncPackage? Package, string? Error) ParseSyncPackage(string jsonText)
     {
         if (string.IsNullOrWhiteSpace(jsonText))
-            return (null, "Le fichier est vide.");
+            return (null, L.T("Le fichier est vide."));
         SyncPackage? package;
         try { package = JsonSerializer.Deserialize<SyncPackage>(jsonText, JsonOpts); }
-        catch (JsonException ex) { return (null, "Fichier illisible : " + ex.Message); }
-        if (package == null) return (null, "Le fichier ne contient pas un paquet de synchronisation.");
-        if (package.Version != 1) return (null, "Version de paquet non prise en charge (" + package.Version + ").");
+        catch (JsonException ex) { return (null, L.F("Fichier illisible : {0}", ex.Message)); }
+        if (package == null) return (null, L.T("Le fichier ne contient pas un paquet de synchronisation."));
+        if (package.Version != 1) return (null, L.F("Version de paquet non prise en charge ({0}).", package.Version));
         package.Options ??= new SyncOptions();
         package.Users ??= new List<UserAccount>();
         package.Fields ??= new List<FieldDefinition>();
@@ -2779,7 +2779,7 @@ if (string.IsNullOrWhiteSpace(draft.Prenom)) Add("prenom", "Le prénom est oblig
         foreach (var v in package.Votes) { v.Options ??= new List<string>(); v.Bulletins ??= new List<Models.Bulletin>(); }
         package.JournalMedia ??= new List<MediaItem>();
         if (!string.IsNullOrWhiteSpace(package.DeviceId) && package.DeviceId == DeviceId)
-            return (null, "Ce paquet a été généré par cet appareil : rien à fusionner.");
+            return (null, L.T("Ce paquet a été généré par cet appareil : rien à fusionner."));
         return (package, null);
     }
 
@@ -2959,7 +2959,7 @@ if (string.IsNullOrWhiteSpace(draft.Prenom)) Add("prenom", "Le prénom est oblig
 
         // Garde-fou : jamais sans administrateur actif.
         if (!_users.Any(u => Models.Roles.IsAdmin(u.Role) && u.Actif))
-            return OperationResult.Fail("La synchronisation supprimerait le dernier administrateur actif : opération annulée.");
+            return OperationResult.Fail(L.T("La synchronisation supprimerait le dernier administrateur actif : opération annulée."));
 
         if (touchedUsers) SaveUsers();
         if (touchedFields) { ReindexFields(); SaveFields(); }
@@ -3113,7 +3113,7 @@ if (string.IsNullOrWhiteSpace(draft.Prenom)) Add("prenom", "Le prénom est oblig
             if (peer.Count == 0 && package.Archives.Count == 0 && local.Count > 0 && HasSnapKeys("users"))
             {
                 // Paquet sans utilisateurs ni archives alors qu'on en suit : pas de vidage automatique.
-                plan.Warning = "Aucun utilisateur dans le paquet : suppressions ignorées par sécurité.";
+                plan.Warning = L.T("Aucun utilisateur dans le paquet : suppressions ignorées par sécurité.");
             }
             else
             {
@@ -3725,10 +3725,10 @@ if (string.IsNullOrWhiteSpace(draft.Prenom)) Add("prenom", "Le prénom est oblig
             var conv = ConversationIdFor(members.Append(me));
             var existe = _messages.Any(m => m.ConversationId == conv);
             if (!existe || inconnus.Count == members.Count)
-                return OperationResult.Fail("Destinataire introuvable : « " + inconnus[0] + " ». Ce membre a peut-être été supprimé.");
+                return OperationResult.Fail(L.F("Destinataire introuvable : « {0} ». Ce membre a peut-être été supprimé.", inconnus[0]));
         }
         if (string.IsNullOrWhiteSpace(texte))
-            return OperationResult.Fail("Le message est vide.");
+            return OperationResult.Fail(L.T("Le message est vide."));
         members.Add(me);
         var message = new Message
         {
@@ -3798,13 +3798,13 @@ if (string.IsNullOrWhiteSpace(draft.Prenom)) Add("prenom", "Le prénom est oblig
     public OperationResult DeleteMessage(string messageId)
     {
         var idx = _messages.FindIndex(m => m.Id == messageId);
-        if (idx < 0) return OperationResult.Fail("Message introuvable.");
+        if (idx < 0) return OperationResult.Fail(L.T("Message introuvable."));
         var target = _messages[idx];
-        if (target.Supprime) return OperationResult.Fail("Message déjà supprimé.");
+        if (target.Supprime) return OperationResult.Fail(L.T("Message déjà supprimé."));
         var me = GetCurrentUser();
         var own = me != null && target.Expediteur.Equals(me.Identifiant, StringComparison.OrdinalIgnoreCase);
         if (!own && !IsAdmin)
-            return OperationResult.Fail("Seul l'expéditeur ou un administrateur peut supprimer ce message.");
+            return OperationResult.Fail(L.T("Seul l'expéditeur ou un administrateur peut supprimer ce message."));
         var author = me?.Identifiant ?? "inconnu";
         target.Supprime = true;
         target.SupprimePar = author;
@@ -3836,18 +3836,18 @@ if (string.IsNullOrWhiteSpace(draft.Prenom)) Add("prenom", "Le prénom est oblig
     public OperationResult UpdateMessage(string messageId, string nouveauTexte)
     {
         var idx = _messages.FindIndex(m => m.Id == messageId);
-        if (idx < 0) return OperationResult.Fail("Message introuvable.");
+        if (idx < 0) return OperationResult.Fail(L.T("Message introuvable."));
         var target = _messages[idx];
-        if (target.Supprime) return OperationResult.Fail("Message supprimé.");
+        if (target.Supprime) return OperationResult.Fail(L.T("Message supprimé."));
         var me = GetCurrentUser()?.Identifiant ?? "";
         if (string.IsNullOrEmpty(me) || !target.Expediteur.Equals(me, StringComparison.OrdinalIgnoreCase))
-            return OperationResult.Fail("Seul l'expéditeur peut modifier ce message.");
+            return OperationResult.Fail(L.T("Seul l'expéditeur peut modifier ce message."));
         if (!DateTimeOffset.TryParse(target.Date, out var sent))
-            return OperationResult.Fail("Modification impossible.");
+            return OperationResult.Fail(L.T("Modification impossible."));
         if (DateTimeOffset.Now - sent > MessageEditWindow)
-            return OperationResult.Fail("Le délai de modification (5 min) est dépassé.");
+            return OperationResult.Fail(L.T("Le délai de modification (5 min) est dépassé."));
         if (string.IsNullOrWhiteSpace(nouveauTexte))
-            return OperationResult.Fail("Le message est vide.");
+            return OperationResult.Fail(L.T("Le message est vide."));
         target.Texte = nouveauTexte.Trim();
         target.DateModification = DateTimeOffset.Now.ToString("O");
         if (!target.LuPar.Any(l => l.Equals(me, StringComparison.OrdinalIgnoreCase)))
@@ -3885,7 +3885,7 @@ if (string.IsNullOrWhiteSpace(draft.Prenom)) Add("prenom", "Le prénom est oblig
     {
         draft.Titre = (draft.Titre ?? "").Trim();
         if (string.IsNullOrWhiteSpace(draft.Titre))
-            return OperationResult.Fail("Le titre de la tâche est obligatoire.");
+            return OperationResult.Fail(L.T("Le titre de la tâche est obligatoire."));
         draft.Description = (draft.Description ?? "").Trim();
         draft.Assignes = (draft.Assignes ?? new List<string>())
             .Select(a => (a ?? "").Trim()).Where(a => a.Length > 0)
@@ -3893,10 +3893,10 @@ if (string.IsNullOrWhiteSpace(draft.Prenom)) Add("prenom", "Le prénom est oblig
         foreach (var a in draft.Assignes)
         {
             if (FindUserByIdentifier(a) == null)
-                return OperationResult.Fail("Assigné introuvable : « " + a + " ».");
+                return OperationResult.Fail(L.F("Assigné introuvable : « {0} ».", a));
         }
         if (!string.IsNullOrWhiteSpace(draft.Echeance) && !TryParseYmd(draft.Echeance, out _))
-            return OperationResult.Fail("L'échéance doit être au format JJ/MM/AAAA.");
+            return OperationResult.Fail(L.T("L'échéance doit être au format JJ/MM/AAAA."));
         draft.Id = Guid.NewGuid().ToString("N");
         draft.Statut = Models.TacheStatuts.AFaire;
         draft.DateCreation = DateTimeOffset.Now.ToString("O");
@@ -3912,12 +3912,12 @@ if (string.IsNullOrWhiteSpace(draft.Prenom)) Add("prenom", "Le prénom est oblig
     public OperationResult UpdateTache(string id, Tache draft)
     {
         var existing = FindTache(id);
-        if (existing == null) return OperationResult.Fail("Tâche introuvable.");
+        if (existing == null) return OperationResult.Fail(L.T("Tâche introuvable."));
         draft.Titre = (draft.Titre ?? "").Trim();
         if (string.IsNullOrWhiteSpace(draft.Titre))
-            return OperationResult.Fail("Le titre de la tâche est obligatoire.");
+            return OperationResult.Fail(L.T("Le titre de la tâche est obligatoire."));
         if (!string.IsNullOrWhiteSpace(draft.Echeance) && !TryParseYmd(draft.Echeance, out _))
-            return OperationResult.Fail("L'échéance doit être au format JJ/MM/AAAA.");
+            return OperationResult.Fail(L.T("L'échéance doit être au format JJ/MM/AAAA."));
         draft.Assignes = (draft.Assignes ?? new List<string>())
             .Select(a => (a ?? "").Trim()).Where(a => a.Length > 0)
             .Distinct(StringComparer.OrdinalIgnoreCase).ToList();
@@ -3925,7 +3925,7 @@ if (string.IsNullOrWhiteSpace(draft.Prenom)) Add("prenom", "Le prénom est oblig
         {
             // Un membre archivé déjà assigné reste accepté : sinon la tâche ne pourrait plus être modifiée.
             if (FindUserByIdentifier(a) == null && !(existing.Assignes ?? new List<string>()).Contains(a, StringComparer.OrdinalIgnoreCase))
-                return OperationResult.Fail("Assigné introuvable : « " + a + " ».");
+                return OperationResult.Fail(L.F("Assigné introuvable : « {0} ».", a));
         }
         existing.Titre = draft.Titre;
         existing.Description = (draft.Description ?? "").Trim();
@@ -3942,9 +3942,9 @@ if (string.IsNullOrWhiteSpace(draft.Prenom)) Add("prenom", "Le prénom est oblig
     public OperationResult SetTacheStatut(string id, string statut)
     {
         var existing = FindTache(id);
-        if (existing == null) return OperationResult.Fail("Tâche introuvable.");
+        if (existing == null) return OperationResult.Fail(L.T("Tâche introuvable."));
         if (statut != Models.TacheStatuts.AFaire && statut != Models.TacheStatuts.EnCours && statut != Models.TacheStatuts.Terminee)
-            return OperationResult.Fail("Statut inconnu.");
+            return OperationResult.Fail(L.T("Statut inconnu."));
         existing.Statut = statut;
         existing.TermineLe = statut == Models.TacheStatuts.Terminee ? DateTimeOffset.Now.ToString("O") : null;
         SaveTaches();
@@ -3957,7 +3957,7 @@ if (string.IsNullOrWhiteSpace(draft.Prenom)) Add("prenom", "Le prénom est oblig
     public OperationResult DeleteTache(string id)
     {
         var idx = _taches.FindIndex(t => t.Id == id);
-        if (idx < 0) return OperationResult.Fail("Tâche introuvable.");
+        if (idx < 0) return OperationResult.Fail(L.T("Tâche introuvable."));
         var titre = _taches[idx].Titre;
         _taches.RemoveAt(idx);
         SaveTaches();
@@ -4008,11 +4008,11 @@ if (string.IsNullOrWhiteSpace(draft.Prenom)) Add("prenom", "Le prénom est oblig
     public OperationResult EnsureBirthdayEvent(string userId)
     {
         var user = FindUser(userId);
-        if (user == null) return OperationResult.Fail("Utilisateur introuvable.");
+        if (user == null) return OperationResult.Fail(L.T("Utilisateur introuvable."));
         if (!TryParseYmd(user.DateNaissance, out _))
-            return OperationResult.Fail("Renseignez d'abord la date de naissance (JJ/MM/AAAA).");
+            return OperationResult.Fail(L.T("Renseignez d'abord la date de naissance (JJ/MM/AAAA)."));
         if (GetBirthdayEventsForUser(user.Identifiant, user.NomComplet).Count > 0)
-            return OperationResult.Fail("Un événement d'anniversaire existe déjà pour ce membre.");
+            return OperationResult.Fail(L.T("Un événement d'anniversaire existe déjà pour ce membre."));
         return AddEvent(new CalendarEvent
         {
             Type = Models.CalendarEventTypes.Anniversaire,
@@ -4255,14 +4255,14 @@ if (string.IsNullOrWhiteSpace(draft.Prenom)) Add("prenom", "Le prénom est oblig
     {
         draft.Motif = (draft.Motif ?? "").Trim();
         if (FindUserByIdentifier(draft.MembreIdentifiant) == null)
-            return OperationResult.Fail("Membre introuvable : « " + draft.MembreIdentifiant + " ».");
+            return OperationResult.Fail(L.F("Membre introuvable : « {0} ».", draft.MembreIdentifiant));
         if (draft.Montant <= 0)
-            return OperationResult.Fail("Le montant doit être supérieur à 0.");
+            return OperationResult.Fail(L.T("Le montant doit être supérieur à 0."));
         if (string.IsNullOrWhiteSpace(draft.Periode)) draft.Periode = DateTime.Today.Year.ToString();
         else draft.Periode = draft.Periode.Trim();
         if (string.IsNullOrWhiteSpace(draft.Date)) draft.Date = DateTime.Today.ToString("yyyy-MM-dd");
         else if (!TryParseYmd(draft.Date, out _))
-            return OperationResult.Fail("La date doit être au format JJ/MM/AAAA.");
+            return OperationResult.Fail(L.T("La date doit être au format JJ/MM/AAAA."));
         else draft.Date = ToYmd(draft.Date);
         if (draft.Statut != CotisationStatuts.EnAttente) draft.Statut = CotisationStatuts.Payee;
         draft.MembreIdentifiant = draft.MembreIdentifiant.Trim();
@@ -4303,11 +4303,11 @@ if (string.IsNullOrWhiteSpace(draft.Prenom)) Add("prenom", "Le prénom est oblig
     public (OperationResult Result, int Ajoutes, int Ignores) AddCotisationsEnAttente(
         IEnumerable<string> identifiants, double montant, string? motif, string? periode)
     {
-        if (montant <= 0) return (OperationResult.Fail("Le montant doit être supérieur à 0."), 0, 0);
+        if (montant <= 0) return (OperationResult.Fail(L.T("Le montant doit être supérieur à 0.")), 0, 0);
         var ids = (identifiants ?? Enumerable.Empty<string>())
             .Select(i => (i ?? "").Trim()).Where(i => i.Length > 0)
             .Distinct(StringComparer.OrdinalIgnoreCase).ToList();
-        if (ids.Count == 0) return (OperationResult.Fail("Choisissez au moins un membre."), 0, 0);
+        if (ids.Count == 0) return (OperationResult.Fail(L.T("Choisissez au moins un membre.")), 0, 0);
         motif = string.IsNullOrWhiteSpace(motif) ? "Cotisation" : motif.Trim();
         periode = string.IsNullOrWhiteSpace(periode) ? DateTime.Today.Year.ToString() : periode.Trim();
         var auteur = GetCurrentUser()?.Identifiant ?? "inconnu";
@@ -4343,10 +4343,10 @@ if (string.IsNullOrWhiteSpace(draft.Prenom)) Add("prenom", "Le prénom est oblig
     public OperationResult EncaisserCotisation(string id, string? date, bool ajouterTresorerie)
     {
         var cot = _cotisations.FirstOrDefault(c => c.Id == id);
-        if (cot == null) return OperationResult.Fail("Cotisation introuvable.");
-        if (cot.Statut == CotisationStatuts.Payee) return OperationResult.Fail("Cette cotisation est déjà payée.");
+        if (cot == null) return OperationResult.Fail(L.T("Cotisation introuvable."));
+        if (cot.Statut == CotisationStatuts.Payee) return OperationResult.Fail(L.T("Cette cotisation est déjà payée."));
         if (string.IsNullOrWhiteSpace(date)) date = DateTime.Today.ToString("yyyy-MM-dd");
-        else if (!TryParseYmd(date, out _)) return OperationResult.Fail("La date doit être au format JJ/MM/AAAA.");
+        else if (!TryParseYmd(date, out _)) return OperationResult.Fail(L.T("La date doit être au format JJ/MM/AAAA."));
         cot.Date = ToYmd(date);
         cot.Statut = CotisationStatuts.Payee;
         SaveCotisations();
@@ -4361,11 +4361,11 @@ if (string.IsNullOrWhiteSpace(draft.Prenom)) Add("prenom", "Le prénom est oblig
     public OperationResult UpdateCotisation(Cotisation changes)
     {
         var cot = _cotisations.FirstOrDefault(c => c.Id == changes.Id);
-        if (cot == null) return OperationResult.Fail("Cotisation introuvable.");
-        if (changes.Montant <= 0) return OperationResult.Fail("Le montant doit être supérieur à 0.");
+        if (cot == null) return OperationResult.Fail(L.T("Cotisation introuvable."));
+        if (changes.Montant <= 0) return OperationResult.Fail(L.T("Le montant doit être supérieur à 0."));
         var date = changes.Date;
         if (string.IsNullOrWhiteSpace(date)) date = cot.Date;
-        else if (!TryParseYmd(date, out _)) return OperationResult.Fail("La date doit être au format JJ/MM/AAAA.");
+        else if (!TryParseYmd(date, out _)) return OperationResult.Fail(L.T("La date doit être au format JJ/MM/AAAA."));
         cot.Montant = changes.Montant;
         cot.Motif = (changes.Motif ?? "").Trim();
         cot.Periode = string.IsNullOrWhiteSpace(changes.Periode) ? cot.Periode : changes.Periode.Trim();
@@ -4399,7 +4399,7 @@ if (string.IsNullOrWhiteSpace(draft.Prenom)) Add("prenom", "Le prénom est oblig
     public OperationResult DeleteCotisation(string id)
     {
         var idx = _cotisations.FindIndex(c => c.Id == id);
-        if (idx < 0) return OperationResult.Fail("Cotisation introuvable.");
+        if (idx < 0) return OperationResult.Fail(L.T("Cotisation introuvable."));
         _cotisations.RemoveAt(idx);
         SaveCotisations();
         LogActivity(Models.ActivityTypes.FinanceCotisation, "Suppression d'une cotisation");
@@ -4434,13 +4434,13 @@ if (string.IsNullOrWhiteSpace(draft.Prenom)) Add("prenom", "Le prénom est oblig
     {
         draft.Motif = (draft.Motif ?? "").Trim();
         if (string.IsNullOrWhiteSpace(draft.Motif))
-            return OperationResult.Fail("Le motif est obligatoire.");
+            return OperationResult.Fail(L.T("Le motif est obligatoire."));
         if (draft.Montant <= 0)
-            return OperationResult.Fail("Le montant doit être supérieur à 0.");
+            return OperationResult.Fail(L.T("Le montant doit être supérieur à 0."));
         if (draft.Type != TresorerieTypes.Sortie) draft.Type = TresorerieTypes.Entree;
         if (string.IsNullOrWhiteSpace(draft.Date)) draft.Date = DateTime.Today.ToString("yyyy-MM-dd");
         else if (!TryParseYmd(draft.Date, out _))
-            return OperationResult.Fail("La date doit être au format JJ/MM/AAAA.");
+            return OperationResult.Fail(L.T("La date doit être au format JJ/MM/AAAA."));
         else draft.Date = ToYmd(draft.Date);
         draft.Id = Guid.NewGuid().ToString("N");
         draft.CreatedBy = GetCurrentUser()?.Identifiant ?? "inconnu";
@@ -4455,7 +4455,7 @@ if (string.IsNullOrWhiteSpace(draft.Prenom)) Add("prenom", "Le prénom est oblig
     public OperationResult DeleteTransaction(string id)
     {
         var idx = _tresorerie.FindIndex(t => t.Id == id);
-        if (idx < 0) return OperationResult.Fail("Mouvement introuvable.");
+        if (idx < 0) return OperationResult.Fail(L.T("Mouvement introuvable."));
         _tresorerie.RemoveAt(idx);
         SaveTresorerie();
         LogActivity(Models.ActivityTypes.FinanceTresorerie, "Suppression d'un mouvement de trésorerie");
@@ -4494,14 +4494,14 @@ if (string.IsNullOrWhiteSpace(draft.Prenom)) Add("prenom", "Le prénom est oblig
     {
         draft.Nom = (draft.Nom ?? "").Trim();
         if (string.IsNullOrWhiteSpace(draft.Nom))
-            return OperationResult.Fail("Le nom du matériel est obligatoire.");
+            return OperationResult.Fail(L.T("Le nom du matériel est obligatoire."));
         draft.Description = (draft.Description ?? "").Trim();
         draft.Categorie = (draft.Categorie ?? "").Trim();
         draft.QuantiteTotale = Math.Max(1, draft.QuantiteTotale);
         if (draft.Etat is not (MaterielEtats.Moyen or MaterielEtats.HorsService)) draft.Etat = MaterielEtats.Bon;
         draft.Responsable = (draft.Responsable ?? "").Trim();
         if (!string.IsNullOrWhiteSpace(draft.Responsable) && FindUserByIdentifier(draft.Responsable) == null)
-            return OperationResult.Fail("Responsable introuvable : « " + draft.Responsable + " ».");
+            return OperationResult.Fail(L.F("Responsable introuvable : « {0} ».", draft.Responsable));
         draft.Id = Guid.NewGuid().ToString("N");
         _materiels.Add(draft);
         SaveMateriels();
@@ -4513,16 +4513,16 @@ if (string.IsNullOrWhiteSpace(draft.Prenom)) Add("prenom", "Le prénom est oblig
     public OperationResult UpdateMateriel(string id, Materiel draft)
     {
         var existing = FindMateriel(id);
-        if (existing == null) return OperationResult.Fail("Matériel introuvable.");
+        if (existing == null) return OperationResult.Fail(L.T("Matériel introuvable."));
         draft.Nom = (draft.Nom ?? "").Trim();
         if (string.IsNullOrWhiteSpace(draft.Nom))
-            return OperationResult.Fail("Le nom du matériel est obligatoire.");
+            return OperationResult.Fail(L.T("Le nom du matériel est obligatoire."));
         var nouvelleQuantite = Math.Max(1, draft.QuantiteTotale);
         var enPret = _prets
             .Where(p => p.MaterielId == id && string.IsNullOrWhiteSpace(p.DateRetour))
             .Sum(p => p.Quantite);
         if (nouvelleQuantite < enPret)
-            return OperationResult.Fail("Quantité inférieure aux prêts actifs (" + enPret + ").");
+            return OperationResult.Fail(L.F("Quantité inférieure aux prêts actifs ({0}).", enPret));
         existing.Nom = draft.Nom;
         existing.Description = (draft.Description ?? "").Trim();
         existing.Categorie = (draft.Categorie ?? "").Trim();
@@ -4538,9 +4538,9 @@ if (string.IsNullOrWhiteSpace(draft.Prenom)) Add("prenom", "Le prénom est oblig
     public OperationResult DeleteMateriel(string id)
     {
         var existing = FindMateriel(id);
-        if (existing == null) return OperationResult.Fail("Matériel introuvable.");
+        if (existing == null) return OperationResult.Fail(L.T("Matériel introuvable."));
         if (_prets.Any(p => p.MaterielId == id && string.IsNullOrWhiteSpace(p.DateRetour)))
-            return OperationResult.Fail("Des prêts actifs existent : retournez-les d'abord.");
+            return OperationResult.Fail(L.T("Des prêts actifs existent : retournez-les d'abord."));
         _materiels.Remove(existing);
         _prets.RemoveAll(p => p.MaterielId == id);
         SaveMateriels();
@@ -4553,12 +4553,12 @@ if (string.IsNullOrWhiteSpace(draft.Prenom)) Add("prenom", "Le prénom est oblig
     public OperationResult AddPret(string materielId, string membreIdentifiant, int quantite)
     {
         var mat = FindMateriel(materielId);
-        if (mat == null) return OperationResult.Fail("Matériel introuvable.");
+        if (mat == null) return OperationResult.Fail(L.T("Matériel introuvable."));
         if (FindUserByIdentifier(membreIdentifiant) == null)
-            return OperationResult.Fail("Membre introuvable : « " + membreIdentifiant + " ».");
-        if (quantite < 1) return OperationResult.Fail("La quantité doit être d'au moins 1.");
+            return OperationResult.Fail(L.F("Membre introuvable : « {0} ».", membreIdentifiant));
+        if (quantite < 1) return OperationResult.Fail(L.T("La quantité doit être d'au moins 1."));
         if (quantite > DisponibleMateriel(materielId))
-            return OperationResult.Fail("Stock insuffisant : " + DisponibleMateriel(materielId) + " disponible(s).");
+            return OperationResult.Fail(L.F("Stock insuffisant : {0} disponible(s).", DisponibleMateriel(materielId)));
         _prets.Add(new PretMateriel
         {
             Id = Guid.NewGuid().ToString("N"),
@@ -4578,9 +4578,9 @@ if (string.IsNullOrWhiteSpace(draft.Prenom)) Add("prenom", "Le prénom est oblig
     public OperationResult ReturnPret(string pretId)
     {
         var pret = _prets.FirstOrDefault(p => p.Id == pretId);
-        if (pret == null) return OperationResult.Fail("Prêt introuvable.");
+        if (pret == null) return OperationResult.Fail(L.T("Prêt introuvable."));
         if (!string.IsNullOrWhiteSpace(pret.DateRetour))
-            return OperationResult.Fail("Ce prêt est déjà retourné.");
+            return OperationResult.Fail(L.T("Ce prêt est déjà retourné."));
         pret.DateRetour = DateTime.Today.ToString("yyyy-MM-dd");
         SavePrets();
         var mat = FindMateriel(pret.MaterielId);
@@ -4593,7 +4593,7 @@ if (string.IsNullOrWhiteSpace(draft.Prenom)) Add("prenom", "Le prénom est oblig
     public OperationResult DeletePret(string pretId)
     {
         var idx = _prets.FindIndex(p => p.Id == pretId);
-        if (idx < 0) return OperationResult.Fail("Prêt introuvable.");
+        if (idx < 0) return OperationResult.Fail(L.T("Prêt introuvable."));
         _prets.RemoveAt(idx);
         SavePrets();
         DataChanged?.Invoke();
@@ -4610,9 +4610,9 @@ if (string.IsNullOrWhiteSpace(draft.Prenom)) Add("prenom", "Le prénom est oblig
     {
         draft.Titre = (draft.Titre ?? "").Trim();
         if (string.IsNullOrWhiteSpace(draft.Titre))
-            return OperationResult.Fail("Le titre de la réunion est obligatoire.");
+            return OperationResult.Fail(L.T("Le titre de la réunion est obligatoire."));
         if (string.IsNullOrWhiteSpace(draft.Date) || !TryParseYmd(draft.Date, out _))
-            return OperationResult.Fail("La date doit être au format JJ/MM/AAAA.");
+            return OperationResult.Fail(L.T("La date doit être au format JJ/MM/AAAA."));
         draft.Date = ToYmd(draft.Date);
         draft.Lieu = (draft.Lieu ?? "").Trim();
         draft.CompteRendu ??= "";
@@ -4622,7 +4622,7 @@ if (string.IsNullOrWhiteSpace(draft.Prenom)) Add("prenom", "Le prénom est oblig
         foreach (var p in draft.Participants)
         {
             if (FindUserByIdentifier(p) == null)
-                return OperationResult.Fail("Participant introuvable : « " + p + " ».");
+                return OperationResult.Fail(L.F("Participant introuvable : « {0} ».", p));
         }
         draft.Presences ??= new Dictionary<string, string>();
         draft.Id = Guid.NewGuid().ToString("N");
@@ -4639,12 +4639,12 @@ if (string.IsNullOrWhiteSpace(draft.Prenom)) Add("prenom", "Le prénom est oblig
     public OperationResult UpdateReunion(string id, Reunion draft)
     {
         var existing = FindReunion(id);
-        if (existing == null) return OperationResult.Fail("Réunion introuvable.");
+        if (existing == null) return OperationResult.Fail(L.T("Réunion introuvable."));
         draft.Titre = (draft.Titre ?? "").Trim();
         if (string.IsNullOrWhiteSpace(draft.Titre))
-            return OperationResult.Fail("Le titre de la réunion est obligatoire.");
+            return OperationResult.Fail(L.T("Le titre de la réunion est obligatoire."));
         if (string.IsNullOrWhiteSpace(draft.Date) || !TryParseYmd(draft.Date, out _))
-            return OperationResult.Fail("La date doit être au format JJ/MM/AAAA.");
+            return OperationResult.Fail(L.T("La date doit être au format JJ/MM/AAAA."));
         var participants = (draft.Participants ?? new List<string>())
             .Select(p => (p ?? "").Trim()).Where(p => p.Length > 0)
             .Distinct(StringComparer.OrdinalIgnoreCase).ToList();
@@ -4652,7 +4652,7 @@ if (string.IsNullOrWhiteSpace(draft.Prenom)) Add("prenom", "Le prénom est oblig
         {
             // Un membre archivé déjà invité reste accepté : sinon la réunion ne pourrait plus être modifiée.
             if (FindUserByIdentifier(p) == null && !(existing.Participants ?? new List<string>()).Contains(p, StringComparer.OrdinalIgnoreCase))
-                return OperationResult.Fail("Participant introuvable : « " + p + " ».");
+                return OperationResult.Fail(L.F("Participant introuvable : « {0} ».", p));
         }
         existing.Titre = draft.Titre;
         existing.Date = ToYmd(draft.Date);
@@ -4673,7 +4673,7 @@ if (string.IsNullOrWhiteSpace(draft.Prenom)) Add("prenom", "Le prénom est oblig
     public OperationResult DeleteReunion(string id)
     {
         var idx = _reunions.FindIndex(r => r.Id == id);
-        if (idx < 0) return OperationResult.Fail("Réunion introuvable.");
+        if (idx < 0) return OperationResult.Fail(L.T("Réunion introuvable."));
         var titre = _reunions[idx].Titre;
         _reunions.RemoveAt(idx);
         SaveReunions();
@@ -4686,11 +4686,11 @@ if (string.IsNullOrWhiteSpace(draft.Prenom)) Add("prenom", "Le prénom est oblig
     public OperationResult MarkPresence(string reunionId, string membreIdentifiant, string statut)
     {
         var reunion = FindReunion(reunionId);
-        if (reunion == null) return OperationResult.Fail("Réunion introuvable.");
+        if (reunion == null) return OperationResult.Fail(L.T("Réunion introuvable."));
         if (FindUserByIdentifier(membreIdentifiant) == null)
-            return OperationResult.Fail("Membre introuvable : « " + membreIdentifiant + " ».");
+            return OperationResult.Fail(L.F("Membre introuvable : « {0} ».", membreIdentifiant));
         if (statut is not (PresenceStatuts.Present or PresenceStatuts.Absent or PresenceStatuts.Excuse))
-            return OperationResult.Fail("Statut de présence inconnu.");
+            return OperationResult.Fail(L.T("Statut de présence inconnu."));
         var membre = membreIdentifiant.Trim();
         if (!reunion.Participants.Contains(membre, StringComparer.OrdinalIgnoreCase))
             reunion.Participants.Add(membre);
@@ -4733,17 +4733,17 @@ if (string.IsNullOrWhiteSpace(draft.Prenom)) Add("prenom", "Le prénom est oblig
                 if (jours < 0)
                     rappels.Add(new Rappel
                     {
-                        Id = "tache:retard:" + t.Id, Categorie = "Tâches",
-                        Titre = "En retard : " + t.Titre,
-                        Detail = "Échéance dépassée depuis " + (-jours) + " j (" + FormatDateCourte(t.Echeance) + ")",
+                        Id = "tache:retard:" + t.Id, Categorie = L.T("Tâches"),
+                        Titre = L.F("En retard : {0}", t.Titre),
+                        Detail = L.F("Échéance dépassée depuis {0} j ({1})", -jours, FormatDateCourte(t.Echeance)),
                         Priorite = Models.CalendarEventTypes.PrioriteUrgente, PageCible = "taches"
                     });
                 else if (jours <= 3)
                     rappels.Add(new Rappel
                     {
-                        Id = "tache:echeance:" + t.Id, Categorie = "Tâches",
-                        Titre = "Échéance proche : " + t.Titre,
-                        Detail = "J-" + jours + " (" + FormatDateCourte(t.Echeance) + ")",
+                        Id = "tache:echeance:" + t.Id, Categorie = L.T("Tâches"),
+                        Titre = L.F("Échéance proche : {0}", t.Titre),
+                        Detail = L.F("J-{0} ({1})", jours, FormatDateCourte(t.Echeance)),
                         Priorite = Models.CalendarEventTypes.PrioriteImportante, PageCible = "taches"
                     });
             }
@@ -4759,9 +4759,9 @@ if (string.IsNullOrWhiteSpace(draft.Prenom)) Add("prenom", "Le prénom est oblig
             if (jours <= 30)
                 rappels.Add(new Rappel
                 {
-                    Id = "anniversaire:" + u.Id, Categorie = "Anniversaires",
-                    Titre = "Anniversaire de " + u.NomComplet,
-                    Detail = jours == 0 ? "Aujourd'hui (" + FormatDateCourte(u.DateNaissance) + ")" : "Dans " + jours + " j (" + prochain.ToString("dd/MM/yyyy") + ")",
+                    Id = "anniversaire:" + u.Id, Categorie = L.T("Anniversaires"),
+                    Titre = L.F("Anniversaire de {0}", u.NomComplet),
+                    Detail = jours == 0 ? L.F("Aujourd'hui ({0})", FormatDateCourte(u.DateNaissance)) : L.F("Dans {0} j ({1})", jours, prochain.ToString("dd/MM/yyyy")),
                     Priorite = jours <= 7 ? Models.CalendarEventTypes.PrioriteImportante : Models.CalendarEventTypes.PrioriteNormale,
                     PageCible = "users"
                 });
@@ -4774,9 +4774,9 @@ if (string.IsNullOrWhiteSpace(draft.Prenom)) Add("prenom", "Le prénom est oblig
             if (jours >= 0 && jours <= 7)
                 rappels.Add(new Rappel
                 {
-                    Id = "evenement:" + e.Id, Categorie = "Calendrier",
+                    Id = "evenement:" + e.Id, Categorie = L.T("Calendrier"),
                     Titre = e.Titre,
-                    Detail = (jours == 0 ? "Aujourd'hui" : "Dans " + jours + " j") + " (" + FormatDateCourte(e.Date) + ")",
+                    Detail = jours == 0 ? L.F("Aujourd'hui ({0})", FormatDateCourte(e.Date)) : L.F("Dans {0} j ({1})", jours, FormatDateCourte(e.Date)),
                     Priorite = Models.CalendarEventTypes.PrioriteNormale, PageCible = "calendar"
                 });
         }
@@ -4786,8 +4786,8 @@ if (string.IsNullOrWhiteSpace(draft.Prenom)) Add("prenom", "Le prénom est oblig
         if (impayes.Count > 0)
             rappels.Add(new Rappel
             {
-                Id = "cotisations:" + annee, Categorie = "Cotisations",
-                Titre = impayes.Count + " cotisation(s) impayée(s) en " + annee,
+                Id = "cotisations:" + annee, Categorie = L.T("Cotisations"),
+                Titre = L.F("{0} cotisation(s) impayée(s) en {1}", impayes.Count, annee),
                 Detail = string.Join(", ", impayes.Take(3).Select(u => u.NomComplet)) + (impayes.Count > 3 ? ", …" : ""),
                 Priorite = Models.CalendarEventTypes.PrioriteImportante, PageCible = "finances"
             });
@@ -4817,9 +4817,9 @@ if (string.IsNullOrWhiteSpace(draft.Prenom)) Add("prenom", "Le prénom est oblig
     {
         draft.Titre = (draft.Titre ?? "").Trim();
         if (string.IsNullOrWhiteSpace(draft.Titre))
-            return OperationResult.Fail("Le titre de la situation est obligatoire.");
+            return OperationResult.Fail(L.T("Le titre de la situation est obligatoire."));
         if (FindUserByIdentifier(draft.MembreIdentifiant) == null)
-            return OperationResult.Fail("Membre introuvable : « " + draft.MembreIdentifiant + " ».");
+            return OperationResult.Fail(L.F("Membre introuvable : « {0} ».", draft.MembreIdentifiant));
         if (draft.Type is not (Models.SituationTypes.Accompagnement or Models.SituationTypes.EvenementImportant or Models.SituationTypes.Autre))
             draft.Type = Models.SituationTypes.Visite;
         draft.Description = (draft.Description ?? "").Trim();
@@ -4839,12 +4839,12 @@ if (string.IsNullOrWhiteSpace(draft.Prenom)) Add("prenom", "Le prénom est oblig
     public OperationResult UpdateSituation(string id, Situation draft)
     {
         var existing = FindSituation(id);
-        if (existing == null) return OperationResult.Fail("Situation introuvable.");
+        if (existing == null) return OperationResult.Fail(L.T("Situation introuvable."));
         draft.Titre = (draft.Titre ?? "").Trim();
         if (string.IsNullOrWhiteSpace(draft.Titre))
-            return OperationResult.Fail("Le titre de la situation est obligatoire.");
+            return OperationResult.Fail(L.T("Le titre de la situation est obligatoire."));
         if (FindUserByIdentifier(draft.MembreIdentifiant) == null)
-            return OperationResult.Fail("Membre introuvable : « " + draft.MembreIdentifiant + " ».");
+            return OperationResult.Fail(L.F("Membre introuvable : « {0} ».", draft.MembreIdentifiant));
         existing.Titre = draft.Titre;
         existing.Description = (draft.Description ?? "").Trim();
         existing.MembreIdentifiant = draft.MembreIdentifiant.Trim();
@@ -4861,9 +4861,9 @@ if (string.IsNullOrWhiteSpace(draft.Prenom)) Add("prenom", "Le prénom est oblig
     public OperationResult SetSituationStatut(string id, string statut)
     {
         var existing = FindSituation(id);
-        if (existing == null) return OperationResult.Fail("Situation introuvable.");
+        if (existing == null) return OperationResult.Fail(L.T("Situation introuvable."));
         if (statut is not (Models.SituationStatuts.Ouvert or Models.SituationStatuts.EnCours or Models.SituationStatuts.Resolu))
-            return OperationResult.Fail("Statut inconnu.");
+            return OperationResult.Fail(L.T("Statut inconnu."));
         existing.Statut = statut;
         existing.DateResolution = statut == Models.SituationStatuts.Resolu ? DateTimeOffset.Now.ToString("O") : null;
         SaveSituations();
@@ -4876,7 +4876,7 @@ if (string.IsNullOrWhiteSpace(draft.Prenom)) Add("prenom", "Le prénom est oblig
     public OperationResult DeleteSituation(string id)
     {
         var idx = _situations.FindIndex(s => s.Id == id);
-        if (idx < 0) return OperationResult.Fail("Situation introuvable.");
+        if (idx < 0) return OperationResult.Fail(L.T("Situation introuvable."));
         var titre = _situations[idx].Titre;
         _situations.RemoveAt(idx);
         SaveSituations();
@@ -4905,15 +4905,15 @@ if (string.IsNullOrWhiteSpace(draft.Prenom)) Add("prenom", "Le prénom est oblig
     {
         draft.Titre = (draft.Titre ?? "").Trim();
         if (string.IsNullOrWhiteSpace(draft.Titre))
-            return OperationResult.Fail("Le titre du vote est obligatoire.");
+            return OperationResult.Fail(L.T("Le titre du vote est obligatoire."));
         draft.Description = (draft.Description ?? "").Trim();
         draft.Options = (draft.Options ?? new List<string>())
             .Select(o => (o ?? "").Trim()).Where(o => o.Length > 0)
             .Distinct(StringComparer.OrdinalIgnoreCase).ToList();
         if (draft.Options.Count < 2)
-            return OperationResult.Fail("Un vote doit proposer au moins 2 options.");
+            return OperationResult.Fail(L.T("Un vote doit proposer au moins 2 options."));
         if (!string.IsNullOrWhiteSpace(draft.DateCloture) && !TryParseYmd(draft.DateCloture, out _))
-            return OperationResult.Fail("La date de clôture doit être au format JJ/MM/AAAA.");
+            return OperationResult.Fail(L.T("La date de clôture doit être au format JJ/MM/AAAA."));
         draft.DateCloture = string.IsNullOrWhiteSpace(draft.DateCloture) ? "" : ToYmd(draft.DateCloture);
         draft.Id = Guid.NewGuid().ToString("N");
         draft.Statut = Models.VoteStatuts.Ouvert;
@@ -4930,19 +4930,19 @@ if (string.IsNullOrWhiteSpace(draft.Prenom)) Add("prenom", "Le prénom est oblig
     public OperationResult UpdateVote(string id, Vote draft)
     {
         var existing = FindVote(id);
-        if (existing == null) return OperationResult.Fail("Vote introuvable.");
+        if (existing == null) return OperationResult.Fail(L.T("Vote introuvable."));
         if (existing.Statut != Models.VoteStatuts.Ouvert)
-            return OperationResult.Fail("Un vote clos ne peut plus être modifié (résultats figés).");
+            return OperationResult.Fail(L.T("Un vote clos ne peut plus être modifié (résultats figés)."));
         draft.Titre = (draft.Titre ?? "").Trim();
         if (string.IsNullOrWhiteSpace(draft.Titre))
-            return OperationResult.Fail("Le titre du vote est obligatoire.");
+            return OperationResult.Fail(L.T("Le titre du vote est obligatoire."));
         var options = (draft.Options ?? new List<string>())
             .Select(o => (o ?? "").Trim()).Where(o => o.Length > 0)
             .Distinct(StringComparer.OrdinalIgnoreCase).ToList();
         if (options.Count < 2)
-            return OperationResult.Fail("Un vote doit proposer au moins 2 options.");
+            return OperationResult.Fail(L.T("Un vote doit proposer au moins 2 options."));
         if (!string.IsNullOrWhiteSpace(draft.DateCloture) && !TryParseYmd(draft.DateCloture, out _))
-            return OperationResult.Fail("La date de clôture doit être au format JJ/MM/AAAA.");
+            return OperationResult.Fail(L.T("La date de clôture doit être au format JJ/MM/AAAA."));
         existing.Titre = draft.Titre;
         existing.Description = (draft.Description ?? "").Trim();
         // Même nombre d'options : une option corrigée garde ses bulletins (renommage par position).
@@ -4971,17 +4971,17 @@ if (string.IsNullOrWhiteSpace(draft.Prenom)) Add("prenom", "Le prénom est oblig
     public OperationResult CastVote(string voteId, string votantIdentifiant, string option)
     {
         var existing = FindVote(voteId);
-        if (existing == null) return OperationResult.Fail("Vote introuvable.");
+        if (existing == null) return OperationResult.Fail(L.T("Vote introuvable."));
         if (existing.Statut != Models.VoteStatuts.Ouvert)
-            return OperationResult.Fail("Ce vote est clos.");
+            return OperationResult.Fail(L.T("Ce vote est clos."));
         if (TryParseYmd(existing.DateCloture, out var cloture) && cloture.Date < DateTime.Today)
-            return OperationResult.Fail("La date de clôture est dépassée.");
+            return OperationResult.Fail(L.T("La date de clôture est dépassée."));
         votantIdentifiant = (votantIdentifiant ?? "").Trim();
         option = (option ?? "").Trim();
         if (FindUserByIdentifier(votantIdentifiant) == null)
-            return OperationResult.Fail("Votant introuvable : « " + votantIdentifiant + " ».");
+            return OperationResult.Fail(L.F("Votant introuvable : « {0} ».", votantIdentifiant));
         if (!existing.Options.Contains(option, StringComparer.OrdinalIgnoreCase))
-            return OperationResult.Fail("Option inconnue pour ce vote.");
+            return OperationResult.Fail(L.T("Option inconnue pour ce vote."));
         var bulletin = existing.Bulletins.FirstOrDefault(b =>
             b.VotantIdentifiant.Equals(votantIdentifiant, StringComparison.OrdinalIgnoreCase));
         if (bulletin == null)
@@ -5007,9 +5007,9 @@ if (string.IsNullOrWhiteSpace(draft.Prenom)) Add("prenom", "Le prénom est oblig
     public OperationResult SetVoteStatut(string id, string statut)
     {
         var existing = FindVote(id);
-        if (existing == null) return OperationResult.Fail("Vote introuvable.");
+        if (existing == null) return OperationResult.Fail(L.T("Vote introuvable."));
         if (statut is not (Models.VoteStatuts.Ouvert or Models.VoteStatuts.Clos))
-            return OperationResult.Fail("Statut inconnu.");
+            return OperationResult.Fail(L.T("Statut inconnu."));
         existing.Statut = statut;
         SaveVotes();
         LogActivity(Models.ActivityTypes.VoteChange,
@@ -5021,7 +5021,7 @@ if (string.IsNullOrWhiteSpace(draft.Prenom)) Add("prenom", "Le prénom est oblig
     public OperationResult DeleteVote(string id)
     {
         var idx = _votes.FindIndex(v => v.Id == id);
-        if (idx < 0) return OperationResult.Fail("Vote introuvable.");
+        if (idx < 0) return OperationResult.Fail(L.T("Vote introuvable."));
         var titre = _votes[idx].Titre;
         _votes.RemoveAt(idx);
         SaveVotes();
@@ -5055,16 +5055,16 @@ if (string.IsNullOrWhiteSpace(draft.Prenom)) Add("prenom", "Le prénom est oblig
     {
         draft.Titre = (draft.Titre ?? "").Trim();
         if (string.IsNullOrWhiteSpace(draft.Titre))
-            return OperationResult.Fail("Le titre est obligatoire.");
+            return OperationResult.Fail(L.T("Le titre est obligatoire."));
         if (draft.Type is not (Models.MediaTypes.Video or Models.MediaTypes.Audio)) draft.Type = Models.MediaTypes.Photo;
         if (string.IsNullOrWhiteSpace(draft.Data))
-            return OperationResult.Fail("Le contenu multimédia est manquant.");
+            return OperationResult.Fail(L.T("Le contenu multimédia est manquant."));
         if (draft.Taille <= 0)
-            return OperationResult.Fail("Le contenu multimédia est manquant.");
+            return OperationResult.Fail(L.T("Le contenu multimédia est manquant."));
         draft.Description = (draft.Description ?? "").Trim();
         if (string.IsNullOrWhiteSpace(draft.Date)) draft.Date = DateTime.Today.ToString("yyyy-MM-dd");
         else if (!TryParseYmd(draft.Date, out _))
-            return OperationResult.Fail("La date doit être au format JJ/MM/AAAA.");
+            return OperationResult.Fail(L.T("La date doit être au format JJ/MM/AAAA."));
         else draft.Date = ToYmd(draft.Date);
         draft.Id = Guid.NewGuid().ToString("N");
         draft.DateCreation = DateTimeOffset.Now.ToString("O");
@@ -5080,10 +5080,10 @@ if (string.IsNullOrWhiteSpace(draft.Prenom)) Add("prenom", "Le prénom est oblig
     public OperationResult UpdateMedia(string id, MediaItem draft)
     {
         var existing = FindMedia(id);
-        if (existing == null) return OperationResult.Fail("Élément introuvable.");
+        if (existing == null) return OperationResult.Fail(L.T("Élément introuvable."));
         draft.Titre = (draft.Titre ?? "").Trim();
         if (string.IsNullOrWhiteSpace(draft.Titre))
-            return OperationResult.Fail("Le titre est obligatoire.");
+            return OperationResult.Fail(L.T("Le titre est obligatoire."));
         existing.Titre = draft.Titre;
         existing.Description = (draft.Description ?? "").Trim();
         SaveJournalMedia();
@@ -5095,7 +5095,7 @@ if (string.IsNullOrWhiteSpace(draft.Prenom)) Add("prenom", "Le prénom est oblig
     public OperationResult DeleteMedia(string id)
     {
         var idx = _journalMedia.FindIndex(m => m.Id == id);
-        if (idx < 0) return OperationResult.Fail("Élément introuvable.");
+        if (idx < 0) return OperationResult.Fail(L.T("Élément introuvable."));
         var titre = _journalMedia[idx].Titre;
         _journalMedia.RemoveAt(idx);
         SaveJournalMedia();

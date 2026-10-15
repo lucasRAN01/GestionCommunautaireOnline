@@ -59,7 +59,7 @@ public static class DocumentBrowser
     };
 
     public static string SortLabel(string? sort) =>
-        SortChoices.FirstOrDefault(c => c.Key == sort).Label ?? "Récents";
+        L.T(SortChoices.FirstOrDefault(c => c.Key == sort).Label ?? "Récents");
 
     private const CompareOptions Loose = CompareOptions.IgnoreCase | CompareOptions.IgnoreNonSpace;
 
@@ -142,7 +142,7 @@ public static class DocumentBrowser
     public static string FolderPath(IReadOnlyDictionary<string, DocumentFolder> folders, string? folderId)
     {
         var path = Breadcrumb(folders, folderId);
-        return path.Count == 0 ? "Racine" : string.Join(" / ", path.Select(f => f.Nom));
+        return path.Count == 0 ? L.T("Racine") : string.Join(" / ", path.Select(f => f.Nom));
     }
 
     /// <summary>Nombre d'éléments directs (documents hors corbeille + sous-dossiers) par dossier, en un seul passage.</summary>

@@ -5,17 +5,17 @@
 
 @if (!Store.Can(Permissions.CarteMembreView))
 {
-    <EmptyState Icon="🔒" Title="Accès réservé" Message="La carte de membre n'est pas autorisée pour votre rôle." />
+    <EmptyState Icon="🔒" Title="@L.T("Accès réservé")" Message="@L.T("La carte de membre n'est pas autorisée pour votre rôle.")" />
 }
 else
 {
     <div class="page-head">
-        <p>Carte de visite du membre avec QR code, imprimable ou exportable.</p>
+        <p>@L.T("Carte de visite du membre avec QR code, imprimable ou exportable.")</p>
     </div>
 
     <div class="form-group no-print">
-        <label>Membre</label>
-        <MemberPicker Value="@_selectedIdent" ValueChanged="@((string v) => _selectedIdent = v)" ActiveOnly="false" Placeholder="Écrire pour chercher un membre…" />
+        <label>@L.T("Membre")</label>
+        <MemberPicker Value="@_selectedIdent" ValueChanged="@((string v) => _selectedIdent = v)" ActiveOnly="false" Placeholder="@L.T("Écrire pour chercher un membre…")" />
     </div>
 
     @if (Current != null)
@@ -37,7 +37,7 @@ else
                         <div class="cmc-brand">
                             @if (!string.IsNullOrWhiteSpace(Store.Settings.Logo))
                             {
-                                <img class="cmc-logo" src="@Store.Settings.Logo" alt="Logo de la communauté" />
+                                <img class="cmc-logo" src="@Store.Settings.Logo" alt="@L.T("Logo de la communauté")" />
                             }
                             else
                             {
@@ -58,22 +58,22 @@ else
                             <div class="cmc-id-text">
                                 <div class="cmc-name">@user.NomComplet</div>
                                 <div class="cmc-status @(isActive ? "is-active" : "is-suspended")">
-                                    <span class="cmc-dot" aria-hidden="true"></span>@(isActive ? "Membre actif" : "Carte suspendue")
+                                    <span class="cmc-dot" aria-hidden="true"></span>@(isActive ? L.T("Membre actif") : L.T("Carte suspendue"))
                                     @if (user.EstMineur)
                                     {
-                                        <span class="cmc-minor">Mineur</span>
+                                        <span class="cmc-minor">@L.T("Mineur")</span>
                                     }
                                 </div>
                                 @if (!string.IsNullOrWhiteSpace(memberCode))
                                 {
-                                    <div class="cmc-field"><span>Matricule</span><strong>@memberCode</strong></div>
+                                    <div class="cmc-field"><span>@L.T("Matricule")</span><strong>@memberCode</strong></div>
                                 }
-                                <div class="cmc-field"><span>Adhésion</span><strong>@DataStore.FormatDateCourte(user.DateCreation)</strong></div>
+                                <div class="cmc-field"><span>@L.T("Adhésion")</span><strong>@DataStore.FormatDateCourte(user.DateCreation)</strong></div>
                             </div>
                         </div>
-                        <div class="cmc-qr" role="button" tabindex="0" aria-label="Agrandir le QR code du membre" @onclick="() => OpenQrPreview(user, memberCode)" @onkeydown="OnQrKeyDown">
-                            <div class="cmc-qr-img"><img src="@QrPngCached(user, memberCode)" alt="QR code de la fiche contact du membre" /></div>
-                            <span>Scanner pour identifier le membre</span>
+                        <div class="cmc-qr" role="button" tabindex="0" aria-label="@L.T("Agrandir le QR code du membre")" @onclick="() => OpenQrPreview(user, memberCode)" @onkeydown="OnQrKeyDown">
+                            <div class="cmc-qr-img"><img src="@QrPngCached(user, memberCode)" alt="@L.T("QR code de la fiche contact du membre")" /></div>
+                            <span>@L.T("Scanner pour identifier le membre")</span>
                         </div>
                     </div>
                 </div>
@@ -94,22 +94,22 @@ else
                     {
                         <blockquote class="cmc-quote">@Store.Settings.CarteCitation</blockquote>
                     }
-                    <p class="cmc-usage">Carte personnelle et non transférable. Elle doit être présentée lors des activités de la communauté. En cas de perte ou de vol, veuillez en informer l'administration.</p>
+                    <p class="cmc-usage">@L.T("Carte personnelle et non transférable. Elle doit être présentée lors des activités de la communauté. En cas de perte ou de vol, veuillez en informer l'administration.")</p>
                     @if (user.EstMineur)
                     {
                         var (respNom, respTel) = Store.ResponsableAffiche(user);
-                        <p class="cmc-guardian"><span>Responsable légal</span> @(string.IsNullOrWhiteSpace(respNom) ? "non renseigné" : respNom)@(string.IsNullOrWhiteSpace(respTel) ? "" : " · " + respTel)</p>
+                        <p class="cmc-guardian"><span>@L.T("Responsable légal")</span> @(string.IsNullOrWhiteSpace(respNom) ? L.T("non renseigné") : respNom)@(string.IsNullOrWhiteSpace(respTel) ? "" : " · " + respTel)</p>
                     }
                     <div class="cmc-back-foot">
                         @if (!string.IsNullOrWhiteSpace(memberCode))
                         {
-                            <div class="cmc-field"><span>N° de membre</span><strong>@memberCode</strong></div>
+                            <div class="cmc-field"><span>@L.T("N° de membre")</span><strong>@memberCode</strong></div>
                         }
                         <div class="cmc-sign">
-                            <span>Signature du membre</span>
+                            <span>@L.T("Signature du membre")</span>
                             @if (!string.IsNullOrWhiteSpace(user.Signature))
                             {
-                                <img src="@user.Signature" alt="Signature du membre" />
+                                <img src="@user.Signature" alt="@L.T("Signature du membre")" />
                             }
                             else
                             {
@@ -121,28 +121,28 @@ else
             </div>
         </div>
         <div class="form-actions no-print" style="margin-top:12px">
-            <button class="btn btn-secondary" @onclick="() => _showBack = !_showBack">@(_showBack ? "↺ Face avant" : "↻ Voir le dos")</button>
-            <button class="btn btn-primary" @onclick="ExportPdfAsync" disabled="@_exporting">@(_exporting ? "Export…" : "⤓ Exporter en PDF")</button>
+            <button class="btn btn-secondary" @onclick="() => _showBack = !_showBack">@(_showBack ? L.T("↺ Face avant") : L.T("↻ Voir le dos"))</button>
+            <button class="btn btn-primary" @onclick="ExportPdfAsync" disabled="@_exporting">@(_exporting ? L.T("Export…") : L.T("⤓ Exporter en PDF"))</button>
         </div>
-        <p class="muted no-print" style="font-size:12.5px">Le QR code contient la fiche contact (vCard) lisible par tout lecteur. « Export PDF » enregistre les deux faces en PDF à la taille réelle configurée (@CardWidthMm × @CardHeightMm mm).</p>
+        <p class="muted no-print" style="font-size:12.5px">@L.F("Le QR code contient la fiche contact (vCard) lisible par tout lecteur. « Export PDF » enregistre les deux faces en PDF à la taille réelle configurée ({0} × {1} mm).", CardWidthMm, CardHeightMm)</p>
     }
     else
     {
-        <EmptyState Icon="🪪" Title="Aucun membre" Message="Ajoutez d'abord un utilisateur." />
+        <EmptyState Icon="🪪" Title="@L.T("Aucun membre")" Message="@L.T("Ajoutez d'abord un utilisateur.")" />
     }
 
-    <Modal Title="QR code — fiche contact" Show="_qrPreview != null" OnClose="() => _qrPreview = null">
+    <Modal Title="@L.T("QR code — fiche contact")" Show="_qrPreview != null" OnClose="() => _qrPreview = null">
         <ChildContent>
             @if (_qrPreview != null)
             {
                 <div class="qr-preview-wrap">
-                    <img class="qr-preview-img" src="@_qrPreview" alt="QR code agrandi de la fiche contact" />
+                    <img class="qr-preview-img" src="@_qrPreview" alt="@L.T("QR code agrandi de la fiche contact")" />
                     <p class="muted" style="text-align:center;margin-bottom:0">@_qrPreviewTitle</p>
                 </div>
             }
         </ChildContent>
         <FooterContent>
-            <button type="button" class="btn btn-primary" @onclick="() => _qrPreview = null">Fermer</button>
+            <button type="button" class="btn btn-primary" @onclick="() => _qrPreview = null">@L.T("Fermer")</button>
         </FooterContent>
     </Modal>
 }
@@ -275,9 +275,9 @@ else
             var pages = new[] { BuildCardFrontHtml(), BuildCardBackHtml() };
             var path = await Saver.SaveHtmlAsPdfAsync(fileName, pages, MmToPt(CardWidthMm), MmToPt(CardHeightMm));
             if (path == null)
-                State.NotifyError("Échec de l'export PDF de la carte.");
+                State.NotifyError(L.T("Échec de l'export PDF de la carte."));
             else
-                State.NotifySuccess("Carte prête : choisissez « Enregistrer au format PDF » dans la fenêtre d'impression.");
+                State.NotifySuccess(L.T("Carte prête : choisissez « Enregistrer au format PDF » dans la fenêtre d'impression."));
         }
         finally { _exporting = false; }
     }
@@ -301,9 +301,9 @@ else
         // en cqw (proportionnelles à la carte, repli px pour les moteurs anciens).
         var ratio = CardWidthMm.ToString("0", System.Globalization.CultureInfo.InvariantCulture)
             + "/" + CardHeightMm.ToString("0", System.Globalization.CultureInfo.InvariantCulture);
-        return "<!DOCTYPE html><html lang=\"fr\"><head><meta charset=\"utf-8\" />"
+        return "<!DOCTYPE html><html lang=\"" + L.Langue + "\"><head><meta charset=\"utf-8\" />"
             + "<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\" />"
-            + "<title>Carte de membre — " + H(user.NomComplet) + "</title>"
+            + "<title>" + H(L.F("Carte de membre — {0}", user.NomComplet)) + "</title>"
             + "<style>"
             + "*{box-sizing:border-box}"
             + "html,body{margin:0;padding:0}"
@@ -357,10 +357,10 @@ else
             + "<div class=\"brand\"><strong>" + H(appName) + "</strong><span>" + H(slogan) + "</span></div></div>"
             + "<div class=\"body\"><div class=\"id\"><div class=\"photo\">" + (string.IsNullOrWhiteSpace(photo) ? H(Initials(user)) : "<img src=\"" + photo + "\" alt=\"\" />") + "</div>"
             + "<div class=\"idtext\"><div class=\"name\">" + H(user.NomComplet) + "</div>"
-            + "<div class=\"status\"><span class=\"dot\"></span>" + (user.Actif ? "Membre actif" : "Carte suspendue") + (user.EstMineur ? "<span class=\"minor\">Mineur</span>" : "") + "</div>"
-            + (string.IsNullOrWhiteSpace(memberCode) ? "" : "<div class=\"field\"><span>Matricule</span>" + H(memberCode) + "</div>")
-            + "<div class=\"field\"><span>Adhésion</span>" + H(DataStore.FormatDateCourte(user.DateCreation)) + "</div></div></div>"
-            + "<div class=\"qr\"><img src=\"" + QrPng(user, memberCode) + "\" alt=\"QR code de la fiche contact\" /><span>Scanner pour identifier le membre</span></div></div></div>";
+            + "<div class=\"status\"><span class=\"dot\"></span>" + H(user.Actif ? L.T("Membre actif") : L.T("Carte suspendue")) + (user.EstMineur ? "<span class=\"minor\">" + H(L.T("Mineur")) + "</span>" : "") + "</div>"
+            + (string.IsNullOrWhiteSpace(memberCode) ? "" : "<div class=\"field\"><span>" + H(L.T("Matricule")) + "</span>" + H(memberCode) + "</div>")
+            + "<div class=\"field\"><span>" + H(L.T("Adhésion")) + "</span>" + H(DataStore.FormatDateCourte(user.DateCreation)) + "</div></div></div>"
+            + "<div class=\"qr\"><img src=\"" + QrPng(user, memberCode) + "\" alt=\"" + H(L.T("QR code de la fiche contact")) + "\" /><span>" + H(L.T("Scanner pour identifier le membre")) + "</span></div></div></div>";
     }
 
     private string CardBackBody()
@@ -376,10 +376,10 @@ else
             + "<div class=\"head\"><div class=\"logo\">" + (string.IsNullOrWhiteSpace(logo) ? "GU" : "<img src=\"" + logo + "\" alt=\"\" />") + "</div>"
             + "<div class=\"brand\"><strong>" + H(appName) + "</strong></div></div>"
             + (string.IsNullOrWhiteSpace(citation) ? "" : "<blockquote class=\"quote\">" + H(citation) + "</blockquote>")
-            + "<p class=\"usage\">Carte personnelle et non transférable. Elle doit être présentée lors des activités de la communauté. En cas de perte ou de vol, veuillez en informer l'administration.</p>"
-            + (user.EstMineur ? "<p class=\"guardian\"><span>Responsable légal</span> " + H(string.IsNullOrWhiteSpace(resp.Nom) ? "non renseigné" : resp.Nom) + (string.IsNullOrWhiteSpace(resp.Telephone) ? "" : " · " + H(resp.Telephone)) + "</p>" : "")
-            + "<div class=\"foot\">" + (string.IsNullOrWhiteSpace(memberCode) ? "" : "<div class=\"field\"><span>N° de membre</span><strong>" + H(memberCode) + "</strong></div>")
-            + "<div class=\"sign\"><span>Signature du membre</span>" + (string.IsNullOrWhiteSpace(signature) ? "<div class=\"signline\"></div>" : "<img src=\"" + signature + "\" alt=\"\" />") + "</div></div></div>";
+            + "<p class=\"usage\">" + H(L.T("Carte personnelle et non transférable. Elle doit être présentée lors des activités de la communauté. En cas de perte ou de vol, veuillez en informer l'administration.")) + "</p>"
+            + (user.EstMineur ? "<p class=\"guardian\"><span>" + H(L.T("Responsable légal")) + "</span> " + H(string.IsNullOrWhiteSpace(resp.Nom) ? L.T("non renseigné") : resp.Nom) + (string.IsNullOrWhiteSpace(resp.Telephone) ? "" : " · " + H(resp.Telephone)) + "</p>" : "")
+            + "<div class=\"foot\">" + (string.IsNullOrWhiteSpace(memberCode) ? "" : "<div class=\"field\"><span>" + H(L.T("N° de membre")) + "</span><strong>" + H(memberCode) + "</strong></div>")
+            + "<div class=\"sign\"><span>" + H(L.T("Signature du membre")) + "</span>" + (string.IsNullOrWhiteSpace(signature) ? "<div class=\"signline\"></div>" : "<img src=\"" + signature + "\" alt=\"\" />") + "</div></div></div>";
     }
 
     private static string H(string? s) => System.Net.WebUtility.HtmlEncode(s ?? "");

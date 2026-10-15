@@ -3,29 +3,29 @@
 @inject AppState State
 
 <div class="page-head dash-head">
-    <h1>Bienvenue, @(Store.GetCurrentUser()?.Prenom ?? "invité")</h1>
-    <p>Tableau de bord : un aperçu de votre communauté.</p>
+    <h1>@L.F("Bienvenue, {0}", Store.GetCurrentUser()?.Prenom ?? L.T("invité"))</h1>
+    <p>@L.T("Tableau de bord : un aperçu de votre communauté.")</p>
 </div>
 
 <div class="stats-grid">
-    <StatCard Icon="☺" Value="@total.ToString()" Label="Utilisateurs total" OnClick='() => GoToUsers(null, null)' Clickable="@Store.IsManager" />
-    <StatCard Icon="✓" Value="@actifs.ToString()" Label="Actifs" Kind="active" OnClick='() => GoToUsers("Actif", null)' Clickable="@Store.IsManager" />
-    <StatCard Icon="✗" Value="@inactifs.ToString()" Label="Inactifs" Kind="inactive" OnClick='() => GoToUsers("Inactif", null)' Clickable="@Store.IsManager" />
-    <StatCard Icon="★" Value="@admins.ToString()" Label="Administrateurs" OnClick='() => GoToUsers(null, "Administrateur")' Clickable="@Store.IsManager" />
-    <StatCard Icon="🗄" Value="@archives.ToString()" Label="Archivés" Kind="recent" OnClick='() => State.Navigate("archive")' Clickable="@Store.IsAdmin" />
-    <StatCard Icon="✤" Value="@gestionnaires.ToString()" Label="Gestionnaires" Kind="recent" OnClick='() => GoToUsers(null, "Gestionnaire")' Clickable="@(Store.IsManager)" />
+    <StatCard Icon="☺" Value="@total.ToString()" Label="@L.T("Utilisateurs total")" OnClick='() => GoToUsers(null, null)' Clickable="@Store.IsManager" />
+    <StatCard Icon="✓" Value="@actifs.ToString()" Label="@L.T("Actifs")" Kind="active" OnClick='() => GoToUsers("Actif", null)' Clickable="@Store.IsManager" />
+    <StatCard Icon="✗" Value="@inactifs.ToString()" Label="@L.T("Inactifs")" Kind="inactive" OnClick='() => GoToUsers("Inactif", null)' Clickable="@Store.IsManager" />
+    <StatCard Icon="★" Value="@admins.ToString()" Label="@L.T("Administrateurs")" OnClick='() => GoToUsers(null, "Administrateur")' Clickable="@Store.IsManager" />
+    <StatCard Icon="🗄" Value="@archives.ToString()" Label="@L.T("Archivés")" Kind="recent" OnClick='() => State.Navigate("archive")' Clickable="@Store.IsAdmin" />
+    <StatCard Icon="✤" Value="@gestionnaires.ToString()" Label="@L.T("Gestionnaires")" Kind="recent" OnClick='() => GoToUsers(null, "Gestionnaire")' Clickable="@(Store.IsManager)" />
 </div>
 
 <div class="card dashboard-card-full">
-    <h3>Répartition par rôle</h3>
+    <h3>@L.T("Répartition par rôle")</h3>
     <ChartBars Items="@roleChart" />
 </div>
 
 <div class="card">
-    <h3>Derniers utilisateurs ajoutés</h3>
+    <h3>@L.T("Derniers utilisateurs ajoutés")</h3>
     @if (RecentUsers.Count == 0)
     {
-        <EmptyState Icon="☺" Title="Aucun utilisateur" Message="Aucun utilisateur pour le moment." />
+        <EmptyState Icon="☺" Title="@L.T("Aucun utilisateur")" Message="@L.T("Aucun utilisateur pour le moment.")" />
     }
     else
     {
@@ -33,14 +33,14 @@
             @foreach (var u in RecentUsers)
             {
                 <div class="recent-user recent-user-row" @onclick="() => GoToUser(u.Id)">
-                    <button class="avatar-btn" type="button" @onclick:stopPropagation="true" @onclick="() => OpenPhoto(u)" aria-label="Agrandir la photo">
+                    <button class="avatar-btn" type="button" @onclick:stopPropagation="true" @onclick="() => OpenPhoto(u)" aria-label="@L.T("Agrandir la photo")">
                         <Avatar UserName="@u.NomComplet" Seed="@u.Identifiant" Size="sm" Photo="@u.Photo" />
                     </button>
                     <div class="recent-user-main">
                         <div class="recent-user-name">@u.NomComplet</div>
-                        <div class="recent-user-sub">@(string.IsNullOrWhiteSpace(u.Email) ? u.Role : u.Email)</div>
+                        <div class="recent-user-sub">@(string.IsNullOrWhiteSpace(u.Email) ? L.T(u.Role) : u.Email)</div>
                     </div>
-                    <Badge Text="@u.Statut" Kind="@(u.Actif ? "active" : "inactive")" />
+                    <Badge Text="@L.T(u.Statut)" Kind="@(u.Actif ? "active" : "inactive")" />
                 </div>
             }
         </div>
@@ -51,28 +51,28 @@
 {
     <div class="card dash-collapse-card @(IsCollapsed("finances") ? "collapsed" : "")">
         <div class="dash-card-head">
-            <h3>💰 Finances</h3>
+            <h3>💰 @L.T("Finances")</h3>
             <div class="dash-head-actions">
-                <button type="button" class="dash-collapse-btn" aria-label="@(IsCollapsed("finances") ? "Déplier" : "Replier") la section Finances"
+                <button type="button" class="dash-collapse-btn" aria-label="@(IsCollapsed("finances") ? L.T("Déplier la section Finances") : L.T("Replier la section Finances"))"
                         @onclick='() => ToggleCollapse("finances")'>
                     <span class="dash-chevron" aria-hidden="true">▾</span>
                 </button>
-                <button type="button" class="btn btn-secondary btn-sm" @onclick='() => State.Navigate("finances")'>Ouvrir</button>
+                <button type="button" class="btn btn-secondary btn-sm" @onclick='() => State.Navigate("finances")'>@L.T("Ouvrir")</button>
             </div>
         </div>
         <div class="dash-collapse-body">
             <div class="dash-kpis">
                 <div class="dash-kpi" @onclick='() => State.Navigate("finances")'>
                     <span class="dash-kpi-value">@FormatMoney(soldeTresorerie)</span>
-                    <span class="dash-kpi-label">Solde trésorerie</span>
+                    <span class="dash-kpi-label">@L.T("Solde trésorerie")</span>
                 </div>
                 <div class="dash-kpi" @onclick='() => State.Navigate("finances")'>
                     <span class="dash-kpi-value">@FormatMoney(totalCotisations)</span>
-                    <span class="dash-kpi-label">Cotisations encaissées</span>
+                    <span class="dash-kpi-label">@L.T("Cotisations encaissées")</span>
                 </div>
                 <div class="dash-kpi @(impayes > 0 ? "dash-kpi-warn" : "")" @onclick='() => State.Navigate("finances")'>
                     <span class="dash-kpi-value">@impayes</span>
-                    <span class="dash-kpi-label">Membres en attente</span>
+                    <span class="dash-kpi-label">@L.T("Membres en attente")</span>
                 </div>
             </div>
             <ChartBars Items="@financeChart" />
@@ -84,15 +84,15 @@
 {
     <div class="card dash-collapse-card @(IsCollapsed("taches") ? "collapsed" : "")">
         <div class="dash-card-head">
-            <h3>☑ Tâches &amp; rappels</h3>
+            <h3>☑ @L.T("Tâches & rappels")</h3>
             <div class="dash-head-actions">
-                <button type="button" class="dash-collapse-btn" aria-label="@(IsCollapsed("taches") ? "Déplier" : "Replier") la section Tâches"
+                <button type="button" class="dash-collapse-btn" aria-label="@(IsCollapsed("taches") ? L.T("Déplier la section Tâches") : L.T("Replier la section Tâches"))"
                         @onclick='() => ToggleCollapse("taches")'>
                     <span class="dash-chevron" aria-hidden="true">▾</span>
                 </button>
                 @if (Store.Can(Permissions.TachesUse))
                 {
-                    <button type="button" class="btn btn-secondary btn-sm" @onclick='() => State.Navigate("taches")'>Ouvrir</button>
+                    <button type="button" class="btn btn-secondary btn-sm" @onclick='() => State.Navigate("taches")'>@L.T("Ouvrir")</button>
                 }
             </div>
         </div>
@@ -100,15 +100,15 @@
             <div class="dash-kpis">
                 <div class="dash-kpi" @onclick='() => State.Navigate("taches")'>
                     <span class="dash-kpi-value">@tachesEnCours</span>
-                    <span class="dash-kpi-label">En cours</span>
+                    <span class="dash-kpi-label">@L.T("En cours")</span>
                 </div>
                 <div class="dash-kpi @(tachesEnRetard > 0 ? "dash-kpi-danger" : "")" @onclick='() => State.Navigate("taches")'>
                     <span class="dash-kpi-value">@tachesEnRetard</span>
-                    <span class="dash-kpi-label">En retard</span>
+                    <span class="dash-kpi-label">@L.T("En retard")</span>
                 </div>
                 <div class="dash-kpi @(rappelsCount > 0 ? "dash-kpi-warn" : "")" @onclick='() => State.Navigate("rappels")'>
                     <span class="dash-kpi-value">@rappelsCount</span>
-                    <span class="dash-kpi-label">Rappels actifs</span>
+                    <span class="dash-kpi-label">@L.T("Rappels actifs")</span>
                 </div>
             </div>
             <ChartBars Items="@tacheChart" />
@@ -120,14 +120,14 @@
 {
     <div class="card">
         <div class="dash-card-head">
-            <h3>👥 Réunions &amp; présence</h3>
-            <button type="button" class="btn btn-secondary btn-sm" @onclick='() => State.Navigate("reunions")'>Ouvrir</button>
+            <h3>👥 @L.T("Réunions & présence")</h3>
+            <button type="button" class="btn btn-secondary btn-sm" @onclick='() => State.Navigate("reunions")'>@L.T("Ouvrir")</button>
         </div>
         @if (PresenceTotal > 0)
         {
             <div class="dash-presence-rate">
                 <strong>@PresenceRate.ToString("0") %</strong>
-                <span>taux de présence global · @ReunionsCount réunion(s)</span>
+                <span>@L.F("taux de présence global · {0} réunion(s)", ReunionsCount)</span>
             </div>
         }
         <ChartBars Items="@presenceChart" />
@@ -138,15 +138,15 @@
 {
     <div class="card dash-collapse-card @(IsCollapsed("materiel") ? "collapsed" : "")">
         <div class="dash-card-head">
-            <h3>🧰 Matériel &amp; médias</h3>
+            <h3>🧰 @L.T("Matériel & médias")</h3>
             <div class="dash-head-actions">
-                <button type="button" class="dash-collapse-btn" aria-label="@(IsCollapsed("materiel") ? "Déplier" : "Replier") la section Matériel"
+                <button type="button" class="dash-collapse-btn" aria-label="@(IsCollapsed("materiel") ? L.T("Déplier la section Matériel") : L.T("Replier la section Matériel"))"
                         @onclick='() => ToggleCollapse("materiel")'>
                     <span class="dash-chevron" aria-hidden="true">▾</span>
                 </button>
                 @if (Store.Can(Permissions.MaterielManage))
                 {
-                    <button type="button" class="btn btn-secondary btn-sm" @onclick='() => State.Navigate("materiel")'>Ouvrir</button>
+                    <button type="button" class="btn btn-secondary btn-sm" @onclick='() => State.Navigate("materiel")'>@L.T("Ouvrir")</button>
                 }
             </div>
         </div>
@@ -154,19 +154,19 @@
             <div class="dash-kpis">
                 <div class="dash-kpi" @onclick='() => State.Navigate("materiel")'>
                     <span class="dash-kpi-value">@materielsCount</span>
-                    <span class="dash-kpi-label">Matériels</span>
+                    <span class="dash-kpi-label">@L.T("Matériels")</span>
                 </div>
                 <div class="dash-kpi" @onclick='() => State.Navigate("materiel")'>
                     <span class="dash-kpi-value">@pretsActifs</span>
-                    <span class="dash-kpi-label">Prêts en cours</span>
+                    <span class="dash-kpi-label">@L.T("Prêts en cours")</span>
                 </div>
                 <div class="dash-kpi @(pretsRetard > 0 ? "dash-kpi-danger" : "")" @onclick='() => State.Navigate("materiel")'>
                     <span class="dash-kpi-value">@pretsRetard</span>
-                    <span class="dash-kpi-label">Retours en retard</span>
+                    <span class="dash-kpi-label">@L.T("Retours en retard")</span>
                 </div>
                 <div class="dash-kpi" @onclick='() => State.Navigate("journal")'>
                     <span class="dash-kpi-value">@mediaCount</span>
-                    <span class="dash-kpi-label">Médias</span>
+                    <span class="dash-kpi-label">@L.T("Médias")</span>
                 </div>
             </div>
         </div>
@@ -174,10 +174,10 @@
 }
 
 <div class="card">
-    <h3>Dernière activité</h3>
+    <h3>@L.T("Dernière activité")</h3>
     @if (Store.Activity.Count == 0)
     {
-        <EmptyState Icon="✎" Title="Aucune activité" Message="Le journal est vide pour le moment." />
+        <EmptyState Icon="✎" Title="@L.T("Aucune activité")" Message="@L.T("Le journal est vide pour le moment.")" />
     }
     else
     {
@@ -267,9 +267,9 @@
         static int R(IReadOnlyList<UserAccount> list, string role) => list.Count(u => u.Role == role);
         roleChart = new List<ChartBars.ChartItem>
         {
-            new("Administrateur", R(users, "Administrateur"), "#4f46e5"),
-            new("Gestionnaire", R(users, "Gestionnaire"), "#0891b2"),
-            new("Utilisateur", R(users, "Utilisateur"), "#059669")
+            new(L.T("Administrateur"), R(users, "Administrateur"), "#4f46e5"),
+            new(L.T("Gestionnaire"), R(users, "Gestionnaire"), "#0891b2"),
+            new(L.T("Utilisateur"), R(users, "Utilisateur"), "#059669")
         };
 
         RecentUsers = users.OrderByDescending(u => u.DateCreation)
@@ -282,10 +282,10 @@
         impayes = Store.ImpayesCotisations().Count;
         financeChart = new List<ChartBars.ChartItem>
         {
-            new("Cotisations payées", Store.Cotisations.Count(c => c.Statut == CotisationStatuts.Payee), "#059669"),
-            new("Cotisations en attente", impayes, "#d97706"),
-            new("Entrées trésorerie", Store.Tresorerie.Count(t => t.Type == TresorerieTypes.Entree), "#0891b2"),
-            new("Sorties trésorerie", Store.Tresorerie.Count(t => t.Type == TresorerieTypes.Sortie), "#dc2626")
+            new(L.T("Cotisations payées"), Store.Cotisations.Count(c => c.Statut == CotisationStatuts.Payee), "#059669"),
+            new(L.T("Cotisations en attente"), impayes, "#d97706"),
+            new(L.T("Entrées trésorerie"), Store.Tresorerie.Count(t => t.Type == TresorerieTypes.Entree), "#0891b2"),
+            new(L.T("Sorties trésorerie"),Store.Tresorerie.Count(t => t.Type == TresorerieTypes.Sortie), "#dc2626")
         };
 
         // Tâches & rappels
@@ -296,10 +296,10 @@
         rappelsCount = Store.GetRappels().Count;
         tacheChart = new List<ChartBars.ChartItem>
         {
-            new("À faire", Store.Taches.Count(t => t.Statut == TacheStatuts.AFaire), "#4f46e5"),
-            new("En cours", tachesEnCours, "#0891b2"),
-            new("En retard", tachesEnRetard, "#dc2626"),
-            new("Terminées", Store.Taches.Count(t => t.Statut == TacheStatuts.Terminee), "#059669")
+            new(L.T("À faire"), Store.Taches.Count(t => t.Statut == TacheStatuts.AFaire), "#4f46e5"),
+            new(L.T("En cours"), tachesEnCours, "#0891b2"),
+            new(L.T("En retard"), tachesEnRetard, "#dc2626"),
+            new(L.T("Terminées"),Store.Taches.Count(t => t.Statut == TacheStatuts.Terminee), "#059669")
         };
 
         // Réunions & présence
@@ -318,10 +318,10 @@
         }
         presenceChart = new List<ChartBars.ChartItem>
         {
-            new("Présents", presencePresent, "#059669"),
-            new("Excusés", presenceExcuse, "#d97706"),
-            new("Absents", presenceAbsent, "#dc2626"),
-            new("Non pointés", presenceNonPointe, "#64748b")
+            new(L.T("Présents"), presencePresent, "#059669"),
+            new(L.T("Excusés"), presenceExcuse, "#d97706"),
+            new(L.T("Absents"), presenceAbsent, "#dc2626"),
+            new(L.T("Non pointés"),presenceNonPointe, "#64748b")
         };
 
         // Matériel & médias

@@ -1,4 +1,17 @@
 // Pont JS pour GestionUtilisateurs (MAUI Blazor Hybrid)
+window.guLangue = {
+    get: function () { try { return localStorage.getItem('gu2:langue'); } catch (e) { return null; } },
+    set: function (code) {
+        try { localStorage.setItem('gu2:langue', code); } catch (e) { }
+        document.documentElement.lang = code === 'mg' ? 'mg' : (code === 'en' ? 'en' : 'fr');
+    },
+    // Changement de langue : le rechargement qui suit garde un écran de chargement court.
+    recharger: function (code) {
+        window.guLangue.set(code);
+        try { sessionStorage.setItem('gu2:chargement-court', '1'); } catch (e) { }
+    }
+};
+
 window.guTheme = {
     apply: function (theme, color, appName, logoDataUrl) {
         var root = document.documentElement;
@@ -27,6 +40,12 @@ window.guSplash = {
     _ready: false,
     _minMs: 5000,
     init: function () {
+        try {
+            if (sessionStorage.getItem('gu2:chargement-court')) {
+                sessionStorage.removeItem('gu2:chargement-court');
+                window.guSplash._minMs = 0;
+            }
+        } catch (e) { }
         try {
             var cached = localStorage.getItem('gu_logo');
             if (cached) window.guSplash.setLogo(cached);

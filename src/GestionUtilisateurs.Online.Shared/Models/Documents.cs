@@ -1,3 +1,5 @@
+using GestionUtilisateurs.Shared.Services;
+
 namespace GestionUtilisateurs.Shared.Models;
 
 /// <summary>Dossier de la gestion documentaire (hiérarchie simple via ParentId).</summary>
@@ -58,13 +60,13 @@ public static class DocumentCategories
 
     public static string Label(string categorie) => categorie switch
     {
-        Personnel => "Personnel",
-        Travail => "Travail",
-        Factures => "Factures",
-        Contrats => "Contrats",
-        Photos => "Photos",
-        Scans => "Scans",
-        _ => "Autre"
+        Personnel => L.T("Personnel"),
+        Travail => L.T("Travail"),
+        Factures => L.T("Factures"),
+        Contrats => L.T("Contrats"),
+        Photos => L.T("Photos"),
+        Scans => L.T("Scans"),
+        _ => L.T("Autre")
     };
 
     public static string Icon(string categorie) => categorie switch
@@ -108,8 +110,8 @@ public static class DocumentKinds
 
     public static string KindLabel(string kind) => kind switch
     {
-        "pdf" => "PDF",
-        "image" => "Images",
-        _ => "Autres"
+        "pdf" => L.T("PDF"),
+        "image" => L.T("Images"),
+        _ => L.T("Autres")
     };
 }

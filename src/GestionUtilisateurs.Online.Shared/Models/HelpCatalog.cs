@@ -1,13 +1,27 @@
 using System.Collections.Generic;
 using System.Linq;
+using GestionUtilisateurs.Shared.Services;
 
 namespace GestionUtilisateurs.Shared.Models;
 
-/// <summary>Une rubrique d'aide (titre + points clés).</summary>
-public sealed record HelpSection(string Title, string[] Points);
+/// <summary>Une rubrique d'aide (titre + points clés). Les textes sont traduits à la lecture.</summary>
+public sealed record HelpSection(string Title, string[] Points)
+{
+    private readonly string _title = Title;
+    private readonly string[] _points = Points;
+    public string Title { get => L.T(_title); init => _title = value; }
+    public string[] Points { get => _points.Select(L.T).ToArray(); init => _points = value; }
+}
 
-/// <summary>Fiche d'aide d'une fonctionnalité (utilisée par le ⓘ d'aide et par le guide utilisateur).</summary>
-public sealed record HelpEntry(string Key, string Title, string Icon, string Summary, HelpSection[] Sections);
+/// <summary>Fiche d'aide d'une fonctionnalité (utilisée par le ⓘ d'aide et par le guide utilisateur).
+/// Titre et résumé sont traduits à la lecture (la langue peut changer après l'initialisation).</summary>
+public sealed record HelpEntry(string Key, string Title, string Icon, string Summary, HelpSection[] Sections)
+{
+    private readonly string _title = Title;
+    private readonly string _summary = Summary;
+    public string Title { get => L.T(_title); init => _title = value; }
+    public string Summary { get => L.T(_summary); init => _summary = value; }
+}
 
 /// <summary>
 /// Catalogue central des fiches d'aide de l'application.
@@ -137,6 +151,7 @@ public static class HelpCatalog
                     "« Apparence » : votre thème clair ou sombre (clair par défaut, choix personnel) et la couleur principale de la communauté.",
                     "« Configuration carte de membre » ajuste slogan, citation, taille et format du matricule (ex. M-{NNNN}).",
                     "Le thème et les conseils au premier usage sont personnels : chacun garde les siens, même l'administrateur.",
+                    "« Ma langue » : français, anglais ou malgache, au choix de chacun ; elle se choisit aussi sur l'écran de connexion.",
                     "« Ordre du menu » (gestionnaires) réorganise les cartes du menu « … » pour toute la communauté.",
                     "Les données sont sauvegardées chaque semaine sur le serveur ; l'export Excel reste disponible à tout moment."
                 }),

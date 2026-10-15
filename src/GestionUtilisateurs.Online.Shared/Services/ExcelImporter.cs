@@ -27,11 +27,11 @@ public static class ExcelImporter
             var sharedStrings = ReadSharedStrings(zip);
             var sheetEntry = ResolveFirstWorksheet(zip);
             if (sheetEntry == null)
-                return new ImportResult { Success = false, Error = "Le classeur ne contient pas de feuille de calcul." };
+                return new ImportResult { Success = false, Error = L.T("Le classeur ne contient pas de feuille de calcul.") };
 
             var sheetRows = ReadRows(sheetEntry, sharedStrings);
             if (sheetRows.Count < 1)
-                return new ImportResult { Success = false, Error = "Le classeur est vide." };
+                return new ImportResult { Success = false, Error = L.T("Le classeur est vide.") };
 
             var header = sheetRows[0];
             var colMap = new Dictionary<int, string>();
@@ -41,7 +41,7 @@ public static class ExcelImporter
                 if (!string.IsNullOrWhiteSpace(h)) colMap[c] = h;
             }
             if (!colMap.Values.Any(v => StandardHeaders.Contains(v)))
-                return new ImportResult { Success = false, Error = "Le fichier ne ressemble pas à un export utilisateur (en-têtes introuvables)." };
+                return new ImportResult { Success = false, Error = L.T("Le fichier ne ressemble pas à un export utilisateur (en-têtes introuvables).") };
 
             var fieldByLabel = new Dictionary<string, FieldDefinition>(StringComparer.OrdinalIgnoreCase);
             foreach (var f in fields)
@@ -82,7 +82,7 @@ public static class ExcelImporter
                 }
 
                 if (string.IsNullOrWhiteSpace(u.Prenom) || string.IsNullOrWhiteSpace(u.Nom))
-                    return new ImportResult { Success = false, Error = "Ligne " + (r + 1) + ": prénom et nom sont obligatoires." };
+                    return new ImportResult { Success = false, Error = L.F("Ligne {0}: prénom et nom sont obligatoires.", r + 1) };
                 if (string.IsNullOrWhiteSpace(u.Identifiant))
                     u.Identifiant = DataStore.GenerateIdentifiant(u.Prenom, u.Nom);
                 if (string.IsNullOrWhiteSpace(u.MotDePasse))
@@ -94,17 +94,17 @@ public static class ExcelImporter
             }
 
             if (users.Count == 0)
-                return new ImportResult { Success = false, Error = "Le fichier ne contient aucun utilisateur." };
+                return new ImportResult { Success = false, Error = L.T("Le fichier ne contient aucun utilisateur.") };
 
             return new ImportResult { Success = true, Users = users };
         }
         catch (InvalidDataException ex)
         {
-            return new ImportResult { Success = false, Error = "Le fichier n'est pas un classeur Excel valide : " + ex.Message };
+            return new ImportResult { Success = false, Error = L.F("Le fichier n'est pas un classeur Excel valide : {0}", ex.Message) };
         }
         catch (Exception ex)
         {
-            return new ImportResult { Success = false, Error = "Erreur de lecture du fichier : " + ex.Message };
+            return new ImportResult { Success = false, Error = L.F("Erreur de lecture du fichier : {0}", ex.Message) };
         }
     }
 

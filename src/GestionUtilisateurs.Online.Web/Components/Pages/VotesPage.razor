@@ -3,35 +3,35 @@
 @inject AppState State
 
 <div class="page-head">
-    <p>Décisions collectives : un bulletin par membre, modifiable tant que le vote est ouvert.</p>
+    <p>@L.T("Décisions collectives : un bulletin par membre, modifiable tant que le vote est ouvert.")</p>
 </div>
 
 <div class="search-box cal-search">
     <span class="search-icon" aria-hidden="true">&#128269;</span>
-    <input type="search" placeholder="Rechercher un vote (question, description, auteur)…" aria-label="Rechercher un vote"
+    <input type="search" placeholder="@L.T("Rechercher un vote (question, description, auteur)…")" aria-label="@L.T("Rechercher un vote")"
            value="@_search" @oninput="OnSearch" />
 </div>
 @if (!string.IsNullOrWhiteSpace(_search))
 {
-    <div class="search-summary">@Filtered.Count vote(s) trouvé(s) pour « @_search.Trim() »</div>
+    <div class="search-summary">@L.F("{0} vote(s) trouvé(s) pour « {1} »", Filtered.Count, _search.Trim())</div>
 }
 
-<div class="chips-row" role="tablist" aria-label="Filtrer les votes">
-    <button type="button" class="chip @(_filter == "" ? "active" : "")" @onclick='() => _filter = ""'>Tous</button>
-    <button type="button" class="chip @(_filter == VoteStatuts.Ouvert ? "active" : "")" @onclick='() => _filter = VoteStatuts.Ouvert'>Ouverts</button>
-    <button type="button" class="chip @(_filter == VoteStatuts.Clos ? "active" : "")" @onclick='() => _filter = VoteStatuts.Clos'>Clos</button>
+<div class="chips-row" role="tablist" aria-label="@L.T("Filtrer les votes")">
+    <button type="button" class="chip @(_filter == "" ? "active" : "")" @onclick='() => _filter = ""'>@L.T("Tous")</button>
+    <button type="button" class="chip @(_filter == VoteStatuts.Ouvert ? "active" : "")" @onclick='() => _filter = VoteStatuts.Ouvert'>@L.T("Ouverts")</button>
+    <button type="button" class="chip @(_filter == VoteStatuts.Clos ? "active" : "")" @onclick='() => _filter = VoteStatuts.Clos'>@L.T("Clos")</button>
 </div>
 
 @if (Store.Can(Permissions.VotesManage))
 {
     <div class="inline-actions" style="justify-content:flex-end;margin-bottom:10px">
-        <button class="btn btn-secondary btn-sm" @onclick="StartAdd">＋ Nouveau vote</button>
+        <button class="btn btn-secondary btn-sm" @onclick="StartAdd">＋ @L.T("Nouveau vote")</button>
     </div>
 }
 
 @if (Filtered.Count == 0)
 {
-    <EmptyState Icon="🗳" Title="Aucun vote" Message="Aucun vote dans cette catégorie pour le moment." />
+    <EmptyState Icon="🗳" Title="@L.T("Aucun vote")" Message="@L.T("Aucun vote dans cette catégorie pour le moment.")" />
 }
 else
 {
@@ -46,7 +46,7 @@ else
                     <Badge Text="@VoteStatuts.Label(vote.StatutAffiche)" Kind="@(vote.EstOuvert ? "active" : "inactive")" />
                     @if (collapsed)
                     {
-                        <button class="btn btn-secondary btn-sm" @onclick="() => Toggle(vote.Id)" @onclick:stopPropagation="true">Détails</button>
+                        <button class="btn btn-secondary btn-sm" @onclick="() => Toggle(vote.Id)" @onclick:stopPropagation="true">@L.T("Détails")</button>
                     }
                 </div>
             </div>
@@ -57,8 +57,8 @@ else
                     <p class="muted" style="margin:6px 0">@vote.Description</p>
                 }
                 <div class="text-muted" style="font-size:12px">
-                    Par @vote.CreatedBy · @vote.Bulletins.Count bulletin(s)
-                    @(string.IsNullOrWhiteSpace(vote.DateCloture) ? "" : " · clôture le " + DataStore.FormatDateCourte(vote.DateCloture))
+                    @L.F("Par {0} · {1} bulletin(s)", vote.CreatedBy, vote.Bulletins.Count)
+                    @(string.IsNullOrWhiteSpace(vote.DateCloture) ? "" : " · " + L.F("clôture le {0}", DataStore.FormatDateCourte(vote.DateCloture)))
                 </div>
                 var results = Store.VoteResults(vote.Id);
                 var myVote = vote.Bulletins.FirstOrDefault(b => b.VotantIdentifiant.Equals(Me, StringComparison.OrdinalIgnoreCase));
@@ -79,7 +79,7 @@ else
                 @if (open)
                 {
                     <div class="form-group" style="margin-top:10px">
-                        <label>Voter@(myVote == null ? "" : " (actuel : " + myVote.Option + ")")</label>
+                        <label>@L.T("Voter")@(myVote == null ? "" : " " + L.F("(actuel : {0})", myVote.Option))</label>
                         <div class="choice-chips">
                             @foreach (var opt in vote.Options)
                             {
@@ -90,24 +90,24 @@ else
                 }
                 else
                 {
-                    <p class="muted" style="margin:8px 0 0">Vote clos — résultats figés@(myVote == null ? "" : ", vous aviez voté « " + myVote.Option + " »").</p>
+                    <p class="muted" style="margin:8px 0 0">@(myVote == null ? L.T("Vote clos — résultats figés.") : L.F("Vote clos — résultats figés, vous aviez voté « {0} ».", myVote.Option))</p>
                 }
                 @if (Store.Can(Permissions.VotesManage))
                 {
                     <div class="form-actions" style="margin-top:10px">
                         @if (vote.Statut == VoteStatuts.Ouvert)
                         {
-                            <button class="btn btn-secondary btn-sm" @onclick="() => StartEdit(vote)">✎ Modifier</button>
-                            <button class="btn btn-secondary btn-sm" @onclick="() => SetStatut(vote, VoteStatuts.Clos)">🔒 Clore</button>
+                            <button class="btn btn-secondary btn-sm" @onclick="() => StartEdit(vote)">✎ @L.T("Modifier")</button>
+                            <button class="btn btn-secondary btn-sm" @onclick="() => SetStatut(vote, VoteStatuts.Clos)">🔒 @L.T("Clore")</button>
                         }
                         else
                         {
-                            <button class="btn btn-secondary btn-sm" @onclick="() => SetStatut(vote, VoteStatuts.Ouvert)">🔓 Rouvrir</button>
+                            <button class="btn btn-secondary btn-sm" @onclick="() => SetStatut(vote, VoteStatuts.Ouvert)">🔓 @L.T("Rouvrir")</button>
                         }
                         <button class="btn btn-danger-outline btn-sm" @onclick="() => AskDelete(vote)">🗑</button>
                     </div>
                 }
-                <button class="btn btn-secondary btn-sm" style="margin-top:10px" @onclick="() => Toggle(vote.Id)">Réduire</button>
+                <button class="btn btn-secondary btn-sm" style="margin-top:10px" @onclick="() => Toggle(vote.Id)">@L.T("Réduire")</button>
             }
         </div>
     }
@@ -115,52 +115,52 @@ else
 
 @if (Store.Can(Permissions.VotesManage))
 {
-    <button class="fab" aria-label="Ajouter un vote" @onclick="StartAdd">+</button>
-    <Modal Title="@(_editId == null ? "Nouveau vote" : "Modifier le vote")" Show="_showEditor" OnClose="CloseEditor">
+    <button class="fab" aria-label="@L.T("Ajouter un vote")" @onclick="StartAdd">+</button>
+    <Modal Title="@(_editId == null ? L.T("Nouveau vote") : L.T("Modifier le vote"))" Show="_showEditor" OnClose="CloseEditor">
         <ChildContent>
             <div class="form-group">
-                <label for="vo-titre">Question *</label>
-                <input id="vo-titre" type="text" placeholder="Ex : Date de la fête annuelle" value="@_titre" @oninput="e => _titre = e.Value?.ToString() ?? string.Empty" />
+                <label for="vo-titre">@L.T("Question *")</label>
+                <input id="vo-titre" type="text" placeholder="@L.T("Ex : Date de la fête annuelle")" value="@_titre" @oninput="e => _titre = e.Value?.ToString() ?? string.Empty" />
             </div>
             <div class="form-group">
-                <label for="vo-desc">Description</label>
+                <label for="vo-desc">@L.T("Description")</label>
                 <textarea id="vo-desc" rows="2" value="@_desc" @oninput="e => _desc = e.Value?.ToString() ?? string.Empty"></textarea>
             </div>
             <div class="form-group">
-                <label for="vo-options">Options (2 minimum) *</label>
+                <label for="vo-options">@L.T("Options (2 minimum) *")</label>
                 <div class="opt-list">
                     @for (var i = 0; i < _optionList.Count; i++)
                     {
                         var idx = i;
                         <div class="opt-row">
                             <span class="opt-num" aria-hidden="true">@(idx + 1).</span>
-                            <input id="vo-opt-@idx" type="text" placeholder="Option @(idx + 1)" value="@_optionList[idx]"
+                            <input id="vo-opt-@idx" type="text" placeholder="@L.F("Option {0}", idx + 1)" value="@_optionList[idx]"
                                    @oninput="e => _optionList[idx] = e.Value?.ToString() ?? string.Empty"
-                                   @onkeydown="(k) => OnOptKey(k, idx)" aria-label="Option @(idx + 1)" />
-                            <button type="button" class="btn-icon opt-remove" aria-label="Retirer l'option @(idx + 1)"
+                                   @onkeydown="(k) => OnOptKey(k, idx)" aria-label="@L.F("Option {0}", idx + 1)" />
+                            <button type="button" class="btn-icon opt-remove" aria-label="@L.F("Retirer l'option {0}", idx + 1)"
                                     @onclick="() => RemoveOption(idx)" disabled="@(_optionList.Count <= 2)">×</button>
                         </div>
                     }
                 </div>
                 <div class="form-actions" style="margin-top:8px">
-                    <button type="button" class="btn btn-secondary btn-sm" @onclick="AddOption">＋ Ajouter une option</button>
+                    <button type="button" class="btn btn-secondary btn-sm" @onclick="AddOption">＋ @L.T("Ajouter une option")</button>
                 </div>
             </div>
             <div class="form-group">
-                <label for="vo-cloture">Clôture (facultatif)</label>
+                <label for="vo-cloture">@L.T("Clôture (facultatif)")</label>
                 <DateInput Id="vo-cloture" Value="@_clotureIso" ValueChanged="@(v => _clotureIso = v)" />
             </div>
             <span class="form-error">@_error</span>
         </ChildContent>
         <FooterContent>
-            <button class="btn btn-secondary" @onclick="CloseEditor">Annuler</button>
-            <button class="btn btn-primary" @onclick="Save">Enregistrer</button>
+            <button class="btn btn-secondary" @onclick="CloseEditor">@L.T("Annuler")</button>
+            <button class="btn btn-primary" @onclick="Save">@L.T("Enregistrer")</button>
         </FooterContent>
     </Modal>
 
-    <ConfirmDialog Show="_deleteTarget != null" Title="Supprimer le vote"
-                   Message="@(_deleteTarget == null ? "" : "Supprimer « " + _deleteTarget.Titre + " » et ses " + _deleteTarget.Bulletins.Count + " bulletin(s) ?")"
-                   ConfirmLabel="Supprimer" Danger="true" OnConfirm="ConfirmDelete" OnCancel="() => _deleteTarget = null" />
+    <ConfirmDialog Show="_deleteTarget != null" Title="@L.T("Supprimer le vote")"
+                   Message="@(_deleteTarget == null ? "" : L.F("Supprimer « {0} » et ses {1} bulletin(s) ?", _deleteTarget.Titre, _deleteTarget.Bulletins.Count))"
+                   ConfirmLabel="@L.T("Supprimer")" Danger="true" OnConfirm="ConfirmDelete" OnCancel="() => _deleteTarget = null" />
 }
 
 @code {
@@ -214,7 +214,7 @@ else
     private void CastVote(Vote vote, string option)
     {
         var res = Store.CastVote(vote.Id, Me, option);
-        if (res.Success) State.NotifySuccess("Vote enregistré : « " + option + " ».");
+        if (res.Success) State.NotifySuccess(L.F("Vote enregistré : « {0} ».", option));
         else State.NotifyError(res.Error);
     }
 
@@ -269,24 +269,24 @@ else
         };
         if (draft.Options.Count < 2)
         {
-            _error = "Ajoutez au moins 2 options.";
+            _error = L.T("Ajoutez au moins 2 options.");
             return;
         }
         if (!string.IsNullOrWhiteSpace(_clotureIso) && string.IsNullOrWhiteSpace(draft.DateCloture))
         {
-            _error = "La date de clôture doit être au format JJ/MM/AAAA.";
+            _error = L.T("La date de clôture doit être au format JJ/MM/AAAA.");
             return;
         }
         OperationResult res = _editId == null ? Store.AddVote(draft) : Store.UpdateVote(_editId, draft);
         if (!res.Success) { _error = res.Error; return; }
-        State.NotifySuccess(_editId == null ? "Vote ouvert." : "Vote enregistré.");
+        State.NotifySuccess(_editId == null ? L.T("Vote ouvert.") : L.T("Vote enregistré."));
         _showEditor = false;
     }
 
     private void SetStatut(Vote vote, string statut)
     {
         var res = Store.SetVoteStatut(vote.Id, statut);
-        if (res.Success) State.NotifySuccess(statut == VoteStatuts.Clos ? "Vote clos." : "Vote rouvert.");
+        if (res.Success) State.NotifySuccess(statut == VoteStatuts.Clos ? L.T("Vote clos.") : L.T("Vote rouvert."));
         else State.NotifyError(res.Error);
     }
 
@@ -298,7 +298,7 @@ else
         _deleteTarget = null;
         if (t == null) return;
         var res = Store.DeleteVote(t.Id);
-        if (res.Success) State.NotifySuccess("Vote supprimé.");
+        if (res.Success) State.NotifySuccess(L.T("Vote supprimé."));
         else State.NotifyError(res.Error);
     }
 

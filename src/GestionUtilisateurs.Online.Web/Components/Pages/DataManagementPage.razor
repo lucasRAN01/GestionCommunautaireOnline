@@ -5,22 +5,22 @@
 
 @if (!Store.IsAdmin)
 {
-    <EmptyState Icon="🔒" Title="Accès réservé" Message="La gestion directe des données est réservée aux administrateurs." />
+    <EmptyState Icon="🔒" Title="@L.T("Accès réservé")" Message="@L.T("La gestion directe des données est réservée aux administrateurs.")" />
 }
 else
 {
     <div class="page-head">
-        <p>Consultez, ajoutez ou modifiez les données de la communauté, sans JSON.</p>
+        <p>@L.T("Consultez, ajoutez ou modifiez les données de la communauté, sans JSON.")</p>
         @if (_demoEnabled)
         {
-            <button type="button" class="btn btn-secondary btn-sm" style="margin-top:8px" @onclick="GenerateDemoData">🧪 Remplir avec des données de démonstration</button>
+            <button type="button" class="btn btn-secondary btn-sm" style="margin-top:8px" @onclick="GenerateDemoData">@L.T("🧪 Remplir avec des données de démonstration")</button>
         }
     </div>
 
-    <div class="chips-row data-set-tabs" role="tablist" aria-label="Collections de données">
+    <div class="chips-row data-set-tabs" role="tablist" aria-label="@L.T("Collections de données")">
         @foreach (var dataSet in DataStore.ManagedDataSets)
         {
-            <button type="button" class="chip @(_selectedKey == dataSet.Key ? "active" : "")" @onclick="() => SelectDataSet(dataSet.Key)">@dataSet.Label</button>
+            <button type="button" class="chip @(_selectedKey == dataSet.Key ? "active" : "")" @onclick="() => SelectDataSet(dataSet.Key)">@L.T(dataSet.Label)</button>
         }
     </div>
 
@@ -28,59 +28,59 @@ else
     {
         <div class="card data-editor-card">
             <div class="inline-actions" style="justify-content:space-between">
-                <h3 style="margin:0">Utilisateurs</h3>
-                <button class="btn btn-secondary btn-sm" @onclick="StartAddUser">＋ Ajouter</button>
+                <h3 style="margin:0">@L.T("Utilisateurs")</h3>
+                <button class="btn btn-secondary btn-sm" @onclick="StartAddUser">@L.T("＋ Ajouter")</button>
             </div>
             <div class="form-group" style="margin:10px 0 0">
-                <input type="search" placeholder="Rechercher un utilisateur (nom, identifiant, e-mail)…" value="@_search" @oninput="OnSearchChanged" />
+                <input type="search" placeholder="@L.T("Rechercher un utilisateur (nom, identifiant, e-mail)…")" value="@_search" @oninput="OnSearchChanged" />
             </div>
         </div>
 
         @if (_userFormVisible && _userDraft != null)
         {
             <div class="card" style="margin-top:10px">
-                <h3>@(_userEditId == null ? "Ajouter un utilisateur" : "Modifier l'utilisateur")</h3>
+                <h3>@(_userEditId == null ? L.T("Ajouter un utilisateur") : L.T("Modifier l'utilisateur"))</h3>
                 <div class="form-group">
-                    <label for="dm-prenom">Prénom *</label>
+                    <label for="dm-prenom">@L.T("Prénom *")</label>
                     <input id="dm-prenom" type="text" value="@_userDraft.Prenom" @oninput="e => _userDraft.Prenom = e.Value?.ToString() ?? string.Empty" />
                 </div>
                 <div class="form-group">
-                    <label for="dm-nom">Nom *</label>
+                    <label for="dm-nom">@L.T("Nom *")</label>
                     <input id="dm-nom" type="text" value="@_userDraft.Nom" @oninput="e => _userDraft.Nom = e.Value?.ToString() ?? string.Empty" />
                 </div>
                 <div class="form-group">
-                    <label for="dm-identifiant">Identifiant</label>
+                    <label for="dm-identifiant">@L.T("Identifiant")</label>
                     <input id="dm-identifiant" type="text" value="@_userDraft.Identifiant" disabled="@(_userEditId != null)" @oninput="e => _userDraft.Identifiant = e.Value?.ToString() ?? string.Empty" />
                     @if (_userEditId == null)
                     {
-                        <span class="field-hint">Vide = généré automatiquement (prénom.nom).</span>
+                        <span class="field-hint">@L.T("Vide = généré automatiquement (prénom.nom).")</span>
                     }
                 </div>
                 <div class="form-group">
-                    <label for="dm-email">E-mail</label>
+                    <label for="dm-email">@L.T("E-mail")</label>
                     <input id="dm-email" type="email" value="@_userDraft.Email" @oninput="e => _userDraft.Email = e.Value?.ToString() ?? string.Empty" />
                 </div>
                 <div class="form-group">
-                    <label for="dm-tel">Téléphone</label>
+                    <label for="dm-tel">@L.T("Téléphone")</label>
                     <input id="dm-tel" type="tel" value="@_userDraft.Telephone" @oninput="e => _userDraft.Telephone = e.Value?.ToString() ?? string.Empty" />
                 </div>
                 <div class="form-group">
-                    <label for="dm-role">Rôle</label>
+                    <label for="dm-role">@L.T("Rôle")</label>
                     <select id="dm-role" value="@_userDraft.Role" @onchange="e => _userDraft.Role = e.Value?.ToString() ?? Roles.Utilisateur">
                         @if (_userEditId != null)
                         {
-                            <option disabled value="@Roles.BaseAdmin">@Roles.BaseAdmin</option>
+                            <option disabled value="@Roles.BaseAdmin">@L.T(Roles.BaseAdmin)</option>
                         }
                         @foreach (var r in RoleChoices)
                         {
-                            <option value="@r">@r</option>
+                            <option value="@r">@L.T(r)</option>
                         }
                     </select>
                 </div>
                 <div class="form-group">
                     <label class="form-check" for="dm-actif">
                         <input id="dm-actif" type="checkbox" checked="@_userDraft.Actif" @onchange="e => _userDraft.Actif = bool.TryParse(e.Value?.ToString(), out var b) ? b : true" />
-                        Compte actif
+                        @L.T("Compte actif")
                     </label>
                 </div>
                 @if (!string.IsNullOrWhiteSpace(_userError))
@@ -88,15 +88,15 @@ else
                     <div class="form-error" role="alert">@_userError</div>
                 }
                 <div class="form-actions">
-                    <button class="btn btn-secondary" @onclick="CancelUserForm">Annuler</button>
-                    <button class="btn btn-primary" @onclick="SaveUser">@(_userEditId == null ? "Ajouter" : "Enregistrer")</button>
+                    <button class="btn btn-secondary" @onclick="CancelUserForm">@L.T("Annuler")</button>
+                    <button class="btn btn-primary" @onclick="SaveUser">@(_userEditId == null ? L.T("Ajouter") : L.T("Enregistrer"))</button>
                 </div>
             </div>
         }
 
         @if (FilteredUsers.Count == 0)
         {
-            <EmptyState Icon="☺" Title="Aucun utilisateur" Message="@(_search.Length > 0 ? "Aucun résultat pour cette recherche." : "Ajoutez le premier compte depuis le bouton « Ajouter ».")" />
+            <EmptyState Icon="☺" Title="@L.T("Aucun utilisateur")" Message="@(_search.Length > 0 ? L.T("Aucun résultat pour cette recherche.") : L.T("Ajoutez le premier compte depuis le bouton « Ajouter »."))" />
         }
         else
         {
@@ -109,13 +109,13 @@ else
                             <div class="user-card-name">@user.NomComplet</div>
                             <div class="user-card-sub">@user.Identifiant</div>
                             <div class="user-card-meta">
-                                <Badge Text="@user.Role" Kind="role" />
-                                <Badge Text="@user.Statut" Kind="@(user.Actif ? "active" : "inactive")" />
+                                <Badge Text="@L.T(user.Role)" Kind="role" />
+                                <Badge Text="@L.T(user.Statut)" Kind="@(user.Actif ? "active" : "inactive")" />
                             </div>
                         </div>
                         <div class="user-card-actions" @onclick:stopPropagation="true">
-                            <button class="btn-icon" aria-label="Modifier" @onclick="@(() => StartEditUser(user))">✎</button>
-                            <button class="btn-icon danger" aria-label="Supprimer" @onclick="@(() => AskDeleteUser(user))">🗑</button>
+                            <button class="btn-icon" aria-label="@L.T("Modifier")" @onclick="@(() => StartEditUser(user))">✎</button>
+                            <button class="btn-icon danger" aria-label="@L.T("Supprimer")" @onclick="@(() => AskDeleteUser(user))">🗑</button>
                         </div>
                     </div>
                 }
@@ -128,42 +128,42 @@ else
     {
         <div class="card data-editor-card">
             <div class="inline-actions" style="justify-content:space-between">
-                <h3 style="margin:0">Champs personnalisés</h3>
-                <button class="btn btn-secondary btn-sm" @onclick="StartAddField">＋ Ajouter</button>
+                <h3 style="margin:0">@L.T("Champs personnalisés")</h3>
+                <button class="btn btn-secondary btn-sm" @onclick="StartAddField">@L.T("＋ Ajouter")</button>
             </div>
             <div class="form-group" style="margin:10px 0 0">
-                <input type="search" placeholder="Rechercher un champ…" value="@_search" @oninput="OnSearchChanged" />
+                <input type="search" placeholder="@L.T("Rechercher un champ…")" value="@_search" @oninput="OnSearchChanged" />
             </div>
         </div>
 
         @if (_fieldFormVisible && _fieldDraft != null)
         {
             <div class="card" style="margin-top:10px">
-                <h3>@(_fieldEditId == null ? "Ajouter un champ" : "Modifier le champ")</h3>
+                <h3>@(_fieldEditId == null ? L.T("Ajouter un champ") : L.T("Modifier le champ"))</h3>
                 <div class="form-group">
-                    <label for="dm-flabel">Libellé *</label>
+                    <label for="dm-flabel">@L.T("Libellé *")</label>
                     <input id="dm-flabel" type="text" value="@_fieldDraft.Label" @oninput="e => _fieldDraft.Label = e.Value?.ToString() ?? string.Empty" />
                 </div>
                 <div class="form-group">
-                    <label for="dm-ftype">Type</label>
+                    <label for="dm-ftype">@L.T("Type")</label>
                     <select id="dm-ftype" value="@_fieldDraft.Type.ToString()" disabled="@_fieldDraft.SystemField" @onchange="OnFieldTypeChanged">
                         @foreach (var t in Store.FieldTypeChoices())
                         {
-                            <option value="@t.id">@t.label</option>
+                            <option value="@t.id">@L.T(t.label)</option>
                         }
                     </select>
                 </div>
                 @if (FieldTypeInfo.SupportsOptions(_fieldDraft.Type))
                 {
                     <div class="form-group">
-                        <label for="dm-foptions">Options (une par ligne)</label>
+                        <label for="dm-foptions">@L.T("Options (une par ligne)")</label>
                         <textarea id="dm-foptions" rows="3" value="@_fieldOptions" @oninput="e => _fieldOptions = e.Value?.ToString() ?? string.Empty"></textarea>
                     </div>
                 }
                 <div class="form-group">
                     <label class="form-check" for="dm-factif">
                         <input id="dm-factif" type="checkbox" checked="@_fieldDraft.Actif" @onchange="e => _fieldDraft.Actif = bool.TryParse(e.Value?.ToString(), out var b) ? b : true" />
-                        Champ actif dans le formulaire
+                        @L.T("Champ actif dans le formulaire")
                     </label>
                 </div>
                 @if (!_fieldDraft.SystemField && _fieldDraft.Id != FieldDefinition.FIELD_IDENTIFIANT)
@@ -171,7 +171,7 @@ else
                     <div class="form-group">
                         <label class="form-check" for="dm-frequis">
                             <input id="dm-frequis" type="checkbox" checked="@_fieldDraft.Requis" @onchange="e => _fieldDraft.Requis = bool.TryParse(e.Value?.ToString(), out var b) ? b : false" />
-                            Champ requis
+                            @L.T("Champ requis")
                         </label>
                     </div>
                 }
@@ -180,15 +180,15 @@ else
                     <div class="form-error" role="alert">@_fieldError</div>
                 }
                 <div class="form-actions">
-                    <button class="btn btn-secondary" @onclick="CancelFieldForm">Annuler</button>
-                    <button class="btn btn-primary" @onclick="SaveField">@(_fieldEditId == null ? "Ajouter" : "Enregistrer")</button>
+                    <button class="btn btn-secondary" @onclick="CancelFieldForm">@L.T("Annuler")</button>
+                    <button class="btn btn-primary" @onclick="SaveField">@(_fieldEditId == null ? L.T("Ajouter") : L.T("Enregistrer"))</button>
                 </div>
             </div>
         }
 
         @if (FilteredFields.Count == 0)
         {
-            <EmptyState Icon="🧩" Title="Aucun champ" Message="@(_search.Length > 0 ? "Aucun résultat pour cette recherche." : "Ajoutez un champ personnalisé pour le formulaire utilisateur.")" />
+            <EmptyState Icon="🧩" Title="@L.T("Aucun champ")" Message="@(_search.Length > 0 ? L.T("Aucun résultat pour cette recherche.") : L.T("Ajoutez un champ personnalisé pour le formulaire utilisateur."))" />
         }
         else
         {
@@ -199,18 +199,18 @@ else
                         <span class="field-type-icon" aria-hidden="true">@FieldTypeInfo.Icon(field.Type)</span>
                         <div class="user-card-main">
                             <div class="user-card-name">@field.Label</div>
-                            <div class="user-card-sub">@FieldTypeInfo.Label(field.Type)</div>
+                            <div class="user-card-sub">@L.T(FieldTypeInfo.Label(field.Type))</div>
                             <div class="user-card-meta">
-                                <Badge Text="Actif" Kind="@(field.Actif ? "active" : "inactive")" />
-                                @if (field.Requis) { <Badge Text="Requis" Kind="role" /> }
-                                @if (field.SystemField) { <Badge Text="Système" Kind="recent" /> }
+                                <Badge Text="@L.T("Actif")" Kind="@(field.Actif ? "active" : "inactive")" />
+                                @if (field.Requis) { <Badge Text="@L.T("Requis")" Kind="role" /> }
+                                @if (field.SystemField) { <Badge Text="@L.T("Système")" Kind="recent" /> }
                             </div>
                         </div>
                         <div class="user-card-actions" @onclick:stopPropagation="true">
-                            <button class="btn-icon" aria-label="Modifier" @onclick="@(() => StartEditField(field))">✎</button>
+                            <button class="btn-icon" aria-label="@L.T("Modifier")" @onclick="@(() => StartEditField(field))">✎</button>
                             @if (!field.SystemField)
                             {
-                                <button class="btn-icon danger" aria-label="Supprimer" disabled="@field.SystemField" @onclick="@(() => AskDeleteField(field))">🗑</button>
+                                <button class="btn-icon danger" aria-label="@L.T("Supprimer")" disabled="@field.SystemField" @onclick="@(() => AskDeleteField(field))">🗑</button>
                             }
                         </div>
                     </div>
@@ -224,14 +224,14 @@ else
     {
         <div class="card data-editor-card">
             <div class="inline-actions" style="justify-content:space-between">
-                <h3 style="margin:0">Journal d'activité</h3>
-                <button class="btn btn-danger-outline btn-sm" disabled="@(Store.Activity.Count == 0)" @onclick="AskClearActivity">Vider le journal</button>
+                <h3 style="margin:0">@L.T("Journal d'activité")</h3>
+                <button class="btn btn-danger-outline btn-sm" disabled="@(Store.Activity.Count == 0)" @onclick="AskClearActivity">@L.T("Vider le journal")</button>
             </div>
         </div>
 
         @if (Store.Activity.Count == 0)
         {
-            <EmptyState Icon="✎" Title="Aucune activité" Message="Le journal est vide pour le moment." />
+            <EmptyState Icon="✎" Title="@L.T("Aucune activité")" Message="@L.T("Le journal est vide pour le moment.")" />
         }
         else
         {
@@ -239,7 +239,7 @@ else
             <div class="card">
                 @if (activityRows.Count == 0)
                 {
-                    <EmptyState Icon="✎" Title="Aucun résultat" Message="Aucune entrée ne correspond à cette recherche." />
+                    <EmptyState Icon="✎" Title="@L.T("Aucun résultat")" Message="@L.T("Aucune entrée ne correspond à cette recherche.")" />
                 }
                 else
                 {
@@ -249,7 +249,7 @@ else
                             <div class="activity-item">
                                 <span class="activity-icon" aria-hidden="true">@ActivityIcon(e.Type)</span>
                                 <div class="activity-content">
-                                    <div class="activity-desc"><strong>@ActivityTypes.Label(e.Type)</strong> — @e.Description</div>
+                                    <div class="activity-desc"><strong>@L.T(ActivityTypes.Label(e.Type))</strong> — @e.Description</div>
                                     <div class="activity-meta">
                                         <span class="activity-user">@e.User</span>
                                         <span class="activity-date">@DataStore.FormatExportDate(e.Date)</span>
@@ -266,17 +266,17 @@ else
     {
         <div class="card data-editor-card">
             <div class="inline-actions" style="justify-content:space-between">
-                <h3 style="margin:0">Archives des utilisateurs</h3>
-                <button class="btn btn-danger-outline btn-sm" disabled="@(Store.ArchivedUsers.Count == 0)" @onclick="AskPurgeAll">Vider les archives</button>
+                <h3 style="margin:0">@L.T("Archives des utilisateurs")</h3>
+                <button class="btn btn-danger-outline btn-sm" disabled="@(Store.ArchivedUsers.Count == 0)" @onclick="AskPurgeAll">@L.T("Vider les archives")</button>
             </div>
             <div class="form-group" style="margin:10px 0 0">
-                <input type="search" placeholder="Rechercher dans les archives…" value="@_search" @oninput="OnSearchChanged" />
+                <input type="search" placeholder="@L.T("Rechercher dans les archives…")" value="@_search" @oninput="OnSearchChanged" />
             </div>
         </div>
 
         @if (FilteredArchives.Count == 0)
         {
-            <EmptyState Icon="🗃" Title="Aucun utilisateur archivé" Message="@(_search.Length > 0 ? "Aucun résultat pour cette recherche." : "Les comptes supprimés apparaîtront ici.")" />
+            <EmptyState Icon="🗃" Title="@L.T("Aucun utilisateur archivé")" Message="@(_search.Length > 0 ? L.T("Aucun résultat pour cette recherche.") : L.T("Les comptes supprimés apparaîtront ici."))" />
         }
         else
         {
@@ -288,14 +288,14 @@ else
                         <Avatar UserName="@user.NomComplet" Seed="@user.Identifiant" Size="sm" />
                         <div class="user-card-main">
                             <div class="user-card-name">@user.NomComplet</div>
-                            <div class="user-card-sub">@user.Identifiant · @user.Role</div>
+                            <div class="user-card-sub">@user.Identifiant · @L.T(user.Role)</div>
                             <div class="user-card-meta">
-                                <Badge Text="Archivé" Kind="inactive" />
-                                <span class="text-muted" style="font-size:12px">Supprimé le @DataStore.FormatExportDate(a.DeletedAt) par @a.DeletedBy</span>
+                                <Badge Text="@L.T("Archivé")" Kind="inactive" />
+                                <span class="text-muted" style="font-size:12px">@L.F("Supprimé le {0} par {1}", DataStore.FormatExportDate(a.DeletedAt), a.DeletedBy)</span>
                             </div>
                         </div>
                         <div class="user-card-actions" @onclick:stopPropagation="true">
-                            <button class="btn btn-secondary btn-sm" @onclick="@(() => AskRestore(user.Id))">♻ Restaurer</button>
+                            <button class="btn btn-secondary btn-sm" @onclick="@(() => AskRestore(user.Id))">@L.T("♻ Restaurer")</button>
                             <button class="btn btn-danger-outline btn-sm" @onclick="@(() => AskPurge(user.Id))">🗑</button>
                         </div>
                     </div>
@@ -309,16 +309,16 @@ else
     {
         <div class="card data-editor-card">
             <div class="inline-actions" style="justify-content:space-between">
-                <h3 style="margin:0">Événements du calendrier</h3>
+                <h3 style="margin:0">@L.T("Événements du calendrier")</h3>
             </div>
             <div class="form-group" style="margin:10px 0 0">
-                <input type="search" placeholder="Rechercher un événement…" value="@_search" @oninput="OnSearchChanged" />
+                <input type="search" placeholder="@L.T("Rechercher un événement…")" value="@_search" @oninput="OnSearchChanged" />
             </div>
         </div>
 
         @if (FilteredManagedEvents.Count == 0)
         {
-            <EmptyState Icon="📅" Title="Aucun événement" Message="@(_search.Length > 0 ? "Aucun résultat pour cette recherche." : "Le calendrier est vide pour le moment.")" />
+            <EmptyState Icon="📅" Title="@L.T("Aucun événement")" Message="@(_search.Length > 0 ? L.T("Aucun résultat pour cette recherche.") : L.T("Le calendrier est vide pour le moment."))" />
         }
         else
         {
@@ -331,16 +331,16 @@ else
                             <div class="user-card-name">@evt.Titre</div>
                             <div class="user-card-sub">@DataStore.FormatDateCourte(evt.Date)@(evt.HeureDebut ?? "")@(evt.HeureFin != null ? " → " + evt.HeureFin : "")</div>
                             <div class="user-card-meta">
-                                <Badge Text="@CalendarEventTypes.Label(evt.Type)" Kind="role" />
-                                @if (evt.TouteLaJournee) { <Badge Text="Toute la journée" Kind="recent" /> }
+                                <Badge Text="@L.T(CalendarEventTypes.Label(evt.Type))" Kind="role" />
+                                @if (evt.TouteLaJournee) { <Badge Text="@L.T("Toute la journée")" Kind="recent" /> }
                                 @if ((evt.PersonnesConcernees?.Count ?? 0) > 0)
                                 {
-                                    <span class="text-muted" style="font-size:12px">@evt.PersonnesConcernees!.Count personne(s)</span>
+                                    <span class="text-muted" style="font-size:12px">@L.F("{0} personne(s)", evt.PersonnesConcernees!.Count)</span>
                                 }
                             </div>
                         </div>
                         <div class="user-card-actions" @onclick:stopPropagation="true">
-                            <button class="btn-icon danger" aria-label="Supprimer l'événement" @onclick="@(() => AskDeleteEvent(evt))">🗑</button>
+                            <button class="btn-icon danger" aria-label="@L.T("Supprimer l'événement")" @onclick="@(() => AskDeleteEvent(evt))">🗑</button>
                         </div>
                     </div>
                 }
@@ -352,21 +352,21 @@ else
     else if (_selectedKey == "settings")
     {
         <div class="card data-editor-card">
-            <h3>Paramètres applicatifs</h3>
+            <h3>@L.T("Paramètres applicatifs")</h3>
             <div class="form-group">
-                <label for="dm-appname">Nom de l'application</label>
+                <label for="dm-appname">@L.T("Nom de l'application")</label>
                 <input id="dm-appname" type="text" value="@_appName" @oninput="e => _appName = e.Value?.ToString() ?? string.Empty" />
             </div>
             <div class="form-group">
-                <label>Couleur d'accent</label>
+                <label>@L.T("Couleur d'accent")</label>
                 <div class="color-swatches">
                     @foreach (var (c, nom) in CouleursAccent.Toutes)
                     {
                         <button type="button" class="color-swatch @(string.Equals(c, _color, StringComparison.OrdinalIgnoreCase) ? "selected" : "")"
-                                style="background:@c" title="@nom" aria-label="@nom" @onclick="() => SelectAccent(c)"></button>
+                                style="background:@c" title="@L.T(nom)" aria-label="@L.T(nom)" @onclick="() => SelectAccent(c)"></button>
                     }
-                    <label class="color-swatch color-custom" title="Autre couleur">
-                        <input type="color" value="@_color" aria-label="Choisir une autre couleur" @onchange="e => SelectAccent(e.Value?.ToString() ?? _color)" />
+                    <label class="color-swatch color-custom" title="@L.T("Autre couleur")">
+                        <input type="color" value="@_color" aria-label="@L.T("Choisir une autre couleur")" @onchange="e => SelectAccent(e.Value?.ToString() ?? _color)" />
                     </label>
                 </div>
             </div>
@@ -375,65 +375,65 @@ else
             <div class="form-group">
                 <label class="form-check" for="dm-autoexport">
                     <input id="dm-autoexport" type="checkbox" checked="@_autoExport" @onchange="e => _autoExport = e.Value is bool b ? b : !_autoExport" />
-                    Export automatique mensuel de toutes les données
+                    @L.T("Export automatique mensuel de toutes les données")
                 </label>
-                <span class="field-hint">Sauvegarde complète (JSON) + utilisateurs (Excel) dans Téléchargements. Dernier export : @(string.IsNullOrWhiteSpace(Store.Settings.DernierExportAuto) ? "jamais" : Store.Settings.DernierExportAuto).</span>
+                <span class="field-hint">@L.F("Sauvegarde complète (JSON) + utilisateurs (Excel) dans Téléchargements. Dernier export : {0}.", string.IsNullOrWhiteSpace(Store.Settings.DernierExportAuto) ? L.T("jamais") : Store.Settings.DernierExportAuto)</span>
             </div>
             }
             <div class="form-actions">
-                <button class="btn btn-primary" @onclick="SaveSettingsAsync" disabled="@_saving">@(_saving ? "Enregistrement…" : "Enregistrer")</button>
+                <button class="btn btn-primary" @onclick="SaveSettingsAsync" disabled="@_saving">@(_saving ? L.T("Enregistrement…") : L.T("Enregistrer"))</button>
             </div>
         </div>
     }
     else
     {
         <div class="card data-editor-card">
-            <h3>@DataSetLabel(_selectedKey)</h3>
-            <p class="muted">Cette collection se gère depuis sa page dédiée (données stockées localement, sans JSON).</p>
+            <h3>@L.T(DataSetLabel(_selectedKey))</h3>
+            <p class="muted">@L.T("Cette collection se gère depuis sa page dédiée (données stockées localement, sans JSON).")</p>
             <div class="form-actions">
                 @if (_selectedKey == "documents" || _selectedKey == "folders")
                 {
-                    <button class="btn btn-secondary" @onclick='() => State.Navigate("documents")'>📄 Ouvrir la gestion documentaire</button>
+                    <button class="btn btn-secondary" @onclick='() => State.Navigate("documents")'>@L.T("📄 Ouvrir la gestion documentaire")</button>
                 }
                 else if (_selectedKey == "community")
                 {
-                    <button class="btn btn-secondary" @onclick='() => State.Navigate("community")'>📖 Ouvrir l'histoire de la communauté</button>
+                    <button class="btn btn-secondary" @onclick='() => State.Navigate("community")'>@L.T("📖 Ouvrir l'histoire de la communauté")</button>
                 }
                 else if (_selectedKey == "permissions")
                 {
-                    <button class="btn btn-secondary" @onclick='() => State.Navigate("roles")'>🛡 Ouvrir les rôles et permissions</button>
+                    <button class="btn btn-secondary" @onclick='() => State.Navigate("roles")'>@L.T("🛡 Ouvrir les rôles et permissions")</button>
                 }
                 else if (_selectedKey == "messages")
                 {
-                    <button class="btn btn-secondary" @onclick='() => State.Navigate("messagerie")'>✉ Ouvrir la messagerie</button>
+                    <button class="btn btn-secondary" @onclick='() => State.Navigate("messagerie")'>@L.T("✉ Ouvrir la messagerie")</button>
                 }
                 else if (_selectedKey == "taches")
                 {
-                    <button class="btn btn-secondary" @onclick='() => State.Navigate("taches")'>☑ Ouvrir les tâches</button>
+                    <button class="btn btn-secondary" @onclick='() => State.Navigate("taches")'>@L.T("☑ Ouvrir les tâches")</button>
                 }
                 else if (_selectedKey == "cotisations" || _selectedKey == "tresorerie")
                 {
-                    <button class="btn btn-secondary" @onclick='() => State.Navigate("finances")'>💰 Ouvrir les finances</button>
+                    <button class="btn btn-secondary" @onclick='() => State.Navigate("finances")'>@L.T("💰 Ouvrir les finances")</button>
                 }
                 else if (_selectedKey == "materiels" || _selectedKey == "prets")
                 {
-                    <button class="btn btn-secondary" @onclick='() => State.Navigate("materiel")'>🧰 Ouvrir le matériel</button>
+                    <button class="btn btn-secondary" @onclick='() => State.Navigate("materiel")'>@L.T("🧰 Ouvrir le matériel")</button>
                 }
                 else if (_selectedKey == "reunions")
                 {
-                    <button class="btn btn-secondary" @onclick='() => State.Navigate("reunions")'>👥 Ouvrir les réunions</button>
+                    <button class="btn btn-secondary" @onclick='() => State.Navigate("reunions")'>@L.T("👥 Ouvrir les réunions")</button>
                 }
                 else if (_selectedKey == "situations")
                 {
-                    <button class="btn btn-secondary" @onclick='() => State.Navigate("situations")'>🤝 Ouvrir les situations</button>
+                    <button class="btn btn-secondary" @onclick='() => State.Navigate("situations")'>@L.T("🤝 Ouvrir les situations")</button>
                 }
                 else if (_selectedKey == "votes")
                 {
-                    <button class="btn btn-secondary" @onclick='() => State.Navigate("votes")'>🗳 Ouvrir les votes</button>
+                    <button class="btn btn-secondary" @onclick='() => State.Navigate("votes")'>@L.T("🗳 Ouvrir les votes")</button>
                 }
                 else if (_selectedKey == "journal_media")
                 {
-                    <button class="btn btn-secondary" @onclick='() => State.Navigate("journal")'>🎞 Ouvrir le journal</button>
+                    <button class="btn btn-secondary" @onclick='() => State.Navigate("journal")'>@L.T("🎞 Ouvrir le journal")</button>
                 }
             </div>
         </div>
@@ -506,7 +506,7 @@ else
         Store.ResetWithDemoData();
         State.ResetNavigation();
         State.GoToInitial("dashboard");
-        State.NotifySuccess("Données de démonstration générées.");
+        State.NotifySuccess(L.T("Données de démonstration générées."));
     }
 
     private void SelectDataSet(string key)
@@ -635,13 +635,13 @@ else
 
     private void AskDeleteEvent(CalendarEvent e)
     {
-        _confirm = new ConfirmState(true, "Supprimer l'événement",
-            $"Supprimer « {e.Titre} » du calendrier ?",
-            "Supprimer", true, () =>
+        _confirm = new ConfirmState(true, L.T("Supprimer l'événement"),
+            L.F("Supprimer « {0} » du calendrier ?", e.Titre),
+            L.T("Supprimer"), true, () =>
             {
                 var res = Store.DeleteEvent(e.Id);
-                if (res.Success) State.NotifySuccess("Événement supprimé.");
-                else State.NotifyError("Erreur : " + res.Error);
+                if (res.Success) State.NotifySuccess(L.T("Événement supprimé."));
+                else State.NotifyError(L.F("Erreur : {0}", res.Error));
             });
     }
 
@@ -697,17 +697,17 @@ else
         if (_userDraft == null) return;
         if (string.IsNullOrWhiteSpace(_userDraft.Prenom) || string.IsNullOrWhiteSpace(_userDraft.Nom))
         {
-            _userError = "Le prénom et le nom sont obligatoires.";
+            _userError = L.T("Le prénom et le nom sont obligatoires.");
             return;
         }
         if (!string.IsNullOrWhiteSpace(_userDraft.Email) && !Store.IsEmailValid(_userDraft.Email))
         {
-            _userError = "L'adresse e-mail n'est pas valide.";
+            _userError = L.T("L'adresse e-mail n'est pas valide.");
             return;
         }
         if (!string.IsNullOrWhiteSpace(_userDraft.Telephone) && !DataStore.IsPhoneValid(_userDraft.Telephone))
         {
-            _userError = "Le numéro de téléphone est invalide (format +261…).";
+            _userError = L.T("Le numéro de téléphone est invalide (format +261…).");
             return;
         }
 
@@ -720,7 +720,7 @@ else
                 _userError = res.Error;
                 return;
             }
-            State.NotifySuccess("Utilisateur « " + draft.NomComplet + " » enregistré.");
+            State.NotifySuccess(L.F("Utilisateur « {0} » enregistré.", draft.NomComplet));
         }
         else
         {
@@ -731,20 +731,20 @@ else
                 _userError = res.Error;
                 return;
             }
-            State.NotifySuccess("Utilisateur « " + draft.NomComplet + " » ajouté.");
+            State.NotifySuccess(L.F("Utilisateur « {0} » ajouté.", draft.NomComplet));
         }
         CancelUserForm();
     }
 
     private void AskDeleteUser(UserAccount u)
     {
-        _confirm = new ConfirmState(true, "Supprimer l'utilisateur",
-            $"Supprimer « {u.NomComplet} » ? Le compte sera archivé.",
-            "Supprimer", true, () =>
+        _confirm = new ConfirmState(true, L.T("Supprimer l'utilisateur"),
+            L.F("Supprimer « {0} » ? Le compte sera archivé.", u.NomComplet),
+            L.T("Supprimer"), true, () =>
             {
                 var res = Store.DeleteUser(u.Id);
-                if (res.Success) State.NotifySuccess("Utilisateur supprimé.");
-                else State.NotifyError("Erreur : " + res.Error);
+                if (res.Success) State.NotifySuccess(L.T("Utilisateur supprimé."));
+                else State.NotifyError(L.F("Erreur : {0}", res.Error));
             });
     }
 
@@ -795,20 +795,20 @@ else
             return;
         }
         State.NotifySuccess(_fieldEditId == null
-            ? "Champ « " + _fieldDraft.Label + " » ajouté."
-            : "Champ « " + _fieldDraft.Label + " » enregistré.");
+            ? L.F("Champ « {0} » ajouté.", _fieldDraft.Label)
+            : L.F("Champ « {0} » enregistré.", _fieldDraft.Label));
         CancelFieldForm();
     }
 
     private void AskDeleteField(FieldDefinition f)
     {
-        _confirm = new ConfirmState(true, "Supprimer le champ",
-            $"Supprimer le champ « {f.Label} » du formulaire et des utilisateurs ?",
-            "Supprimer", true, () =>
+        _confirm = new ConfirmState(true, L.T("Supprimer le champ"),
+            L.F("Supprimer le champ « {0} » du formulaire et des utilisateurs ?", f.Label),
+            L.T("Supprimer"), true, () =>
             {
                 var (res, _) = Store.DeleteField(f.Id);
-                if (res.Success) State.NotifySuccess("Champ supprimé.");
-                else State.NotifyError("Erreur : " + res.Error);
+                if (res.Success) State.NotifySuccess(L.T("Champ supprimé."));
+                else State.NotifyError(L.F("Erreur : {0}", res.Error));
             });
     }
 
@@ -832,12 +832,12 @@ else
 
     private void AskClearActivity()
     {
-        _confirm = new ConfirmState(true, "Vider le journal",
-            "Supprimer tout l'historique d'activité ? Action définitive.",
-            "Vider", true, () =>
+        _confirm = new ConfirmState(true, L.T("Vider le journal"),
+            L.T("Supprimer tout l'historique d'activité ? Action définitive."),
+            L.T("Vider"), true, () =>
             {
                 Store.ClearActivity();
-                State.NotifySuccess("Le journal a été vidé.");
+                State.NotifySuccess(L.T("Le journal a été vidé."));
             });
     }
 
@@ -863,13 +863,13 @@ else
     {
         var u = Store.FindArchivedUser(id);
         if (u == null) return;
-        _confirm = new ConfirmState(true, "Restaurer l'utilisateur",
-            $"Restaurer « {u.NomComplet} » dans la liste des utilisateurs actifs ?",
-            "Restaurer", false, () =>
+        _confirm = new ConfirmState(true, L.T("Restaurer l'utilisateur"),
+            L.F("Restaurer « {0} » dans la liste des utilisateurs actifs ?", u.NomComplet),
+            L.T("Restaurer"), false, () =>
             {
                 var res = Store.RestoreArchivedUser(id);
-                if (res.Success) State.NotifySuccess("Utilisateur restauré.");
-                else State.NotifyError("Erreur : " + res.Error);
+                if (res.Success) State.NotifySuccess(L.T("Utilisateur restauré."));
+                else State.NotifyError(L.F("Erreur : {0}", res.Error));
             });
     }
 
@@ -877,23 +877,23 @@ else
     {
         var u = Store.FindArchivedUser(id);
         if (u == null) return;
-        _confirm = new ConfirmState(true, "Supprimer définitivement",
-            $"Supprimer définitivement l'archivage de « {u.NomComplet} » ?",
-            "Supprimer", true, () =>
+        _confirm = new ConfirmState(true, L.T("Supprimer définitivement"),
+            L.F("Supprimer définitivement l'archivage de « {0} » ?", u.NomComplet),
+            L.T("Supprimer"), true, () =>
             {
                 Store.PurgeUser(id);
-                State.NotifySuccess("Archivage définitivement supprimé.");
+                State.NotifySuccess(L.T("Archivage définitivement supprimé."));
             });
     }
 
     private void AskPurgeAll()
     {
-        _confirm = new ConfirmState(true, "Vider les archives",
-            "Supprimer définitivement tous les comptes archivés ?",
-            "Vider", true, () =>
+        _confirm = new ConfirmState(true, L.T("Vider les archives"),
+            L.T("Supprimer définitivement tous les comptes archivés ?"),
+            L.T("Vider"), true, () =>
             {
                 Store.PurgeAllArchive();
-                State.NotifySuccess("Les archives ont été vidées.");
+                State.NotifySuccess(L.T("Les archives ont été vidées."));
             });
     }
 
@@ -923,7 +923,7 @@ else
             copie.ExportAutoMensuel = _autoExport;
             Store.SaveSettings(copie);
             await Js.ApplySettingsAsync(Store.SettingsAffichees());
-            State.NotifySuccess("Paramètres enregistrés.");
+            State.NotifySuccess(L.T("Paramètres enregistrés."));
         }
         finally
         {

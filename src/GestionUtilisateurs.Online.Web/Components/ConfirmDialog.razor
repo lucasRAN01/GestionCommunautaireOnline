@@ -15,13 +15,13 @@
 
 @code {
     [Parameter] public bool Show { get; set; }
-    [Parameter] public string Title { get; set; } = "Confirmation";
+    [Parameter] public string Title { get; set; } = L.T("Confirmation");
     [Parameter] public string? Message { get; set; }
-    [Parameter] public string ConfirmLabel { get; set; } = "Confirmer";
-    [Parameter] public string CancelLabel { get; set; } = "Annuler";
+    [Parameter] public string ConfirmLabel { get; set; } = L.T("Confirmer");
+    [Parameter] public string CancelLabel { get; set; } = L.T("Annuler");
     [Parameter] public bool Danger { get; set; }
     [Parameter] public bool ShowSecondary { get; set; }
-    [Parameter] public string SecondaryLabel { get; set; } = "Option";
+    [Parameter] public string SecondaryLabel { get; set; } = L.T("Option");
     [Parameter] public EventCallback OnConfirm { get; set; }
     [Parameter] public EventCallback OnSecondary { get; set; }
     [Parameter] public EventCallback OnCancel { get; set; }

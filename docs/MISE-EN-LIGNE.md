@@ -233,6 +233,31 @@ dépôt que vous avez créé).
 
 ---
 
+## Corriger une traduction
+
+Le site existe en français, en anglais et en malgache ; chaque membre choisit
+sa langue. Les textes traduits sont dans
+`src/GestionUtilisateurs.Online.Shared/I18n/en/` (anglais) et
+`src/GestionUtilisateurs.Online.Shared/I18n/mg/` (malgache), un fichier par
+partie de l'application (`shell.json` pour les menus et la connexion,
+`membres.json`, `communaute.json` pour les finances, les votes et la
+messagerie, `modeles.json` pour l'aide, `messages.json` pour les messages
+d'erreur, etc.).
+
+Chaque ligne a la forme `"Texte français": "traduction"` :
+
+1. Sur GitHub, ouvrez le fichier, cliquez sur le crayon (**Edit**).
+2. Modifiez **seulement la partie à droite** des deux-points. Le texte français
+   à gauche doit rester identique, au caractère près.
+3. Gardez les codes `{0}`, `{1}`… : ils sont remplacés par un nom, un nombre
+   ou une date.
+4. **Commit changes** : le site est republié tout seul quelques minutes plus
+   tard.
+
+Un texte absent du fichier s'affiche simplement en français.
+
+---
+
 ## Limites connues de cette première version
 
 - **Données partagées par blocs.** Chaque partie de l'application (membres,

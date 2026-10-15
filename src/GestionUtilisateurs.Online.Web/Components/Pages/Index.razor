@@ -1,18 +1,18 @@
 @page "/"
 @using GestionUtilisateurs.Shared.Services
 
-<h1>Gestion des utilisateurs - Mobile</h1>
-<p>Application hors ligne pour gérer vos utilisateurs</p>
+<h1>@L.T("Gestion des utilisateurs - Mobile")</h1>
+<p>@L.T("Application hors ligne pour gérer vos utilisateurs")</p>
 
 <div class="stats">
     <div class="stat-card">
         <h3>@totalUsers</h3>
-        <p>Utilisateurs</p>
+        <p>@L.T("Utilisateurs")</p>
     </div>
 </div>
 
 <button class="btn btn-primary" @onclick="NavigateToUsers">
-    Voir les Utilisateurs
+    @L.T("Voir les Utilisateurs")
 </button>
 
 @code {

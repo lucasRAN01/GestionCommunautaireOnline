@@ -4,6 +4,19 @@ Les nouveautés de la version en ligne, de la plus récente à la plus ancienne.
 Après chaque mise à jour, le site affiche un bandeau « Nouvelle version
 disponible » : un clic sur **Mettre à jour** suffit.
 
+## 15 octobre 2026 (langues)
+
+**Trois langues : français, anglais, malgache**
+- Chacun choisit sa langue dans Paramètres › Apparence › « Ma langue », ou
+  directement sur l'écran de connexion. Le choix est personnel : il ne change
+  rien pour les autres membres, même pour l'administrateur.
+- Tout l'écran est traduit : menus, pages, boutons, messages, aide et carte
+  de membre. Le français reste la langue par défaut.
+- Les données ne sont pas traduites : noms, motifs, historique d'activité et
+  fichiers Excel restent tels qu'ils ont été saisis.
+- Les traductions se corrigent dans de simples fichiers (voir
+  `docs/MISE-EN-LIGNE.md`, « Corriger une traduction »).
+
 ## 15 octobre 2026 (soir)
 
 **Finances**

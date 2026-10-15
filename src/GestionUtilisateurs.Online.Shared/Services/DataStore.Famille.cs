@@ -59,21 +59,21 @@ public partial class DataStore
     /// <summary>Déclare que <paramref name="autreIdentifiant"/> est le <paramref name="type"/> du membre <paramref name="userId"/>.</summary>
     public OperationResult AjouterLienFamille(string userId, string autreIdentifiant, string type)
     {
-        if (!Can(Permissions.UsersManage)) return OperationResult.Fail("Action réservée à la gestion des utilisateurs.");
-        if (!LiensFamille.Tous.Contains(type)) return OperationResult.Fail("Type de lien inconnu.");
+        if (!Can(Permissions.UsersManage)) return OperationResult.Fail(L.T("Action réservée à la gestion des utilisateurs."));
+        if (!LiensFamille.Tous.Contains(type)) return OperationResult.Fail(L.T("Type de lien inconnu."));
         var moi = _users.FirstOrDefault(u => u.Id == userId);
         var autre = FindUserByIdentifier(autreIdentifiant ?? "");
-        if (moi == null || autre == null) return OperationResult.Fail("Membre introuvable.");
-        if (moi.Id == autre.Id) return OperationResult.Fail("Un membre ne peut pas être lié à lui-même.");
+        if (moi == null || autre == null) return OperationResult.Fail(L.T("Membre introuvable."));
+        if (moi.Id == autre.Id) return OperationResult.Fail(L.T("Un membre ne peut pas être lié à lui-même."));
         if (LienEntre(moi, autre.Identifiant) is { } existant)
-            return OperationResult.Fail(autre.NomComplet + " est déjà lié(e) à cette fiche (" + LiensFamille.Libelle(existant).ToLowerInvariant() + ").");
+            return OperationResult.Fail(L.F("{0} est déjà lié(e) à cette fiche ({1}).", autre.NomComplet, L.T(LiensFamille.Libelle(existant)).ToLowerInvariant()));
         if (type is LiensFamille.Parent or LiensFamille.Enfant)
         {
             // Pas de boucle : on ne peut pas être son propre ancêtre.
             var parent = type == LiensFamille.Parent ? autre : moi;
             var enfant = type == LiensFamille.Parent ? moi : autre;
             if (EstAncetre(enfant, parent))
-                return OperationResult.Fail(enfant.NomComplet + " est déjà un ascendant de " + parent.NomComplet + ".");
+                return OperationResult.Fail(L.F("{0} est déjà un ascendant de {1}.", enfant.NomComplet, parent.NomComplet));
         }
 
         moi.Famille ??= new List<LienFamille>();
@@ -82,7 +82,7 @@ public partial class DataStore
         autre.Famille.RemoveAll(l => l.Identifiant.Equals(moi.Identifiant, StringComparison.OrdinalIgnoreCase));
         autre.Famille.Add(new LienFamille { Identifiant = moi.Identifiant, Type = LiensFamille.Inverse(type) });
         SaveUsers();
-        LogActivity(ActivityTypes.Update, "Lien de famille : " + autre.Identifiant + " (" + LiensFamille.Libelle(type).ToLowerInvariant() + ") de " + moi.Identifiant);
+        LogActivity(ActivityTypes.Update, "Lien de famille : " + autre.Identifiant + " (" + L.EnFrancais(() => LiensFamille.Libelle(type)).ToLowerInvariant() + ") de " + moi.Identifiant);
         DataChanged?.Invoke();
         return OperationResult.Ok();
     }
@@ -90,14 +90,14 @@ public partial class DataStore
     /// <summary>Retire le lien entre deux membres, des deux côtés.</summary>
     public OperationResult RetirerLienFamille(string userId, string autreIdentifiant)
     {
-        if (!Can(Permissions.UsersManage)) return OperationResult.Fail("Action réservée à la gestion des utilisateurs.");
+        if (!Can(Permissions.UsersManage)) return OperationResult.Fail(L.T("Action réservée à la gestion des utilisateurs."));
         var moi = _users.FirstOrDefault(u => u.Id == userId);
-        if (moi == null) return OperationResult.Fail("Membre introuvable.");
+        if (moi == null) return OperationResult.Fail(L.T("Membre introuvable."));
         var n = (moi.Famille ?? new List<LienFamille>()).RemoveAll(l => l.Identifiant.Equals(autreIdentifiant, StringComparison.OrdinalIgnoreCase));
         var autre = FindUserByIdentifier(autreIdentifiant);
         if (autre != null)
             n += (autre.Famille ?? new List<LienFamille>()).RemoveAll(l => l.Identifiant.Equals(moi.Identifiant, StringComparison.OrdinalIgnoreCase));
-        if (n == 0) return OperationResult.Fail("Aucun lien à retirer.");
+        if (n == 0) return OperationResult.Fail(L.T("Aucun lien à retirer."));
         SaveUsers();
         LogActivity(ActivityTypes.Update, "Lien de famille retiré entre " + moi.Identifiant + " et " + autreIdentifiant);
         DataChanged?.Invoke();
@@ -124,6 +124,6 @@ public partial class DataStore
     {
         if (!string.IsNullOrWhiteSpace(u.ResponsableLegal)) return (u.ResponsableLegal.Trim(), (u.ResponsableTelephone ?? "").Trim());
         var parent = Lies(u, LiensFamille.Parent).FirstOrDefault(p => !p.EstMineur);
-        return parent == null ? ("", "") : (parent.NomComplet + " (parent)", parent.Telephone ?? "");
+        return parent == null ? ("", "") : (L.F("{0} (parent)", parent.NomComplet), parent.Telephone ?? "");
     }
 }

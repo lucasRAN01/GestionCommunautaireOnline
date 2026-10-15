@@ -11,9 +11,9 @@
     <div class="ob-overlay @(_place != null ? "ob-popmode" : "")" @ontouchstart="OnTouchStart" @ontouchend="OnTouchEnd">
         @if (_place == null)
         {
-            <div class="ob-card" id="ob-card" role="dialog" aria-modal="true" aria-label="Mini-guide de démarrage"
+            <div class="ob-card" id="ob-card" role="dialog" aria-modal="true" aria-label="@L.T("Mini-guide de démarrage")"
                  tabindex="0" @ref="_cardRef" @onkeydown="OnKeyDown">
-                <button type="button" class="ob-skip" @onclick="Skip">Passer</button>
+                <button type="button" class="ob-skip" @onclick="Skip">@L.T("Passer")</button>
                 <div class="ob-anim" @key="_index">
                     <div class="ob-illus" aria-hidden="true">
                         <div class="ob-float">@Illustration(Steps[_index].Art)</div>
@@ -41,9 +41,9 @@
                 <div class="ob-arrow @(_place.ArrowDown ? "ob-down" : "ob-up")" aria-hidden="true"
                      style="left:@Px(_place.ArrowX - 11)"></div>
             }
-            <div class="ob-card ob-pop" id="ob-card" role="dialog" aria-modal="true" aria-label="Mini-guide de démarrage"
+            <div class="ob-card ob-pop" id="ob-card" role="dialog" aria-modal="true" aria-label="@L.T("Mini-guide de démarrage")"
                  tabindex="0" @ref="_cardRef" @onkeydown="OnKeyDown">
-                <button type="button" class="ob-skip" @onclick="Skip">Passer</button>
+                <button type="button" class="ob-skip" @onclick="Skip">@L.T("Passer")</button>
                 <div class="ob-anim" @key="_index">
                     <h2 class="ob-title ob-title-pop">@Steps[_index].Title</h2>
                     <p class="ob-text">@Steps[_index].Text</p>
@@ -90,38 +90,38 @@
     private List<Step> BuildSteps(bool desktop)
     {
         var appName = string.IsNullOrWhiteSpace(Store.Settings.AppName)
-            ? "Gestion des utilisateurs" : Store.Settings.AppName;
+            ? L.T("Gestion des utilisateurs") : Store.Settings.AppName;
         var steps = new List<Step>();
         if (desktop)
         {
-            steps.Add(new("", "En haut à gauche : le logo",
-                "Cliquez sur le logo pour afficher l'image en grand et parcourir l'histoire de votre communauté.", ".web-sidebar-logo", Side: true));
-            steps.Add(new("", "À gauche : le menu",
-                "Toutes les pages sont dans ce menu : Accueil, Utilisateurs, Calendrier, Finances, Messagerie, Paramètres…", ".web-sidebar-nav", Side: true));
-            steps.Add(new("", "En haut à droite : votre avatar",
-                "Cliquez sur votre photo pour ouvrir Mes informations, changer votre mot de passe ou vous déconnecter.", ".avatar-button"));
-            steps.Add(new("", "Sur chaque écran : l'aide ⓘ",
-                "Ce bouton, à côté de votre avatar, ouvre l'aide de la page en cours. En cas de doute, il sait quoi faire.", ".topbar-help-btn"));
-            steps.Add(new("ready", "Vous êtes prêt·e !",
-                "Vous pouvez revoir ce guide à tout moment depuis Paramètres, ici dans le menu. Bon usage !", ".web-nav-item[data-nav=\"settings\"]", Side: true));
+            steps.Add(new("", L.T("En haut à gauche : le logo"),
+                L.T("Cliquez sur le logo pour afficher l'image en grand et parcourir l'histoire de votre communauté."), ".web-sidebar-logo", Side: true));
+            steps.Add(new("", L.T("À gauche : le menu"),
+                L.T("Toutes les pages sont dans ce menu : Accueil, Utilisateurs, Calendrier, Finances, Messagerie, Paramètres…"), ".web-sidebar-nav", Side: true));
+            steps.Add(new("", L.T("En haut à droite : votre avatar"),
+                L.T("Cliquez sur votre photo pour ouvrir Mes informations, changer votre mot de passe ou vous déconnecter."), ".avatar-button"));
+            steps.Add(new("", L.T("Sur chaque écran : l'aide ⓘ"),
+                L.T("Ce bouton, à côté de votre avatar, ouvre l'aide de la page en cours. En cas de doute, il sait quoi faire."), ".topbar-help-btn"));
+            steps.Add(new("ready", L.T("Vous êtes prêt·e !"),
+                L.T("Vous pouvez revoir ce guide à tout moment depuis Paramètres, ici dans le menu. Bon usage !"), ".web-nav-item[data-nav=\"settings\"]", Side: true));
         }
         else
         {
-            steps.Add(new("", "Tout se passe en bas",
-                "Regardez la barre du bas : Accueil, Utilisateurs, Calendrier et Activité, toujours à portée de pouce.", ".bottom-nav"));
-            steps.Add(new("", "Ici, le menu « ⋮ »",
-                "En haut à droite : Finances, matériel, messagerie, carte de membre, votes… Tout le reste se trouve derrière ce bouton.", "[aria-label=\"Plus d'options\"]"));
-            steps.Add(new("", "Juste à côté : votre avatar",
-                "Touchez votre photo en haut à droite pour ouvrir Mes informations, changer votre mot de passe ou vous déconnecter.", ".avatar-button"));
-            steps.Add(new("", "En haut à gauche : le logo",
-                "Touchez le logo pour afficher l'image en grand et parcourir l'histoire de votre communauté.", ".logo-btn"));
-            steps.Add(new("", "Sur chaque écran : l'aide ⓘ",
-                "Ce bouton ouvre l'aide de la page en cours. En cas de doute, il sait quoi faire.", ".topbar-help-btn"));
-            steps.Add(new("ready", "Vous êtes prêt·e !",
-                "Pour revoir ce guide, ouvrez « ⋮ » puis Paramètres. Astuce : glissez du bord gauche vers la droite pour revenir en arrière.", "[aria-label=\"Plus d'options\"]"));
+            steps.Add(new("", L.T("Tout se passe en bas"),
+                L.T("Regardez la barre du bas : Accueil, Utilisateurs, Calendrier et Activité, toujours à portée de pouce."), ".bottom-nav"));
+            steps.Add(new("", L.T("Ici, le menu « ⋮ »"),
+                L.T("En haut à droite : Finances, matériel, messagerie, carte de membre, votes… Tout le reste se trouve derrière ce bouton."), "[aria-label=\"" + L.T("Plus d'options") + "\"]"));
+            steps.Add(new("", L.T("Juste à côté : votre avatar"),
+                L.T("Touchez votre photo en haut à droite pour ouvrir Mes informations, changer votre mot de passe ou vous déconnecter."), ".avatar-button"));
+            steps.Add(new("", L.T("En haut à gauche : le logo"),
+                L.T("Touchez le logo pour afficher l'image en grand et parcourir l'histoire de votre communauté."), ".logo-btn"));
+            steps.Add(new("", L.T("Sur chaque écran : l'aide ⓘ"),
+                L.T("Ce bouton ouvre l'aide de la page en cours. En cas de doute, il sait quoi faire."), ".topbar-help-btn"));
+            steps.Add(new("ready", L.T("Vous êtes prêt·e !"),
+                L.T("Pour revoir ce guide, ouvrez « ⋮ » puis Paramètres. Astuce : glissez du bord gauche vers la droite pour revenir en arrière."), "[aria-label=\"" + L.T("Plus d'options") + "\"]"));
         }
-        steps.Insert(0, new("welcome", "Bienvenue sur " + appName,
-            "Votre gestion communautaire en ligne, partagée avec tous les membres. Laissez-vous guider en " + steps.Count + " étapes.", null));
+        steps.Insert(0, new("welcome", L.F("Bienvenue sur {0}", appName),
+            L.F("Votre gestion communautaire en ligne, partagée avec tous les membres. Laissez-vous guider en {0} étapes.", steps.Count), null));
         return steps;
     }
 
@@ -230,12 +230,12 @@
 
     private static string Px(double v) => v.ToString("0", System.Globalization.CultureInfo.InvariantCulture) + "px";
 
-    private RenderFragment NavDots() => @<div class="ob-dots" role="tablist" aria-label="Étapes du guide">
+    private RenderFragment NavDots() => @<div class="ob-dots" role="tablist" aria-label="@L.T("Étapes du guide")">
         @for (var i = 0; i < Steps.Count; i++)
         {
             var idx = i;
             <button type="button" role="tab" aria-selected="@(idx == _index)"
-                    aria-label="Aller à l'étape @(idx + 1) sur @Steps.Count"
+                    aria-label="@L.F("Aller à l'étape {0} sur {1}", idx + 1, Steps.Count)"
                     class="ob-dot @(idx == _index ? "active" : "")" @onclick="() => Go(idx)"></button>
         }
     </div>;
@@ -243,7 +243,7 @@
     private RenderFragment NavRow() => @<div class="ob-nav">
         @if (_index > 0)
         {
-            <button type="button" class="btn btn-secondary ob-btn" @onclick="Prev">← Précédent</button>
+            <button type="button" class="btn btn-secondary ob-btn" @onclick="Prev">@L.T("← Précédent")</button>
         }
         else
         {
@@ -251,11 +251,11 @@
         }
         @if (_index < Steps.Count - 1)
         {
-            <button type="button" class="ob-btn ob-primary" @onclick="Next">Suivant →</button>
+            <button type="button" class="ob-btn ob-primary" @onclick="Next">@L.T("Suivant →")</button>
         }
         else
         {
-            <button type="button" class="ob-btn ob-primary" @onclick="Finish">Terminer ✓</button>
+            <button type="button" class="ob-btn ob-primary" @onclick="Finish">@L.T("Terminer ✓")</button>
         }
     </div>;
 

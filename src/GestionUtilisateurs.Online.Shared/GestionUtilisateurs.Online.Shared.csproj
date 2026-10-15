@@ -7,6 +7,11 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <!-- Traductions de l'interface (texte français → anglais / malgache). -->
+    <EmbeddedResource Include="I18n\**\*.json" LogicalName="i18n/$([System.String]::Copy('%(RecursiveDir)').Replace('\','/'))%(Filename)%(Extension)" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="Microsoft.JSInterop" Version="9.0.9" />
   </ItemGroup>
 

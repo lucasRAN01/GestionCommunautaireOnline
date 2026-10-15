@@ -1,3 +1,5 @@
+using GestionUtilisateurs.Shared.Services;
+
 namespace GestionUtilisateurs.Shared.Models;
 
 /// <summary>Jours fériés fixes de Madagascar (dates calendaires, sans fêtes mobiles).</summary>
@@ -19,7 +21,7 @@ public static class Holidays
     public static string? GetFixedHoliday(DateTime date)
     {
         foreach (var (m, d, label) in Fixed)
-            if (date.Month == m && date.Day == d) return label;
+            if (date.Month == m && date.Day == d) return L.T(label);
         return null;
     }
 }
