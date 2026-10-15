@@ -153,11 +153,11 @@ public class AccountService
     public Task<RpcResult<List<OnlineProfile>>> ListAsync() => _api.RpcAsync<List<OnlineProfile>>("list_accounts");
 
     /// <summary>Valide le compte sur le serveur puis crée (ou réactive) sa fiche membre.</summary>
-    public async Task<string?> ApproveAsync(OnlineProfile profile, string role)
+    public async Task<string?> ApproveAsync(OnlineProfile profile, string role, string? relierAFicheId = null)
     {
         var res = await _api.RpcAsync<OnlineProfile>("approve_account", new { p_id = profile.Id, p_role = role });
         if (!res.Ok) return res.Error;
-        var upsert = _store.UpsertOnlineMember(profile.Id, profile.Prenom, profile.Nom, profile.Email, profile.Telephone, role);
+        var upsert = _store.UpsertOnlineMember(profile.Id, profile.Prenom, profile.Nom, profile.Email, profile.Telephone, role, relierAFicheId);
         return upsert.Success ? null : upsert.Error;
     }
 

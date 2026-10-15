@@ -108,10 +108,27 @@ public partial class DataStore
     /// Crée ou met à jour la fiche d'un membre dont le compte en ligne a été validé.
     /// L'identifiant de la fiche est celui du compte Supabase, ce qui relie les deux.
     /// </summary>
-    public UserOperationResult UpsertOnlineMember(string accountId, string prenom, string nom, string email, string telephone, string role)
+    public UserOperationResult UpsertOnlineMember(string accountId, string prenom, string nom, string email, string telephone, string role,
+        string? relierAFicheId = null)
     {
         if (string.IsNullOrWhiteSpace(accountId))
             return new UserOperationResult { Success = false, Error = "Compte introuvable." };
+
+        // Relier le compte à une fiche déjà saisie (même personne) au lieu d'en créer une seconde.
+        var cible = string.IsNullOrWhiteSpace(relierAFicheId) ? null : _users.FirstOrDefault(u => u.Id == relierAFicheId);
+        if (cible != null && !EstCompteEnLigne(cible) && !_users.Any(u => u.Id == accountId))
+        {
+            cible.Id = accountId;
+            cible.Role = string.IsNullOrWhiteSpace(role) ? Roles.Utilisateur : role;
+            cible.Actif = true;
+            if (string.IsNullOrWhiteSpace(cible.Email)) cible.Email = (email ?? "").Trim();
+            if (string.IsNullOrWhiteSpace(cible.Telephone)) cible.Telephone = (telephone ?? "").Trim();
+            if (string.IsNullOrWhiteSpace(cible.Matricule)) cible.Matricule = ProchainMatricule(cible);
+            SaveUsers();
+            LogActivity(ActivityTypes.Activate, "Compte en ligne relié à la fiche existante de " + cible.Identifiant);
+            DataChanged?.Invoke();
+            return new UserOperationResult { Success = true, UserId = cible.Id };
+        }
 
         var existing = _users.FirstOrDefault(u => u.Id == accountId);
         if (existing != null)
@@ -150,12 +167,23 @@ public partial class DataStore
             MotDePasse = "",
             DateCreation = DateTimeOffset.Now.ToString("O")
         };
+        user.Matricule = ProchainMatricule(user);
         _users.Add(user);
         SaveUsers();
         LogActivity(ActivityTypes.Create, "Validation du compte en ligne de " + user.Identifiant);
         DataChanged?.Invoke();
         return new UserOperationResult { Success = true, UserId = user.Id };
     }
+
+    /// <summary>
+    /// Fiches sans compte en ligne qui ressemblent à une inscription (même nom,
+    /// e-mail, téléphone) : on propose de relier le compte à l'une d'elles.
+    /// </summary>
+    public IReadOnlyList<(UserAccount Fiche, string Raison)> FichesPourInscription(string prenom, string nom, string email, string telephone)
+        => DoublonsPossibles(new UserAccount { Prenom = prenom ?? "", Nom = nom ?? "", Email = email ?? "", Telephone = telephone ?? "" })
+            .Where(x => !EstCompteEnLigne(x.Fiche))
+            .OrderByDescending(x => x.Raison.Contains("e-mail"))
+            .ToList();
 
     /// <summary>
     /// Recharge toutes les collections depuis le stockage, par exemple après une

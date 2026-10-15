@@ -45,6 +45,20 @@ else
                                     <strong>@profile.NomComplet</strong>
                                     <div class="text-muted online-account-meta">@profile.Email@(string.IsNullOrWhiteSpace(profile.Telephone) ? "" : " · " + profile.Telephone)</div>
                                     <div class="text-muted online-account-meta">Inscrit le @Date(profile.CreatedAt)</div>
+                                    @{ var fiches = FichesSimilaires(profile); }
+                                    @if (fiches.Count > 0)
+                                    {
+                                        <div class="online-link-fiche">
+                                            <label for="lien-@profile.Id">⚠ Une fiche existe peut-être déjà pour cette personne :</label>
+                                            <select id="lien-@profile.Id" value="@LienFor(profile, fiches)" @onchange="e => _liens[profile.Id] = e.Value?.ToString() ?? NouvelleFiche">
+                                                @foreach (var f in fiches)
+                                                {
+                                                    <option value="@f.Fiche.Id">Relier à la fiche de @f.Fiche.NomComplet (@f.Raison)</option>
+                                                }
+                                                <option value="@NouvelleFiche">Créer une nouvelle fiche</option>
+                                            </select>
+                                        </div>
+                                    }
                                 </div>
                             </div>
                             <div class="online-account-actions">
@@ -153,11 +167,28 @@ else
 
     private string RoleFor(OnlineProfile p) => _roles.TryGetValue(p.Id, out var r) ? r : Roles.Utilisateur;
 
+    // Fiche à relier au compte validé (évite une seconde fiche pour la même personne).
+    private const string NouvelleFiche = "__nouvelle__";
+    private readonly Dictionary<string, string> _liens = new();
+
+    private IReadOnlyList<(UserAccount Fiche, string Raison)> FichesSimilaires(OnlineProfile p)
+        => Store.FichesPourInscription(p.Prenom, p.Nom, p.Email, p.Telephone);
+
+    /// <summary>Par défaut, la fiche est reliée seulement si l'e-mail est identique (homonymes possibles sinon).</summary>
+    private string LienFor(OnlineProfile p, IReadOnlyList<(UserAccount Fiche, string Raison)> fiches)
+    {
+        if (_liens.TryGetValue(p.Id, out var v)) return v;
+        var parEmail = fiches.FirstOrDefault(f => f.Raison.Contains("e-mail"));
+        return parEmail.Fiche?.Id ?? NouvelleFiche;
+    }
+
     private async Task ApproveAsync(OnlineProfile profile)
     {
         _busy = true;
         var role = profile.Statut == OnlineStatuts.Refuse ? Roles.Utilisateur : RoleFor(profile);
-        var error = await Accounts.ApproveAsync(profile, role);
+        var fiches = FichesSimilaires(profile);
+        var lien = fiches.Count > 0 ? LienFor(profile, fiches) : NouvelleFiche;
+        var error = await Accounts.ApproveAsync(profile, role, lien == NouvelleFiche ? null : lien);
         _busy = false;
         if (error != null) { State.NotifyError(error); return; }
         State.NotifySuccess(profile.NomComplet + " peut maintenant se connecter (" + role + ").");

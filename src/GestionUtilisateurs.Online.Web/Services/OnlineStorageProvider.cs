@@ -26,6 +26,14 @@ public class OnlineStorageProvider : IStorageProvider
     /// <summary>Dernière valeur confirmée par le serveur, pour annuler une modification refusée.</summary>
     private readonly Dictionary<string, string> _synced = new(StringComparer.Ordinal);
     private readonly HashSet<string> _dirty = new(StringComparer.Ordinal);
+    /// <summary>
+    /// Collections que ce compte ne peut pas lire (le serveur ne renvoie pas leur contenu) :
+    /// les envoyer écraserait celles des autres avec la seule copie locale.
+    /// </summary>
+    private readonly HashSet<string> _nonLisibles = new(StringComparer.Ordinal);
+
+    /// <summary>Journaux où l'on ne fait qu'ajouter : en cas de conflit, on fusionne au lieu d'avertir.</summary>
+    private static readonly HashSet<string> AjoutSeulKeys = new(StringComparer.Ordinal) { "gu2:activity" };
     private readonly SemaphoreSlim _saveLock = new(1, 1);
     private CancellationTokenSource? _flushDelay;
     private Task _flushTask = Task.CompletedTask;
@@ -46,6 +54,8 @@ public class OnlineStorageProvider : IStorageProvider
 
     /// <summary>Un autre membre a modifié une collection : les données ont été mises à jour.</summary>
     public event Action<string>? ConflictResolved;
+    /// <summary>Journal fusionné avec celui du serveur : à recharger sans alerte.</summary>
+    public event Action<string>? Merged;
 
     /// <summary>L'envoi a échoué (réseau) : il sera retenté.</summary>
     public event Action<string>? SaveFailed;
@@ -75,7 +85,7 @@ public class OnlineStorageProvider : IStorageProvider
         }
         if (_values.TryGetValue(key, out var previous) && SameJson(previous, value)) return;
         _values[key] = value;
-        if (LocalOnlyKeys.Contains(key)) return;
+        if (LocalOnlyKeys.Contains(key) || _nonLisibles.Contains(key)) return;
         lock (_dirty) _dirty.Add(key);
         ScheduleFlush();
     }
@@ -93,6 +103,7 @@ public class OnlineStorageProvider : IStorageProvider
         _values.Clear();
         _versions.Clear();
         _synced.Clear();
+        _nonLisibles.Clear();
         lock (_dirty) _dirty.Clear();
         foreach (var row in result.Rows)
         {
@@ -191,13 +202,27 @@ public class OnlineStorageProvider : IStorageProvider
                         _synced[key] = json;
                         break;
                     case "conflict":
-                        // Un autre membre a enregistré avant nous : sa version gagne.
                         _versions[key] = res.Version;
-                        if (res.Value != null)
+                        if (res.Value == null)
                         {
-                            _values[key] = res.Value;
-                            _synced[key] = res.Value;
+                            // Collection illisible pour ce compte : ne plus jamais l'envoyer.
+                            _nonLisibles.Add(key);
+                            _values.Remove(key);
+                            _synced.Remove(key);
+                            break;
                         }
+                        if (AjoutSeulKeys.Contains(key) && Fusionner(res.Value, json, _synced.GetValueOrDefault(key)) is { } fusion)
+                        {
+                            // Journal : on ajoute nos nouvelles lignes à celles du serveur, sans alerte.
+                            _synced[key] = res.Value;
+                            _values[key] = fusion;
+                            lock (_dirty) _dirty.Add(key);
+                            Merged?.Invoke(key);
+                            break;
+                        }
+                        // Un autre membre a enregistré avant nous : sa version gagne.
+                        _values[key] = res.Value;
+                        _synced[key] = res.Value;
                         ConflictResolved?.Invoke(key);
                         break;
                     case "denied":
@@ -226,6 +251,32 @@ public class OnlineStorageProvider : IStorageProvider
     {
         await Task.Delay(TimeSpan.FromSeconds(15));
         await SaveDirtyAsync();
+    }
+
+    /// <summary>
+    /// Fusion d'un journal (tableau d'objets avec « id », plus récents en tête) :
+    /// lignes du serveur + nos lignes qui n'avaient pas encore été envoyées.
+    /// </summary>
+    private static string? Fusionner(string serveur, string local, string? dejaEnvoye)
+    {
+        try
+        {
+            if (JsonNode.Parse(serveur) is not JsonArray srv || JsonNode.Parse(local) is not JsonArray loc) return null;
+            static string? Id(JsonNode? n) => n?["id"]?.GetValue<string>();
+            var connus = new HashSet<string>(srv.Select(Id).OfType<string>(), StringComparer.Ordinal);
+            if (dejaEnvoye != null && JsonNode.Parse(dejaEnvoye) is JsonArray env)
+                foreach (var id in env.Select(Id).OfType<string>()) connus.Add(id);
+            var nouveaux = loc.Where(n => Id(n) is { } id && !connus.Contains(id)).Select(n => n!.DeepClone()).ToList();
+            var resultat = new JsonArray();
+            foreach (var n in nouveaux) resultat.Add(n);
+            foreach (var n in srv) resultat.Add(n?.DeepClone());
+            while (resultat.Count > 500) resultat.RemoveAt(resultat.Count - 1);
+            return resultat.ToJsonString();
+        }
+        catch
+        {
+            return null;
+        }
     }
 
     private static bool SameJson(string a, string b)

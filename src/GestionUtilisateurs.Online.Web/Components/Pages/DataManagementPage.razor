@@ -3,14 +3,14 @@
 @inject AppState State
 @inject JavascriptBridge Js
 
-@if (!Store.IsBaseAdmin)
+@if (!Store.IsAdmin)
 {
-    <EmptyState Icon="🔒" Title="Accès réservé" Message="La gestion directe des données est réservée au gestionnaire de la base." />
+    <EmptyState Icon="🔒" Title="Accès réservé" Message="La gestion directe des données est réservée aux administrateurs." />
 }
 else
 {
     <div class="page-head">
-        <p>Consultez, ajoutez ou modifiez simplement vos données locales, sans JSON.</p>
+        <p>Consultez, ajoutez ou modifiez les données de la communauté, sans JSON.</p>
         @if (_demoEnabled)
         {
             <button type="button" class="btn btn-secondary btn-sm" style="margin-top:8px" @onclick="GenerateDemoData">🧪 Remplir avec des données de démonstration</button>
@@ -83,14 +83,6 @@ else
                         Compte actif
                     </label>
                 </div>
-                <div class="form-group">
-                    <label for="dm-mdp">@(_userEditId == null ? "Mot de passe" : "Nouveau mot de passe (vide = inchangé)")</label>
-                    <input id="dm-mdp" type="text" value="@_userPassword" @oninput="e => _userPassword = e.Value?.ToString() ?? string.Empty" />
-                    @if (_userEditId == null)
-                    {
-                        <span class="field-hint">Vide = mot de passe par défaut « @DataStore.DEFAULT_PASSWORD ».</span>
-                    }
-                </div>
                 @if (!string.IsNullOrWhiteSpace(_userError))
                 {
                     <div class="form-error" role="alert">@_userError</div>
@@ -119,19 +111,6 @@ else
                             <div class="user-card-meta">
                                 <Badge Text="@user.Role" Kind="role" />
                                 <Badge Text="@user.Statut" Kind="@(user.Actif ? "active" : "inactive")" />
-                            </div>
-                            <div class="user-card-pwd">
-                                <span class="pwd-lock" aria-hidden="true">🔒</span>
-                                @if (_revealedPasswords.Contains(user.Id))
-                                {
-                                    <code class="pwd-plain">@Store.GetPlainPassword(user.Id)</code>
-                                    <button type="button" class="btn-icon" aria-label="Masquer le mot de passe" @onclick="() => HidePassword(user.Id)">🙈</button>
-                                }
-                                else
-                                {
-                                    <code class="pwd-cipher" title="Mot de passe chiffré">@Store.GetEncryptedPasswordDisplay(user.Id)</code>
-                                    <button type="button" class="btn-icon" aria-label="Déchiffrer le mot de passe" @onclick="() => RevealPassword(user.Id)">🔓</button>
-                                }
                             </div>
                         </div>
                         <div class="user-card-actions" @onclick:stopPropagation="true">
@@ -379,19 +358,16 @@ else
                 <input id="dm-appname" type="text" value="@_appName" @oninput="e => _appName = e.Value?.ToString() ?? string.Empty" />
             </div>
             <div class="form-group">
-                <label for="dm-theme">Thème</label>
-                <select id="dm-theme" value="@_theme" @onchange="OnThemeChanged">
-                    <option value="light">Clair</option>
-                    <option value="dark">Sombre</option>
-                </select>
-            </div>
-            <div class="form-group">
                 <label>Couleur d'accent</label>
                 <div class="color-swatches">
-                    @foreach (var c in AccentColors)
+                    @foreach (var (c, nom) in CouleursAccent.Toutes)
                     {
-                        <button type="button" class="color-swatch @(c == _color ? "selected" : "")" style="background:@c" title="@c" @onclick="() => SelectAccent(c)"></button>
+                        <button type="button" class="color-swatch @(string.Equals(c, _color, StringComparison.OrdinalIgnoreCase) ? "selected" : "")"
+                                style="background:@c" title="@nom" aria-label="@nom" @onclick="() => SelectAccent(c)"></button>
                     }
+                    <label class="color-swatch color-custom" title="Autre couleur">
+                        <input type="color" value="@_color" aria-label="Choisir une autre couleur" @onchange="e => SelectAccent(e.Value?.ToString() ?? _color)" />
+                    </label>
                 </div>
             </div>
             @if (!Store.OnlineMode)
@@ -475,10 +451,6 @@ else
         public static ConfirmState Hidden() => new(false, "", "", "OK", true, null);
     }
 
-    private static readonly string[] AccentColors =
-    {
-        "#4f46e5", "#0891b2", "#059669", "#d97706", "#dc2626", "#7c3aed", "#0ea5e9"
-    };
 
     private static readonly string[] RoleChoices =
     {
@@ -500,7 +472,6 @@ else
     private bool _userFormVisible;
     private UserAccount? _userDraft;
     private string? _userEditId;
-    private string _userPassword = "";
     private string _userError = "";
 
     // Formulaire champ inline
@@ -698,7 +669,6 @@ else
     {
         _userEditId = null;
         _userDraft = new UserAccount { Role = Roles.Utilisateur, Actif = true };
-        _userPassword = "";
         _userError = "";
         _userFormVisible = true;
     }
@@ -706,12 +676,9 @@ else
     private void StartEditUser(UserAccount u)
     {
         _userEditId = u.Id;
-        _userDraft = new UserAccount
-        {
-            Id = u.Id, Prenom = u.Prenom, Nom = u.Nom, Identifiant = u.Identifiant,
-            Email = u.Email, Telephone = u.Telephone, Role = u.Role, Actif = u.Actif, Notes = u.Notes
-        };
-        _userPassword = "";
+        // Copie complète : la mise à jour reprend aussi photo, signature, naissance,
+        // matricule et champs personnalisés, qui ne doivent pas être effacés.
+        _userDraft = System.Text.Json.JsonSerializer.Deserialize<UserAccount>(System.Text.Json.JsonSerializer.Serialize(u))!;
         _userError = "";
         _userFormVisible = true;
     }
@@ -747,9 +714,7 @@ else
         if (_userEditId != null)
         {
             var draft = _userDraft;
-            var passwordChanged = !string.IsNullOrWhiteSpace(_userPassword);
-            if (passwordChanged) draft.MotDePasse = _userPassword.Trim();
-            var res = Store.UpdateUser(_userEditId, draft, passwordChanged);
+            var res = Store.UpdateUser(_userEditId, draft, false);
             if (!res.Success)
             {
                 _userError = res.Error;
@@ -760,7 +725,6 @@ else
         else
         {
             var draft = _userDraft;
-            draft.MotDePasse = _userPassword.Trim();
             var res = Store.AddUser(draft);
             if (!res.Success)
             {
@@ -950,18 +914,15 @@ else
         _saving = true;
         try
         {
-            Store.SaveSettings(new AppSettings
-            {
-                AppName = string.IsNullOrWhiteSpace(_appName) ? "Gestion des utilisateurs" : _appName.Trim(),
-                Theme = _theme,
-                Color = _color,
-                PageSize = Store.Settings.PageSize,
-                Logo = Store.Settings.Logo,
-                SessionTimeoutMinutes = Store.Settings.SessionTimeoutMinutes,
-                ExportAutoMensuel = _autoExport,
-                DernierExportAuto = Store.Settings.DernierExportAuto
-            });
-            await Js.ApplySettingsAsync(Store.Settings);
+            // Copie complète des paramètres : seuls le nom, la couleur et l'export changent ici
+            // (avant, l'ordre du menu, la carte de membre, etc. étaient remis à zéro).
+            var copie = System.Text.Json.JsonSerializer.Deserialize<AppSettings>(
+                System.Text.Json.JsonSerializer.Serialize(Store.Settings)) ?? new AppSettings();
+            copie.AppName = string.IsNullOrWhiteSpace(_appName) ? "Gestion des utilisateurs" : _appName.Trim();
+            copie.Color = _color;
+            copie.ExportAutoMensuel = _autoExport;
+            Store.SaveSettings(copie);
+            await Js.ApplySettingsAsync(Store.SettingsAffichees());
             State.NotifySuccess("Paramètres enregistrés.");
         }
         finally

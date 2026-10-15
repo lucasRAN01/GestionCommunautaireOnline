@@ -170,7 +170,7 @@ else
             @if (viewer.Type == MediaTypes.Video || viewer.Type == MediaTypes.Audio)
             {
                 <div class="form-actions" style="margin-top:12px">
-                    <button type="button" class="btn btn-primary btn-block" @onclick="() => PlayMedia(viewer)">▶ Lire avec le lecteur du téléphone</button>
+                    <button type="button" class="btn btn-primary btn-block" @onclick="() => PlayMedia(viewer)">▶ Ouvrir dans un nouvel onglet</button>
                 </div>
             }
             @if (!string.IsNullOrWhiteSpace(viewer.Description))

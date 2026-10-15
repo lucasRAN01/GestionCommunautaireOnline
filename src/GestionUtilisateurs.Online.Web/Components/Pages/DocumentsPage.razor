@@ -889,7 +889,8 @@ else
 
         _usedBytes = Store.StorageUsedBytes();
         _quotaPercent = QuotaBytes > 0 ? Math.Min((double)_usedBytes / QuotaBytes * 100.0, 100.0) : 0;
-        _quotaAlmostFull = _quotaPercent >= 80.0;
+        // En ligne, la place se surveille dans « Capacité du serveur » (quota Supabase), pas ici.
+        _quotaAlmostFull = false;
 
         ApplyFilters();
     }

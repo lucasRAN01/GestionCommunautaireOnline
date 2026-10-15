@@ -52,6 +52,7 @@ public sealed class OnlineSession : IDisposable
         _store = store;
         _state = state;
         _storage.ConflictResolved += OnConflict;
+        _storage.Merged += OnMerged;
         _storage.SaveRejected += OnRejected;
         _storage.SaveFailed += OnSaveFailed;
         _store.SessionChanged += OnStoreSessionChanged;
@@ -284,6 +285,8 @@ public sealed class OnlineSession : IDisposable
         _state.NotifyWarning("Un autre membre vient de modifier ces données. Elles ont été mises à jour : vérifiez et refaites votre dernière modification si besoin.");
     }
 
+    private void OnMerged(string key) => ReloadStore();
+
     private void OnRejected(string key, string message)
     {
         ReloadStore();
@@ -314,6 +317,7 @@ public sealed class OnlineSession : IDisposable
     {
         StopTimer();
         _storage.ConflictResolved -= OnConflict;
+        _storage.Merged -= OnMerged;
         _storage.SaveRejected -= OnRejected;
         _storage.SaveFailed -= OnSaveFailed;
         _store.SessionChanged -= OnStoreSessionChanged;

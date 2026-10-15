@@ -43,7 +43,7 @@ else
             <div class="inline-actions" style="justify-content:space-between" role="button" tabindex="0" @onclick="() => Toggle(vote.Id)" @onkeydown="(k) => OnToggleKey(k, vote.Id)">
                 <h3 style="margin:0">@vote.Titre</h3>
                 <div class="inline-actions">
-                    <Badge Text="@VoteStatuts.Label(vote.Statut)" Kind="@(vote.Statut == VoteStatuts.Ouvert ? "active" : "inactive")" />
+                    <Badge Text="@VoteStatuts.Label(vote.StatutAffiche)" Kind="@(vote.EstOuvert ? "active" : "inactive")" />
                     @if (collapsed)
                     {
                         <button class="btn btn-secondary btn-sm" @onclick="() => Toggle(vote.Id)" @onclick:stopPropagation="true">Détails</button>
@@ -62,7 +62,7 @@ else
                 </div>
                 var results = Store.VoteResults(vote.Id);
                 var myVote = vote.Bulletins.FirstOrDefault(b => b.VotantIdentifiant.Equals(Me, StringComparison.OrdinalIgnoreCase));
-                var open = vote.Statut == VoteStatuts.Ouvert;
+                var open = vote.EstOuvert;
                 <div class="chart-list" style="margin-top:10px">
                     @foreach (var (option, voix, pourcent) in results)
                     {
@@ -95,7 +95,7 @@ else
                 @if (Store.Can(Permissions.VotesManage))
                 {
                     <div class="form-actions" style="margin-top:10px">
-                        @if (open)
+                        @if (vote.Statut == VoteStatuts.Ouvert)
                         {
                             <button class="btn btn-secondary btn-sm" @onclick="() => StartEdit(vote)">✎ Modifier</button>
                             <button class="btn btn-secondary btn-sm" @onclick="() => SetStatut(vote, VoteStatuts.Clos)">🔒 Clore</button>
@@ -191,14 +191,14 @@ else
     }
 
     private IReadOnlyList<Vote> Filtered => Store.Votes
-        .Where(v => _filter.Length == 0 || v.Statut == _filter)
+        .Where(v => _filter.Length == 0 || v.StatutAffiche == _filter)
         .Where(v =>
         {
             var q = _search.Trim();
             if (q.Length == 0) return true;
             return (v.Titre + " " + v.Description + " " + v.CreatedBy).Contains(q, StringComparison.OrdinalIgnoreCase);
         })
-        .OrderBy(v => v.Statut == VoteStatuts.Ouvert ? 0 : 1)
+        .OrderBy(v => v.EstOuvert ? 0 : 1)
         .ThenByDescending(v => v.DateCreation)
         .ToList();
 

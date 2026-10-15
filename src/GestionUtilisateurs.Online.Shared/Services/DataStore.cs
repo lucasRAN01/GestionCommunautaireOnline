@@ -369,7 +369,15 @@ var usersNormalized = false;
     private string Serialize<T>(T value) => JsonSerializer.Serialize(value, JsonOpts);
 
     private void SaveSettings() => _storage.Set(K_SETTINGS, Serialize(_settings));
-    private void SaveUsers() => _storage.Set(K_USERS, Serialize(_users));
+    private void SaveUsers()
+    {
+        // En ligne, les mots de passe sont ceux des comptes Supabase : aucune copie
+        // (même chiffrée) ne doit rester dans la collection lue par tous les membres.
+        if (OnlineMode)
+            foreach (var u in _users)
+                if (!string.IsNullOrEmpty(u.MotDePasse)) u.MotDePasse = "";
+        _storage.Set(K_USERS, Serialize(_users));
+    }
     private void SaveFields() => _storage.Set(K_FIELDS, Serialize(_fields));
     private void SaveActivity() => _storage.Set(K_ACTIVITY, Serialize(_activity));
     private void SaveSession() =>
@@ -916,7 +924,9 @@ case "settings":
                 suffix++;
             draft.Identifiant = baseId + "." + suffix;
         }
-        if (string.IsNullOrWhiteSpace(draft.MotDePasse))
+        if (OnlineMode)
+            draft.MotDePasse = ""; // géré par Supabase, jamais copié dans les données partagées
+        else if (string.IsNullOrWhiteSpace(draft.MotDePasse))
             draft.MotDePasse = PasswordCipher.Encrypt(DEFAULT_PASSWORD);
         else
             draft.MotDePasse = PasswordCipher.Encrypt(draft.MotDePasse);
@@ -928,6 +938,8 @@ case "settings":
             return new UserOperationResult { Success = false, Error = "Ce matricule existe déjà. Aucun utilisateur n'a été ajouté." };
         if (string.IsNullOrEmpty(draft.DateCreation))
             draft.DateCreation = DateTimeOffset.Now.ToString("O");
+        // Matricule automatique quand un format est réglé et que rien n'a été saisi.
+        if (draft.Matricule.Length == 0) draft.Matricule = ProchainMatricule(draft);
         _users.Add(draft);
         SaveUsers();
         try { SyncUserDateEvents(draft); } catch { }
@@ -1004,6 +1016,8 @@ case "settings":
         existing.Photo = draft.Photo;
         existing.Signature = draft.Signature;
         existing.DateNaissance = NormalizeYmd(draft.DateNaissance);
+        existing.ResponsableLegal = (draft.ResponsableLegal ?? "").Trim();
+        existing.ResponsableTelephone = (draft.ResponsableTelephone ?? "").Trim();
         var matricule = (draft.Matricule ?? "").Trim();
         if (matricule.Length > 0 && _users.Any(u => u.Id != userId && (u.Matricule ?? "").Trim().Equals(matricule, StringComparison.OrdinalIgnoreCase)))
             return new UserOperationResult { Success = false, Error = "Ce matricule existe déjà." };
@@ -1103,7 +1117,11 @@ public OperationResult SetUserActive(string userId, bool active)
         if (idx < 0) return OperationResult.Fail("Utilisateur archivé introuvable.");
         var archived = _archive[idx];
         var draft = CloneImportUser(archived.User);
-        draft.Id = Guid.NewGuid().ToString("N");
+        // Garder l'identifiant d'origine : une fiche reliée à un compte en ligne le
+        // retrouve ainsi (le compte est relié à la fiche par cet Id).
+        draft.Id = string.IsNullOrWhiteSpace(archived.User.Id) || _users.Any(u => u.Id == archived.User.Id)
+            ? Guid.NewGuid().ToString("N")
+            : archived.User.Id;
 
         if (_users.Any(u => u.Identifiant.Equals(draft.Identifiant.Trim(), StringComparison.OrdinalIgnoreCase)))
             return OperationResult.Fail("Un utilisateur actif porte déjà cet identifiant. Restauration impossible.");
@@ -1587,6 +1605,14 @@ if (string.IsNullOrWhiteSpace(draft.Prenom)) Add("prenom", "Le prénom est oblig
                 Add("email", "Cette adresse e-mail existe déjà.");
         }
 
+        // Membre de moins de 18 ans : un responsable légal (nom) est demandé.
+        if (NormalizeYmd(draft.DateNaissance) is { Length: > 0 } naissance
+            && new UserAccount { DateNaissance = naissance }.EstMineur
+            && string.IsNullOrWhiteSpace(draft.ResponsableLegal)
+            && !(existingId != null && _users.FirstOrDefault(u => u.Id == existingId) is { } fiche
+                 && Lies(fiche, LiensFamille.Parent).Any(p => !p.EstMineur)))
+            Add("responsable", "Moins de 18 ans : indiquez le responsable légal (parent ou tuteur), ou reliez un parent dans la section Famille de sa fiche.");
+
         // Matricule facultatif mais unique s'il est renseigné.
         if (!string.IsNullOrWhiteSpace(draft.Matricule)
             && _users.Any(u => u.Id != existingId && (u.Matricule ?? "").Trim().Equals(draft.Matricule.Trim(), StringComparison.OrdinalIgnoreCase)))
@@ -1601,7 +1627,8 @@ if (string.IsNullOrWhiteSpace(draft.Prenom)) Add("prenom", "Le prénom est oblig
                 Add("telephone", "Le numéro doit être au format « +261 xx xxx xx » (ex. +261 32 12 345 67).");
         }
 
-        if (isNew)
+        // En ligne, le mot de passe est celui du compte Supabase : rien à saisir sur la fiche.
+        if (isNew && !OnlineMode)
         {
             if (!isSimpleUser)
             {
@@ -1611,7 +1638,7 @@ if (string.IsNullOrWhiteSpace(draft.Prenom)) Add("prenom", "Le prénom est oblig
                 else if (draft.MotDePasse != confirmPassword) Add("confirmPassword", "Les mots de passe ne correspondent pas.");
             }
         }
-        else if (passwordProvided && !isSimpleUser)
+        else if (passwordProvided && !isSimpleUser && !OnlineMode)
         {
             if (draft.MotDePasse.Length < 6) Add("password", "Le mot de passe doit contenir au moins 6 caractères.");
             if (draft.MotDePasse != confirmPassword) Add("confirmPassword", "Les mots de passe ne correspondent pas.");
@@ -2131,18 +2158,24 @@ if (string.IsNullOrWhiteSpace(draft.Prenom)) Add("prenom", "Le prénom est oblig
             return (OperationResult.Fail("Aucun utilisateur à importer."), 0);
 
         var seen = new HashSet<string>(_users.Select(u => u.Identifiant.ToLowerInvariant()));
+        // Même personne déjà présente (même e-mail, téléphone ou matricule) : pas de doublon.
+        // Les homonymes sont importés ; ils apparaissent ensuite dans « Doublons possibles ».
+        var contacts = new HashSet<string>(_users.SelectMany(ClesContact));
         var added = 0;
         foreach (var imp in imported)
         {
             var key = (imp.Identifiant ?? "").ToLowerInvariant();
             if (string.IsNullOrWhiteSpace(key) || seen.Contains(key)) continue;
+            var siennes = ClesContact(imp).ToList();
+            if (siennes.Any(contacts.Contains)) continue;
+            contacts.UnionWith(siennes);
             seen.Add(key);
             _users.Add(CloneImportUser(imp));
             added++;
         }
 
         if (added == 0)
-            return (OperationResult.Fail("Aucun nouvel utilisateur à importer : les identifiants existent déjà."), 0);
+            return (OperationResult.Fail("Aucun nouvel utilisateur à importer : ils existent déjà (même identifiant, e-mail, téléphone ou matricule)."), 0);
 
         // S'assurer qu'un administrateur actif existe après l'import
         if (!_users.Any(u => Roles.IsAdmin(u.Role) && u.Actif))
@@ -2171,6 +2204,8 @@ if (string.IsNullOrWhiteSpace(draft.Prenom)) Add("prenom", "Le prénom est oblig
         DateNaissance = src.DateNaissance,
         Matricule = src.Matricule,
         Signature = src.Signature,
+        ResponsableLegal = src.ResponsableLegal,
+        ResponsableTelephone = src.ResponsableTelephone,
         DateCreation = src.DateCreation,
         DerniereConnexion = src.DerniereConnexion,
         Champs = src.Champs.ToDictionary(kv => kv.Key, kv => kv.Value)
@@ -2234,6 +2269,12 @@ if (string.IsNullOrWhiteSpace(draft.Prenom)) Add("prenom", "Le prénom est oblig
 
     public void SaveSettings(AppSettings value)
     {
+        // Les pages de réglages reconstruisent les paramètres champ par champ :
+        // la liste des homonymes confirmés ne doit pas disparaître au passage.
+        if ((value.PasDoublons == null || value.PasDoublons.Count == 0) && _settings.PasDoublons?.Count > 0)
+            value.PasDoublons = _settings.PasDoublons;
+        // En ligne, aucun thème commun : chacun choisit le sien (clair par défaut).
+        if (OnlineMode) value.Theme = "light";
         _settings = value;
         SaveSettings();
         LogActivity(ActivityTypes.Update, "Mise à jour des paramètres de l'application");
@@ -2305,8 +2346,19 @@ if (string.IsNullOrWhiteSpace(draft.Prenom)) Add("prenom", "Le prénom est oblig
             && _settings.ThemesUtilisateurs.TryGetValue(identifiant, out var perso)
             && (perso == "dark" || perso == "light"))
             return perso;
+        // En ligne, le thème est un choix personnel : clair pour tous par défaut.
+        if (OnlineMode) return "light";
         return _settings.Theme == "dark" ? "dark" : "light";
     }
+
+    /// <summary>Paramètres à appliquer à l'écran du compte connecté (avec son thème personnel).</summary>
+    public AppSettings SettingsAffichees() => new()
+    {
+        AppName = _settings.AppName,
+        Theme = GetEffectiveTheme(GetCurrentUser()?.Identifiant),
+        Color = _settings.Color,
+        Logo = _settings.Logo
+    };
 
     /// <summary>Enregistre le thème individuel d'un compte (sans toucher au thème global).</summary>
     public void SetUserTheme(string identifiant, string theme)
@@ -3665,10 +3717,15 @@ if (string.IsNullOrWhiteSpace(draft.Prenom)) Add("prenom", "Le prénom est oblig
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .ToList();
         // Chaque destinataire doit être un compte existant (ou aucun = canal Annonces).
-        foreach (var d in members)
+        // Un membre archivé reste accepté dans une conversation qui existe déjà,
+        // pour que les autres participants puissent continuer à y répondre.
+        var inconnus = members.Where(d => FindUserByIdentifier(d) == null).ToList();
+        if (inconnus.Count > 0)
         {
-            if (FindUserByIdentifier(d) == null)
-                return OperationResult.Fail("Destinataire introuvable : « " + d + " ».");
+            var conv = ConversationIdFor(members.Append(me));
+            var existe = _messages.Any(m => m.ConversationId == conv);
+            if (!existe || inconnus.Count == members.Count)
+                return OperationResult.Fail("Destinataire introuvable : « " + inconnus[0] + " ». Ce membre a peut-être été supprimé.");
         }
         if (string.IsNullOrWhiteSpace(texte))
             return OperationResult.Fail("Le message est vide.");
@@ -3866,7 +3923,8 @@ if (string.IsNullOrWhiteSpace(draft.Prenom)) Add("prenom", "Le prénom est oblig
             .Distinct(StringComparer.OrdinalIgnoreCase).ToList();
         foreach (var a in draft.Assignes)
         {
-            if (FindUserByIdentifier(a) == null)
+            // Un membre archivé déjà assigné reste accepté : sinon la tâche ne pourrait plus être modifiée.
+            if (FindUserByIdentifier(a) == null && !(existing.Assignes ?? new List<string>()).Contains(a, StringComparer.OrdinalIgnoreCase))
                 return OperationResult.Fail("Assigné introuvable : « " + a + " ».");
         }
         existing.Titre = draft.Titre;
@@ -4189,7 +4247,11 @@ if (string.IsNullOrWhiteSpace(draft.Prenom)) Add("prenom", "Le prénom est oblig
     public static string FormatMontant(double montant)
         => montant.ToString("0.##", System.Globalization.CultureInfo.GetCultureInfo("fr-FR")) + " Ar";
 
-    public OperationResult AddCotisation(Cotisation draft)
+    /// <summary>
+    /// Enregistre une cotisation. Si <paramref name="ajouterTresorerie"/> et que la
+    /// cotisation est payée, l'entrée correspondante est aussi ajoutée en trésorerie.
+    /// </summary>
+    public OperationResult AddCotisation(Cotisation draft, bool ajouterTresorerie = false)
     {
         draft.Motif = (draft.Motif ?? "").Trim();
         if (FindUserByIdentifier(draft.MembreIdentifiant) == null)
@@ -4204,15 +4266,135 @@ if (string.IsNullOrWhiteSpace(draft.Prenom)) Add("prenom", "Le prénom est oblig
         else draft.Date = ToYmd(draft.Date);
         if (draft.Statut != CotisationStatuts.EnAttente) draft.Statut = CotisationStatuts.Payee;
         draft.MembreIdentifiant = draft.MembreIdentifiant.Trim();
+        // Un paiement règle d'abord l'impayé correspondant (même membre, même période,
+        // même motif ou motif laissé vide) au lieu de laisser l'impayé ouvert à côté.
+        if (draft.Statut == CotisationStatuts.Payee)
+        {
+            var ident = draft.MembreIdentifiant;
+            var periode = draft.Periode;
+            var motif = draft.Motif;
+            var attente = _cotisations.FirstOrDefault(c => c.Statut == CotisationStatuts.EnAttente
+                && string.Equals((c.MembreIdentifiant ?? "").Trim(), ident, StringComparison.OrdinalIgnoreCase)
+                && c.Periode == periode
+                && (motif.Length == 0 || string.Equals((c.Motif ?? "").Trim(), motif, StringComparison.OrdinalIgnoreCase)));
+            if (attente != null)
+            {
+                attente.Montant = draft.Montant;
+                if (motif.Length > 0) attente.Motif = motif;
+                return EncaisserCotisation(attente.Id, draft.Date, ajouterTresorerie);
+            }
+        }
         draft.Id = Guid.NewGuid().ToString("N");
         draft.CreatedBy = GetCurrentUser()?.Identifiant ?? "inconnu";
         _cotisations.Add(draft);
         SaveCotisations();
+        if (ajouterTresorerie && draft.Statut == CotisationStatuts.Payee) AddEntreeCotisation(draft);
         LogActivity(Models.ActivityTypes.FinanceCotisation,
             "Cotisation " + FormatMontant(draft.Montant) + " de " + draft.MembreIdentifiant + " (" + draft.Periode + ")");
         DataChanged?.Invoke();
         return OperationResult.Ok();
     }
+
+    /// <summary>
+    /// Configure des impayés : une cotisation « en attente » pour chaque membre choisi.
+    /// Un membre qui a déjà une cotisation (payée ou non) de même motif sur la même
+    /// période est ignoré, pour ne jamais créer de doublon.
+    /// </summary>
+    public (OperationResult Result, int Ajoutes, int Ignores) AddCotisationsEnAttente(
+        IEnumerable<string> identifiants, double montant, string? motif, string? periode)
+    {
+        if (montant <= 0) return (OperationResult.Fail("Le montant doit être supérieur à 0."), 0, 0);
+        var ids = (identifiants ?? Enumerable.Empty<string>())
+            .Select(i => (i ?? "").Trim()).Where(i => i.Length > 0)
+            .Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+        if (ids.Count == 0) return (OperationResult.Fail("Choisissez au moins un membre."), 0, 0);
+        motif = string.IsNullOrWhiteSpace(motif) ? "Cotisation" : motif.Trim();
+        periode = string.IsNullOrWhiteSpace(periode) ? DateTime.Today.Year.ToString() : periode.Trim();
+        var auteur = GetCurrentUser()?.Identifiant ?? "inconnu";
+        var today = DateTime.Today.ToString("yyyy-MM-dd");
+        int ajoutes = 0, ignores = 0;
+        foreach (var id in ids)
+        {
+            var user = FindUserByIdentifier(id);
+            if (user == null) { ignores++; continue; }
+            var existe = _cotisations.Any(c =>
+                string.Equals((c.MembreIdentifiant ?? "").Trim(), user.Identifiant, StringComparison.OrdinalIgnoreCase)
+                && string.Equals(c.Periode, periode, StringComparison.OrdinalIgnoreCase)
+                && string.Equals((c.Motif ?? "").Trim(), motif, StringComparison.OrdinalIgnoreCase));
+            if (existe) { ignores++; continue; }
+            _cotisations.Add(new Cotisation
+            {
+                Id = Guid.NewGuid().ToString("N"), MembreIdentifiant = user.Identifiant, Montant = montant,
+                Motif = motif, Periode = periode, Date = today, Statut = CotisationStatuts.EnAttente, CreatedBy = auteur
+            });
+            ajoutes++;
+        }
+        if (ajoutes > 0)
+        {
+            SaveCotisations();
+            LogActivity(Models.ActivityTypes.FinanceCotisation,
+                ajoutes + " impayé(s) de " + FormatMontant(montant) + " configuré(s) : " + motif + " (" + periode + ")");
+            DataChanged?.Invoke();
+        }
+        return (OperationResult.Ok(), ajoutes, ignores);
+    }
+
+    /// <summary>Encaisse une cotisation en attente (date de paiement, entrée en trésorerie en option).</summary>
+    public OperationResult EncaisserCotisation(string id, string? date, bool ajouterTresorerie)
+    {
+        var cot = _cotisations.FirstOrDefault(c => c.Id == id);
+        if (cot == null) return OperationResult.Fail("Cotisation introuvable.");
+        if (cot.Statut == CotisationStatuts.Payee) return OperationResult.Fail("Cette cotisation est déjà payée.");
+        if (string.IsNullOrWhiteSpace(date)) date = DateTime.Today.ToString("yyyy-MM-dd");
+        else if (!TryParseYmd(date, out _)) return OperationResult.Fail("La date doit être au format JJ/MM/AAAA.");
+        cot.Date = ToYmd(date);
+        cot.Statut = CotisationStatuts.Payee;
+        SaveCotisations();
+        if (ajouterTresorerie) AddEntreeCotisation(cot);
+        LogActivity(Models.ActivityTypes.FinanceCotisation,
+            "Cotisation encaissée " + FormatMontant(cot.Montant) + " de " + cot.MembreIdentifiant + " (" + cot.Periode + ")");
+        DataChanged?.Invoke();
+        return OperationResult.Ok();
+    }
+
+    /// <summary>Modifie le montant, le motif, la période, la date ou le statut d'une cotisation.</summary>
+    public OperationResult UpdateCotisation(Cotisation changes)
+    {
+        var cot = _cotisations.FirstOrDefault(c => c.Id == changes.Id);
+        if (cot == null) return OperationResult.Fail("Cotisation introuvable.");
+        if (changes.Montant <= 0) return OperationResult.Fail("Le montant doit être supérieur à 0.");
+        var date = changes.Date;
+        if (string.IsNullOrWhiteSpace(date)) date = cot.Date;
+        else if (!TryParseYmd(date, out _)) return OperationResult.Fail("La date doit être au format JJ/MM/AAAA.");
+        cot.Montant = changes.Montant;
+        cot.Motif = (changes.Motif ?? "").Trim();
+        cot.Periode = string.IsNullOrWhiteSpace(changes.Periode) ? cot.Periode : changes.Periode.Trim();
+        cot.Date = ToYmd(date);
+        cot.Statut = changes.Statut == CotisationStatuts.EnAttente ? CotisationStatuts.EnAttente : CotisationStatuts.Payee;
+        SaveCotisations();
+        LogActivity(Models.ActivityTypes.FinanceCotisation,
+            "Modification d'une cotisation de " + cot.MembreIdentifiant + " (" + cot.Periode + ")");
+        DataChanged?.Invoke();
+        return OperationResult.Ok();
+    }
+
+    private void AddEntreeCotisation(Cotisation cot)
+    {
+        var nom = FindUserByIdentifier(cot.MembreIdentifiant)?.NomComplet ?? cot.MembreIdentifiant;
+        _tresorerie.Add(new TransactionTresorerie
+        {
+            Id = Guid.NewGuid().ToString("N"), Type = TresorerieTypes.Entree, Montant = cot.Montant,
+            Motif = (string.IsNullOrWhiteSpace(cot.Motif) ? "Cotisation" : cot.Motif) + " – " + nom + " (" + cot.Periode + ")",
+            Date = cot.Date, CreatedBy = GetCurrentUser()?.Identifiant ?? "inconnu"
+        });
+        SaveTresorerie();
+    }
+
+    /// <summary>Cotisations en attente de paiement sur la période (toutes périodes si null).</summary>
+    public IReadOnlyList<Cotisation> CotisationsEnAttente(string? periode = null)
+        => _cotisations
+            .Where(c => c.Statut == CotisationStatuts.EnAttente && (periode == null || c.Periode == periode))
+            .ToList();
 
     public OperationResult DeleteCotisation(string id)
     {
@@ -4230,15 +4412,20 @@ if (string.IsNullOrWhiteSpace(draft.Prenom)) Add("prenom", "Le prénom est oblig
             .Where(c => c.Statut == CotisationStatuts.Payee && (periode == null || c.Periode == periode))
             .Sum(c => c.Montant);
 
-    /// <summary>Membres actifs sans cotisation payée sur la période (année en cours par défaut).</summary>
+    /// <summary>
+    /// Membres ayant au moins une cotisation « en attente » sur la période (année en
+    /// cours par défaut). Les impayés sont configurés par le trésorier, membre par
+    /// membre : un membre sans cotisation attendue n'est jamais compté comme impayé.
+    /// </summary>
     public IReadOnlyList<UserAccount> ImpayesCotisations(string? periode = null)
     {
         periode ??= DateTime.Today.Year.ToString();
-        var payeurs = new HashSet<string>(_cotisations
-            .Where(c => c.Periode == periode && c.Statut == CotisationStatuts.Payee)
+        var enAttente = new HashSet<string>(_cotisations
+            .Where(c => c.Periode == periode && c.Statut == CotisationStatuts.EnAttente)
             .Select(c => (c.MembreIdentifiant ?? "").Trim().ToLowerInvariant()));
+        if (enAttente.Count == 0) return Array.Empty<UserAccount>();
         return _users
-            .Where(u => u.Actif && !payeurs.Contains((u.Identifiant ?? "").Trim().ToLowerInvariant()))
+            .Where(u => enAttente.Contains((u.Identifiant ?? "").Trim().ToLowerInvariant()))
             .OrderBy(u => u.Nom).ThenBy(u => u.Prenom)
             .ToList();
     }
@@ -4463,7 +4650,8 @@ if (string.IsNullOrWhiteSpace(draft.Prenom)) Add("prenom", "Le prénom est oblig
             .Distinct(StringComparer.OrdinalIgnoreCase).ToList();
         foreach (var p in participants)
         {
-            if (FindUserByIdentifier(p) == null)
+            // Un membre archivé déjà invité reste accepté : sinon la réunion ne pourrait plus être modifiée.
+            if (FindUserByIdentifier(p) == null && !(existing.Participants ?? new List<string>()).Contains(p, StringComparer.OrdinalIgnoreCase))
                 return OperationResult.Fail("Participant introuvable : « " + p + " ».");
         }
         existing.Titre = draft.Titre;
@@ -4564,8 +4752,9 @@ if (string.IsNullOrWhiteSpace(draft.Prenom)) Add("prenom", "Le prénom est oblig
         foreach (var u in _users.Where(u => u.Actif && TryParseYmd(u.DateNaissance, out _)))
         {
             TryParseYmd(u.DateNaissance, out var naiss);
-            var prochain = new DateTime(today.Year, naiss.Month, naiss.Day);
-            if (prochain < today) prochain = prochain.AddYears(1);
+            // AddYears ramène le 29 février au 28 les années non bissextiles (pas d'exception).
+            var prochain = naiss.Date.AddYears(today.Year - naiss.Year);
+            if (prochain < today) prochain = naiss.Date.AddYears(today.Year + 1 - naiss.Year);
             var jours = (prochain - today).Days;
             if (jours <= 30)
                 rappels.Add(new Rappel
@@ -4756,6 +4945,18 @@ if (string.IsNullOrWhiteSpace(draft.Prenom)) Add("prenom", "Le prénom est oblig
             return OperationResult.Fail("La date de clôture doit être au format JJ/MM/AAAA.");
         existing.Titre = draft.Titre;
         existing.Description = (draft.Description ?? "").Trim();
+        // Même nombre d'options : une option corrigée garde ses bulletins (renommage par position).
+        if (options.Count == existing.Options.Count)
+        {
+            for (var i = 0; i < options.Count; i++)
+            {
+                var ancienne = existing.Options[i];
+                if (ancienne.Equals(options[i], StringComparison.Ordinal)) continue;
+                if (existing.Options.Contains(options[i], StringComparer.OrdinalIgnoreCase)) continue; // simple réordonnancement
+                foreach (var b in existing.Bulletins.Where(b => b.Option.Equals(ancienne, StringComparison.OrdinalIgnoreCase)))
+                    b.Option = options[i];
+            }
+        }
         existing.Options = options;
         existing.DateCloture = string.IsNullOrWhiteSpace(draft.DateCloture) ? "" : ToYmd(draft.DateCloture);
         // Retirer les bulletins devenus hors options.

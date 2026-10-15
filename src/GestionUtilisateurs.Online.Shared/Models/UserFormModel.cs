@@ -14,6 +14,8 @@ public class UserFormModel
     public string Notes { get; set; } = "";
     /// <summary>Date de naissance (yyyy-MM-dd) liée au calendrier des anniversaires.</summary>
     public string DateNaissance { get; set; } = "";
+    public string ResponsableLegal { get; set; } = "";
+    public string ResponsableTelephone { get; set; } = "";
     /// <summary>Matricule unique du membre.</summary>
     public string Matricule { get; set; } = "";
     public string Password { get; set; } = "";
@@ -42,6 +44,8 @@ public class UserFormModel
             Photo = u.Photo ?? "",
             Signature = u.Signature ?? "",
             DateNaissance = u.DateNaissance ?? "",
+            ResponsableLegal = u.ResponsableLegal ?? "",
+            ResponsableTelephone = u.ResponsableTelephone ?? "",
             Matricule = u.Matricule ?? "",
             ChangePasswordOnEdit = false
         };
@@ -128,6 +132,8 @@ public class UserFormModel
         Notes = Notes,
         MotDePasse = Password,
         DateNaissance = DateNaissance,
+        ResponsableLegal = ResponsableLegal,
+        ResponsableTelephone = ResponsableTelephone,
         Matricule = Matricule,
         Photo = string.IsNullOrWhiteSpace(Photo) ? null : Photo,
         Signature = string.IsNullOrWhiteSpace(Signature) ? null : Signature,

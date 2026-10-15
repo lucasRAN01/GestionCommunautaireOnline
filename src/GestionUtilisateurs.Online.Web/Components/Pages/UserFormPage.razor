@@ -21,8 +21,15 @@
     </div>
     <div class="form-group">
         <label for="uf-matricule">Matricule (facultatif, unique)</label>
-        <input id="uf-matricule" type="text" placeholder="Ex : M-0001" value="@_model.Matricule" @oninput="e => _model.Matricule = e.Value?.ToString() ?? string.Empty" />
-        <span class="field-hint">Affiché sur la carte de membre à la place du code automatique.</span>
+        <input id="uf-matricule" type="text" placeholder="@(string.IsNullOrEmpty(_matriculeAuto) ? "Ex : M-0001" : _matriculeAuto)" value="@_model.Matricule" @oninput="e => _model.Matricule = e.Value?.ToString() ?? string.Empty" />
+        @if (!string.IsNullOrEmpty(_matriculeAuto))
+        {
+            <span class="field-hint">Laissez vide pour attribuer automatiquement « @_matriculeAuto ».</span>
+        }
+        else
+        {
+            <span class="field-hint">Affiché sur la carte de membre. Le format automatique se règle dans Paramètres › Carte de membre.</span>
+        }
         <span class="form-error">@Err("matricule")</span>
     </div>
     <div class="form-group">
@@ -118,6 +125,18 @@
         <DateInput Id="uf-naissance" Value="@_model.DateNaissance" ValueChanged="@(v => _model.DateNaissance = v)" MinYear="1900" MaxYear="@(DateTime.Now.Year)" />
         <span class="field-hint">Liée aux anniversaires du calendrier.</span>
     </div>
+    @if (new UserAccount { DateNaissance = DataStore.ToYmd(_model.DateNaissance) }.Age is { } age && age < 18)
+    {
+        <div class="form-group minor-box">
+            <span class="badge badge-minor">Moins de 18 ans (@age ans)</span>
+            <label for="uf-resp">Responsable légal (parent ou tuteur) *</label>
+            <input id="uf-resp" type="text" placeholder="Nom et prénom" value="@_model.ResponsableLegal" @oninput="e => _model.ResponsableLegal = e.Value?.ToString() ?? string.Empty" />
+            <span class="field-hint">Si un parent est déjà inscrit, vous pouvez aussi le relier dans la section « Famille » de la fiche.</span>
+            <span class="form-error">@Err("responsable")</span>
+            <label for="uf-resp-tel" style="margin-top:8px">Téléphone du responsable</label>
+            <input id="uf-resp-tel" type="tel" placeholder="+261 xx xx xxx xx" value="@_model.ResponsableTelephone" @oninput="e => _model.ResponsableTelephone = e.Value?.ToString() ?? string.Empty" />
+        </div>
+    }
     @if (!IsSelfSimpleUser)
     {
         <div class="form-group">
@@ -130,42 +149,9 @@
         </div>
     }
 
-    @if (_isNew && !IsSimpleRole)
+    @if (_isNew)
     {
-        <div class="form-group">
-            <label for="uf-pwd">Mot de passe <span class="required">*</span></label>
-            <input id="uf-pwd" type="password" value="@_model.Password" @oninput="e => _model.Password = e.Value?.ToString() ?? string.Empty" />
-            <span class="field-hint">Min. 6 caractères</span>
-            <span class="form-error">@Err("password")</span>
-        </div>
-        <div class="form-group">
-            <label for="uf-pwd2">Confirmer le mot de passe <span class="required">*</span></label>
-            <input id="uf-pwd2" type="password" value="@_model.ConfirmPassword" @oninput="e => _model.ConfirmPassword = e.Value?.ToString() ?? string.Empty" />
-            <span class="form-error">@Err("confirmPassword")</span>
-        </div>
-    }
-    else if (!_isNew && !IsSimpleRole)
-    {
-        <div class="form-group">
-            <label class="checkbox-label">
-                <input type="checkbox" checked="@_model.ChangePasswordOnEdit" @onchange="e => _model.ChangePasswordOnEdit = e.Value is true" />
-                Changer le mot de passe
-            </label>
-        </div>
-        @if (_model.ChangePasswordOnEdit)
-        {
-            <div class="form-group">
-                <label for="uf-pwd">Nouveau mot de passe</label>
-                <input id="uf-pwd" type="password" value="@_model.Password" @oninput="e => _model.Password = e.Value?.ToString() ?? string.Empty" />
-                <span class="field-hint">Min. 6 caractères</span>
-                <span class="form-error">@Err("password")</span>
-            </div>
-            <div class="form-group">
-                <label for="uf-pwd2">Confirmer le nouveau mot de passe</label>
-                <input id="uf-pwd2" type="password" value="@_model.ConfirmPassword" @oninput="e => _model.ConfirmPassword = e.Value?.ToString() ?? string.Empty" />
-                <span class="form-error">@Err("confirmPassword")</span>
-            </div>
-        }
+        <p class="field-hint" style="margin:-4px 0 12px">Pour se connecter, la personne crée son compte sur le site avec son e-mail. Un administrateur le valide ensuite dans « Comptes en ligne » et peut le relier à cette fiche.</p>
     }
 
     <div class="form-group">
@@ -313,6 +299,11 @@
     </FooterContent>
 </Modal>
 
+
+<ConfirmDialog Show="_doublons.Count > 0" Title="Ce membre existe peut-être déjà"
+               Message="@DoublonsMessage" ConfirmLabel="Ajouter quand même"
+               OnConfirm="ConfirmAjoutDoublon" OnCancel="() => _doublons.Clear()" />
+
 @code {
     [Parameter] public string? EditingId { get; set; }
     [Parameter] public EventCallback OnClose { get; set; }
@@ -323,6 +314,7 @@
     private bool _statusLocked;
 
     private bool _isNew => string.IsNullOrEmpty(EditingId);
+    private string _matriculeAuto => _isNew ? Store.ProchainMatricule() : "";
 
     private bool IsSimpleRole => _model.Role == "Utilisateur";
 
@@ -482,6 +474,20 @@
         _showPad = false;
     }
 
+    private List<(UserAccount Fiche, string Raison)> _doublons = new();
+    private bool _doublonConfirme;
+
+    private string DoublonsMessage => "Fiche(s) semblable(s) : "
+        + string.Join(" ; ", _doublons.Take(3).Select(d => d.Fiche.NomComplet + " (" + d.Raison + ")"))
+        + (_doublons.Count > 3 ? "…" : "") + ". Vérifiez avant d'ajouter une nouvelle fiche.";
+
+    private async Task ConfirmAjoutDoublon()
+    {
+        _doublons.Clear();
+        _doublonConfirme = true;
+        await Save();
+    }
+
     private async Task Save()
     {
         _saving = true;
@@ -493,7 +499,8 @@
             var isSimple = IsSimpleRole;
             if (isSimple) _model.ChangePasswordOnEdit = false;
 
-            var passwordProvided = !isSimple && (_isNew || _model.ChangePasswordOnEdit);
+            // En ligne, le mot de passe est géré par le compte Supabase, pas par la fiche.
+            var passwordProvided = false;
             _errors = Store.ValidateUser(draft, _isNew ? null : EditingId, _isNew, !isSimple, _model.ConfirmPassword, passwordProvided);
 
             if (!_isNew)
@@ -514,6 +521,14 @@
 
             if (_isNew)
             {
+                // Même nom ou même téléphone qu'une fiche existante : on demande confirmation
+                // (l'e-mail et le matricule identiques sont déjà refusés plus haut).
+                if (!_doublonConfirme)
+                {
+                    _doublons = Store.DoublonsPossibles(draft).ToList();
+                    if (_doublons.Count > 0) { StateHasChanged(); return; }
+                }
+                _doublonConfirme = false;
                 var res = Store.AddUser(draft);
                 if (!res.Success)
                 {

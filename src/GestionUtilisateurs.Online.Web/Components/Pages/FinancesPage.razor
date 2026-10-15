@@ -15,7 +15,7 @@ else
     <div class="stats-grid stats-grid-3">
         <StatCard Icon="💰" Value="@FormatSolde(Store.SoldeTresorerie())" Label="Solde" />
         <StatCard Icon="🧾" Value="@FormatSolde(Store.TotalCotisations(_periode))" Label="@("Cotisations " + _periode)" Kind="active" />
-        <StatCard Icon="⏳" Value="@Store.ImpayesCotisations(_periode).Count.ToString()" Label="Impayés" Kind="inactive" />
+        <StatCard Icon="⏳" Value="@FormatSolde(EnAttente.Sum(c => c.Montant))" Label="@("Impayés (" + Impayes.Count + " membre" + (Impayes.Count > 1 ? "s" : "") + ")")" Kind="inactive" />
     </div>
 
     <div class="search-box cal-search">
@@ -42,11 +42,15 @@ else
                     <option value="@y">@y</option>
                 }
             </select>
-            <button class="btn btn-secondary btn-sm" @onclick="StartAddCotisation">＋ Cotisation</button>
+            <div class="inline-actions">
+                <button class="btn btn-secondary btn-sm" @onclick="StartConfigImpayes" title="Indiquer les membres qui doivent une cotisation">＋ Impayés</button>
+                <button class="btn btn-secondary btn-sm" @onclick="StartAddCotisation">＋ Paiement</button>
+            </div>
         </div>
+        <p class="field-hint" style="margin:0 0 10px">Les impayés ne sont plus automatiques : choisissez avec « ＋ Impayés » les membres qui doivent une cotisation, puis encaissez-la quand elle est payée.</p>
         @if (FilteredCotisations.Count == 0)
         {
-            <EmptyState Icon="🧾" Title="Aucune cotisation" Message="Enregistrez la première cotisation de la période." />
+            <EmptyState Icon="🧾" Title="Aucune cotisation" Message="Configurez les impayés de la période ou enregistrez un paiement." />
         }
         else
         {
@@ -64,6 +68,10 @@ else
                             </div>
                         </div>
                         <div class="user-card-actions" @onclick:stopPropagation="true">
+                            @if (cot.Statut == CotisationStatuts.EnAttente)
+                            {
+                                <button class="btn btn-primary btn-sm" @onclick="() => StartEncaisser(cot)">Encaisser</button>
+                            }
                             <button class="btn-icon danger" aria-label="Supprimer" @onclick="() => AskDeleteCotisation(cot)">🗑</button>
                         </div>
                     </div>
@@ -78,6 +86,7 @@ else
                             <div class="storage-line"><span>Statut</span><strong>@CotisationStatuts.Label(cot.Statut)</strong></div>
                             <div class="storage-line"><span>Enregistrée par</span><strong>@cot.CreatedBy</strong></div>
                             <div class="form-actions" style="margin-top:10px">
+                                <button class="btn btn-secondary btn-sm" @onclick="() => StartEditCotisation(cot)">Modifier</button>
                                 <button class="btn btn-secondary btn-sm" @onclick="() => _selCotId = null">Réduire</button>
                             </div>
                         </div>
@@ -88,18 +97,18 @@ else
         @if (Impayes.Count > 0)
         {
             <div class="card" style="margin-top:12px">
-                <h3>⏳ Impayés (@_periode) — @Impayes.Count</h3>
+                <h3>⏳ Impayés (@_periode) — @Impayes.Count membre(s), @DataStore.FormatMontant(EnAttente.Sum(c => c.Montant))</h3>
                 <div class="search-box cal-search cal-opt-search">
                     <span class="search-icon" aria-hidden="true">&#128269;</span>
                     <input type="search" placeholder="Écrire pour chercher un membre…" aria-label="Chercher un membre"
                            value="@_impayeSearch" @oninput="e => _impayeSearch = e.Value?.ToString() ?? string.Empty" />
                 </div>
-                @foreach (var u in FilteredImpayes)
+                @foreach (var c in FilteredImpayes)
                 {
-                    var user = u;
+                    var cot = c;
                     <div class="kv-row">
-                        <span class="kv-label">@user.NomComplet</span>
-                        <span class="kv-value"><button class="btn btn-secondary btn-sm" @onclick="() => PrefillCotisation(user.Identifiant)">＋ Encaisser</button></span>
+                        <span class="kv-label">@MemberName(cot.MembreIdentifiant)<small class="text-muted"> · @DataStore.FormatMontant(cot.Montant)@(string.IsNullOrWhiteSpace(cot.Motif) ? "" : " · " + cot.Motif)</small></span>
+                        <span class="kv-value"><button class="btn btn-secondary btn-sm" @onclick="() => StartEncaisser(cot)">Encaisser</button></span>
                     </div>
                 }
                 @if (FilteredImpayes.Count == 0)
@@ -154,12 +163,19 @@ else
 
     <button class="fab" aria-label="Ajouter une cotisation ou un mouvement" @onclick="OnFabAdd">+</button>
 
-    <Modal Title="Nouvelle cotisation" Show="_showCotisation" OnClose="() => _showCotisation = false">
+    <Modal Title="@(_editCotId == null ? "Enregistrer un paiement" : "Modifier la cotisation")" Show="_showCotisation" OnClose="() => _showCotisation = false">
         <ChildContent>
-            <div class="form-group">
-                <label>Membre *</label>
-                <MemberPicker Value="@_cMembre" ValueChanged="@((string v) => _cMembre = v)" Placeholder="Écrire pour chercher un membre…" />
-            </div>
+            @if (_editCotId == null)
+            {
+                <div class="form-group">
+                    <label>Membre *</label>
+                    <MemberPicker Value="@_cMembre" ValueChanged="@((string v) => _cMembre = v)" Placeholder="Écrire pour chercher un membre…" />
+                </div>
+            }
+            else
+            {
+                <p class="text-muted" style="margin-top:0">@MemberName(_cMembre)</p>
+            }
             <div class="form-group">
                 <label for="fi-montant">Montant (Ar) *</label>
                 <input id="fi-montant" type="text" inputmode="decimal" placeholder="Ex : 5000" value="@_cMontant" @oninput="e => _cMontant = e.Value?.ToString() ?? string.Empty" />
@@ -176,18 +192,96 @@ else
                 <label for="fi-date">Date</label>
                 <DateInput Id="fi-date" Value="@_cDateIso" ValueChanged="@(v => _cDateIso = v)" />
             </div>
-            <div class="form-group">
-                <label for="fi-statut">Statut</label>
-                <select id="fi-statut" value="@_cStatut" @onchange="e => _cStatut = e.Value?.ToString() ?? CotisationStatuts.Payee">
-                    <option value="@CotisationStatuts.Payee">Payée</option>
-                    <option value="@CotisationStatuts.EnAttente">En attente</option>
-                </select>
-            </div>
+            @if (_editCotId != null)
+            {
+                <div class="form-group">
+                    <label for="fi-statut">Statut</label>
+                    <select id="fi-statut" value="@_cStatut" @onchange="e => _cStatut = e.Value?.ToString() ?? CotisationStatuts.Payee">
+                        <option value="@CotisationStatuts.Payee">Payée</option>
+                        <option value="@CotisationStatuts.EnAttente">En attente (impayé)</option>
+                    </select>
+                </div>
+            }
+            else
+            {
+                <label class="form-check" for="fi-treso">
+                    <input id="fi-treso" type="checkbox" checked="@_cTreso" @onchange="e => _cTreso = e.Value is bool b && b" />
+                    Ajouter aussi l'entrée en trésorerie
+                </label>
+            }
             <span class="form-error">@_cError</span>
         </ChildContent>
         <FooterContent>
             <button class="btn btn-secondary" @onclick="() => _showCotisation = false">Annuler</button>
             <button class="btn btn-primary" @onclick="SaveCotisation">Enregistrer</button>
+        </FooterContent>
+    </Modal>
+
+    <Modal Title="Encaisser la cotisation" Show="_encaisser != null" OnClose="() => _encaisser = null">
+        <ChildContent>
+            @if (_encaisser != null)
+            {
+                <p style="margin-top:0"><strong>@MemberName(_encaisser.MembreIdentifiant)</strong> · @DataStore.FormatMontant(_encaisser.Montant)@(string.IsNullOrWhiteSpace(_encaisser.Motif) ? "" : " · " + _encaisser.Motif) (@_encaisser.Periode)</p>
+                <div class="form-group">
+                    <label for="enc-date">Date du paiement</label>
+                    <DateInput Id="enc-date" Value="@_encDateIso" ValueChanged="@(v => _encDateIso = v)" />
+                </div>
+                <label class="form-check" for="enc-treso">
+                    <input id="enc-treso" type="checkbox" checked="@_cTreso" @onchange="e => _cTreso = e.Value is bool b && b" />
+                    Ajouter aussi l'entrée en trésorerie
+                </label>
+                <span class="form-error">@_encError</span>
+            }
+        </ChildContent>
+        <FooterContent>
+            <button class="btn btn-secondary" @onclick="() => _encaisser = null">Annuler</button>
+            <button class="btn btn-primary" @onclick="ConfirmEncaisser">Encaisser</button>
+        </FooterContent>
+    </Modal>
+
+    <Modal Title="Configurer des impayés" Show="_showImpayes" OnClose="() => _showImpayes = false">
+        <ChildContent>
+            <p class="text-muted" style="margin-top:0">Chaque membre coché devra cette cotisation. Un membre qui a déjà une cotisation de même motif sur la période est ignoré.</p>
+            <div class="form-group">
+                <label for="imp-montant">Montant dû (Ar) *</label>
+                <input id="imp-montant" type="text" inputmode="decimal" placeholder="Ex : 5000" value="@_iMontant" @oninput="e => _iMontant = e.Value?.ToString() ?? string.Empty" />
+            </div>
+            <div class="form-group">
+                <label for="imp-motif">Motif</label>
+                <input id="imp-motif" type="text" value="@_iMotif" @oninput="e => _iMotif = e.Value?.ToString() ?? string.Empty" />
+            </div>
+            <div class="form-group">
+                <label for="imp-periode">Période</label>
+                <input id="imp-periode" type="text" value="@_iPeriode" @oninput="e => _iPeriode = e.Value?.ToString() ?? string.Empty" />
+            </div>
+            <div class="form-group">
+                <label>Membres concernés (@_iChoix.Count)</label>
+                <div class="inline-actions" style="margin-bottom:6px;flex-wrap:wrap">
+                    <button type="button" class="btn btn-secondary btn-sm" @onclick="ChoisirTous">Tous les membres actifs</button>
+                    <button type="button" class="btn btn-secondary btn-sm" @onclick="ChoisirMajeurs">Seulement les 18 ans et plus</button>
+                    <button type="button" class="btn btn-secondary btn-sm" @onclick="() => _iChoix.Clear()">Aucun</button>
+                </div>
+                <div class="search-box cal-search cal-opt-search">
+                    <span class="search-icon" aria-hidden="true">&#128269;</span>
+                    <input type="search" placeholder="Chercher un membre…" aria-label="Chercher un membre"
+                           value="@_iSearch" @oninput="e => _iSearch = e.Value?.ToString() ?? string.Empty" />
+                </div>
+                <div class="fin-member-list">
+                    @foreach (var u in ImpayeCandidats)
+                    {
+                        var user = u;
+                        <label class="form-check fin-member">
+                            <input type="checkbox" checked="@_iChoix.Contains(user.Identifiant)" @onchange="e => ToggleChoix(user.Identifiant, e.Value is bool b && b)" />
+                            <span>@user.NomComplet@(user.EstMineur ? " · moins de 18 ans" : "")</span>
+                        </label>
+                    }
+                </div>
+            </div>
+            <span class="form-error">@_iError</span>
+        </ChildContent>
+        <FooterContent>
+            <button class="btn btn-secondary" @onclick="() => _showImpayes = false">Annuler</button>
+            <button class="btn btn-primary" @onclick="SaveImpayes">Enregistrer</button>
         </FooterContent>
     </Modal>
 
@@ -280,17 +374,87 @@ else
     private void OnSearch(ChangeEventArgs e) => _search = e.Value?.ToString() ?? string.Empty;
 
     private IReadOnlyList<UserAccount> Impayes => Store.ImpayesCotisations(_periode);
+    private IReadOnlyList<Cotisation> EnAttente => Store.CotisationsEnAttente(_periode);
     private string _impayeSearch = "";
 
-    private List<UserAccount> FilteredImpayes
+    private List<Cotisation> FilteredImpayes
     {
         get
         {
             var q = _impayeSearch.Trim();
-            if (q.Length == 0) return Impayes.ToList();
-            return Impayes.Where(u => (u.NomComplet + " " + u.Identifiant + " " + (u.Matricule ?? ""))
+            var list = EnAttente.OrderBy(c => MemberName(c.MembreIdentifiant)).ToList();
+            if (q.Length == 0) return list;
+            return list.Where(c => (MemberName(c.MembreIdentifiant) + " " + c.MembreIdentifiant + " " + c.Motif)
                 .Contains(q, StringComparison.OrdinalIgnoreCase)).ToList();
         }
+    }
+
+    // ---- Configuration des impayés ----
+    private bool _showImpayes;
+    private string _iMontant = "";
+    private string _iMotif = "";
+    private string _iPeriode = "";
+    private string _iSearch = "";
+    private string _iError = "";
+    private readonly HashSet<string> _iChoix = new(StringComparer.OrdinalIgnoreCase);
+
+    private IEnumerable<UserAccount> ImpayeCandidats
+    {
+        get
+        {
+            var q = _iSearch.Trim();
+            var list = ActiveUsers.AsEnumerable();
+            if (q.Length > 0)
+                list = list.Where(u => (u.NomComplet + " " + u.Identifiant).Contains(q, StringComparison.OrdinalIgnoreCase));
+            return list;
+        }
+    }
+
+    private void StartConfigImpayes()
+    {
+        _iMontant = ""; _iMotif = "Cotisation " + _periode; _iPeriode = _periode;
+        _iSearch = ""; _iError = ""; _iChoix.Clear();
+        _showImpayes = true;
+    }
+
+    private void ToggleChoix(string identifiant, bool on)
+    {
+        if (on) _iChoix.Add(identifiant); else _iChoix.Remove(identifiant);
+    }
+
+    private void ChoisirTous() { _iChoix.Clear(); foreach (var u in ActiveUsers) _iChoix.Add(u.Identifiant); }
+    private void ChoisirMajeurs() { _iChoix.Clear(); foreach (var u in ActiveUsers.Where(u => !u.EstMineur)) _iChoix.Add(u.Identifiant); }
+
+    private void SaveImpayes()
+    {
+        _iError = "";
+        var montant = ParseMontant(_iMontant);
+        if (montant == null) { _iError = "Montant invalide."; return; }
+        var (res, ajoutes, ignores) = Store.AddCotisationsEnAttente(_iChoix, montant.Value, _iMotif, _iPeriode);
+        if (!res.Success) { _iError = res.Error; return; }
+        _periode = string.IsNullOrWhiteSpace(_iPeriode) ? _periode : _iPeriode.Trim();
+        State.NotifySuccess(ajoutes + " impayé(s) ajouté(s)" + (ignores > 0 ? ", " + ignores + " déjà présent(s)" : "") + ".");
+        _showImpayes = false;
+    }
+
+    // ---- Encaissement ----
+    private Cotisation? _encaisser;
+    private string _encDateIso = "";
+    private string _encError = "";
+    private bool _cTreso = true;
+
+    private void StartEncaisser(Cotisation c)
+    {
+        _encaisser = c; _encDateIso = ""; _encError = ""; _cTreso = true;
+    }
+
+    private void ConfirmEncaisser()
+    {
+        if (_encaisser == null) return;
+        var res = Store.EncaisserCotisation(_encaisser.Id, DataStore.ToYmd(_encDateIso), _cTreso);
+        if (!res.Success) { _encError = res.Error; return; }
+        State.NotifySuccess("Cotisation encaissée.");
+        _encaisser = null;
     }
     private IReadOnlyList<UserAccount> ActiveUsers =>
         Store.Users.Where(u => u.Actif).OrderBy(u => u.NomComplet).ToList();
@@ -306,6 +470,7 @@ else
     }
 
     private bool _showCotisation;
+    private string? _editCotId;
     private string _cMembre = "";
     private string _cMontant = "";
     private string _cMotif = "";
@@ -355,16 +520,21 @@ else
 
     private void StartAddCotisation()
     {
+        _editCotId = null;
         _cMembre = ""; _cMontant = ""; _cMotif = "";
         _cPeriode = _periode; _cDateIso = ""; _cStatut = CotisationStatuts.Payee;
-        _cError = "";
+        _cError = ""; _cTreso = true;
         _showCotisation = true;
     }
 
-    private void PrefillCotisation(string identifiant)
+    private void StartEditCotisation(Cotisation c)
     {
-        StartAddCotisation();
-        _cMembre = identifiant;
+        _editCotId = c.Id;
+        _cMembre = c.MembreIdentifiant;
+        _cMontant = c.Montant.ToString(System.Globalization.CultureInfo.InvariantCulture);
+        _cMotif = c.Motif; _cPeriode = c.Periode; _cDateIso = c.Date; _cStatut = c.Statut;
+        _cError = "";
+        _showCotisation = true;
     }
 
     private void SaveCotisation()
@@ -373,17 +543,19 @@ else
         var montant = ParseMontant(_cMontant);
         if (string.IsNullOrWhiteSpace(_cMembre)) { _cError = "Choisissez un membre."; return; }
         if (montant == null) { _cError = "Montant invalide."; return; }
-        var res = Store.AddCotisation(new Cotisation
+        var cot = new Cotisation
         {
+            Id = _editCotId ?? "",
             MembreIdentifiant = _cMembre,
             Montant = montant.Value,
             Motif = _cMotif,
             Periode = _cPeriode,
             Date = DataStore.ToYmd(_cDateIso),
-            Statut = _cStatut
-        });
+            Statut = _editCotId == null ? CotisationStatuts.Payee : _cStatut
+        };
+        var res = _editCotId == null ? Store.AddCotisation(cot, _cTreso) : Store.UpdateCotisation(cot);
         if (!res.Success) { _cError = res.Error; return; }
-        State.NotifySuccess("Cotisation enregistrée.");
+        State.NotifySuccess(_editCotId == null ? "Paiement enregistré." : "Cotisation modifiée.");
         _showCotisation = false;
     }
 

@@ -83,6 +83,42 @@ public class FieldValue
     public FileRef? Fichier { get; set; }
 }
 
+/// <summary>Lien de famille vu depuis la fiche qui le porte : « Identifiant est mon parent ».</summary>
+public class LienFamille
+{
+    /// <summary>Identifiant du membre lié.</summary>
+    public string Identifiant { get; set; } = "";
+    /// <summary>Ce que ce membre est pour moi (voir <see cref="LiensFamille"/>).</summary>
+    public string Type { get; set; } = "";
+}
+
+public static class LiensFamille
+{
+    public const string Parent = "parent";
+    public const string Enfant = "enfant";
+    public const string Conjoint = "conjoint";
+    public const string Fratrie = "fratrie";
+
+    public static readonly string[] Tous = { Parent, Enfant, Conjoint, Fratrie };
+
+    /// <summary>Le lien vu depuis l'autre fiche (mon parent → je suis son enfant).</summary>
+    public static string Inverse(string type) => type switch
+    {
+        Parent => Enfant,
+        Enfant => Parent,
+        _ => type
+    };
+
+    public static string Libelle(string type) => type switch
+    {
+        Parent => "Parent",
+        Enfant => "Enfant",
+        Conjoint => "Conjoint(e)",
+        Fratrie => "Frère ou sœur",
+        _ => type
+    };
+}
+
 public class UserAccount
 {
     public string Id { get; set; } = "";
@@ -109,6 +145,31 @@ public class UserAccount
     public string NomComplet => Nom + " " + Prenom;
     public string Statut => Actif ? "Actif" : "Inactif";
 
+    /// <summary>Responsable légal (parent, tuteur) d'un membre de moins de 18 ans.</summary>
+    public string ResponsableLegal { get; set; } = "";
+    /// <summary>Téléphone du responsable légal.</summary>
+    public string ResponsableTelephone { get; set; } = "";
+    /// <summary>Liens de famille avec d'autres membres (parents, enfants, conjoint, frères et sœurs).</summary>
+    public List<LienFamille> Famille { get; set; } = new();
+
+    /// <summary>Âge en années révolues d'après la date de naissance (null si inconnue).</summary>
+    [System.Text.Json.Serialization.JsonIgnore]
+    public int? Age => AgeAu(DateTime.Today);
+
+    /// <summary>Membre de moins de 18 ans (date de naissance connue).</summary>
+    [System.Text.Json.Serialization.JsonIgnore]
+    public bool EstMineur => Age is < 18;
+
+    public int? AgeAu(DateTime jour)
+    {
+        if (!DateTime.TryParseExact(DateNaissance ?? "", "yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture,
+                System.Globalization.DateTimeStyles.None, out var naissance) || naissance > jour)
+            return null;
+        var age = jour.Year - naissance.Year;
+        if (naissance.Date > jour.AddYears(-age)) age--;
+        return age;
+    }
+
     public string? GetChampTexte(string fieldId)
         => Champs.TryGetValue(fieldId, out var v) ? v.Texte : null;
 
@@ -125,9 +186,24 @@ public class ActivityEntry
     public string Description { get; set; } = "";
 }
 
+/// <summary>Couleurs d'accent proposées (toutes lisibles avec un texte blanc).</summary>
+public static class CouleursAccent
+{
+    public static readonly (string Hex, string Nom)[] Toutes =
+    {
+        ("#4f46e5", "Indigo"), ("#1e3a8a", "Bleu marine"), ("#2563eb", "Bleu"), ("#0284c7", "Bleu ciel"),
+        ("#0891b2", "Cyan"), ("#0d9488", "Sarcelle"), ("#059669", "Émeraude"), ("#16a34a", "Vert"),
+        ("#4d7c0f", "Vert olive"), ("#b45309", "Ocre"), ("#d97706", "Ambre"), ("#ea580c", "Orange"),
+        ("#dc2626", "Rouge"), ("#be123c", "Framboise"), ("#db2777", "Rose"), ("#c026d3", "Fuchsia"),
+        ("#7c3aed", "Violet"), ("#92400e", "Brun"), ("#475569", "Ardoise"), ("#0f172a", "Nuit")
+    };
+}
+
 public class AppSettings
 {
     public string AppName { get; set; } = "Gestion des utilisateurs";
+    /// <summary>Paires de fiches (« idA|idB ») confirmées comme deux personnes différentes (homonymes).</summary>
+    public List<string> PasDoublons { get; set; } = new();
     public string Theme { get; set; } = "light";
     public string Color { get; set; } = "#4f46e5";
     public int PageSize { get; set; } = 10;
@@ -139,6 +215,8 @@ public class AppSettings
     public string CarteSlogan { get; set; } = "";
     /// <summary>Citation affichée au dos de la carte de membre (modifiable côté admin).</summary>
     public string CarteCitation { get; set; } = "";
+    /// <summary>Format des matricules attribués automatiquement (ex. « M-{NNNN} »). Vide : saisie manuelle.</summary>
+    public string MatriculeFormat { get; set; } = "";
     /// <summary>Largeur réelle de la carte de membre à l'impression, en mm (défaut 85).</summary>
     public int CarteLargeurMm { get; set; } = 85;
     /// <summary>Hauteur réelle de la carte de membre à l'impression, en mm (défaut 55).</summary>
@@ -478,6 +556,16 @@ public class Vote
     public List<Bulletin> Bulletins { get; set; } = new();
     public string DateCreation { get; set; } = "";
     public string CreatedBy { get; set; } = "";
+
+    /// <summary>Ouvert et date de clôture non dépassée : on peut encore voter.</summary>
+    [System.Text.Json.Serialization.JsonIgnore]
+    public bool EstOuvert => Statut == VoteStatuts.Ouvert
+        && !(DateTime.TryParseExact(DateCloture, "yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture,
+                System.Globalization.DateTimeStyles.None, out var c) && c.Date < DateTime.Today);
+
+    /// <summary>Statut affiché : « Clos » dès que la date de clôture est passée.</summary>
+    [System.Text.Json.Serialization.JsonIgnore]
+    public string StatutAffiche => EstOuvert ? VoteStatuts.Ouvert : VoteStatuts.Clos;
 }
 
 public class Bulletin

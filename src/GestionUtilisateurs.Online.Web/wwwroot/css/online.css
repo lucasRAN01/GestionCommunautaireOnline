@@ -80,6 +80,8 @@
 .online-account:first-child { border-top: none; padding-top: 2px; }
 .online-account-main { display: flex; align-items: center; gap: 12px; min-width: 0; }
 .online-account-meta { font-size: 12.5px; overflow-wrap: anywhere; }
+.online-link-fiche { margin-top: 8px; display: flex; flex-direction: column; gap: 4px; font-size: 12.5px; color: var(--warning, #b45309); }
+.online-link-fiche select { max-width: 100%; font-size: 13px; }
 .online-account-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
 .online-account-actions select {
     padding: 7px 10px;
@@ -334,3 +336,72 @@
 @media (min-width: 1024px) {
     .gu-update { bottom: 24px; left: calc(50% + var(--sidebar-w, 0px) / 2); }
 }
+
+/* Couleur d'accent personnalisée : pastille arc-en-ciel qui ouvre le sélecteur. */
+.color-swatch.color-custom {
+    position: relative;
+    overflow: hidden;
+    background: conic-gradient(#ef4444, #f59e0b, #22c55e, #06b6d4, #6366f1, #d946ef, #ef4444);
+}
+.color-swatch.color-custom input[type="color"] {
+    position: absolute; inset: 0; width: 100%; height: 100%;
+    opacity: 0; cursor: pointer; border: 0; padding: 0;
+}
+
+/* Membre de moins de 18 ans */
+.badge-minor { background: #fef3c7; color: #92400e; }
+.badge-minor:not(.badge) { display: inline-block; padding: 2px 10px; border-radius: 999px; font-size: 12px; font-weight: 700; }
+[data-theme="dark"] .badge-minor { background: #451a03; color: #fcd34d; }
+.minor-box { border: 1px dashed var(--border); border-radius: 12px; padding: 10px 12px; display: flex; flex-direction: column; gap: 4px; }
+.fin-member-list { max-height: 260px; overflow-y: auto; border: 1px solid var(--border); border-radius: 10px; padding: 6px 10px; }
+.fin-member { display: flex; align-items: center; gap: 8px; padding: 6px 0; }
+
+/* Carte de membre : membre mineur */
+.cmc-minor { display: inline-block; margin-left: 4px; padding: 1px 7px; border-radius: 999px; background: #fef3c7; color: #92400e; font-size: 10px; font-weight: 700; }
+.cmc-guardian { margin: 6px 0 0; font-size: 11px; line-height: 1.4; color: #0b2a6b; }
+.cmc-guardian span { font-weight: 700; margin-right: 4px; }
+
+/* Utilisateurs : fiches en double */
+.dup-banner { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; margin: 10px 0; padding: 10px 14px; border-radius: 12px; background: #fef3c7; color: #92400e; font-size: 14px; }
+[data-theme="dark"] .dup-banner { background: #451a03; color: #fcd34d; }
+.dup-help { font-size: 13px; margin: 0 0 10px; }
+.dup-group { border: 1px solid var(--border); border-radius: 12px; padding: 10px 12px; margin-bottom: 12px; }
+.dup-reason { font-size: 12px; font-weight: 700; color: var(--text-secondary, #64748b); text-transform: uppercase; letter-spacing: .03em; margin-bottom: 6px; }
+.dup-member { display: flex; align-items: flex-start; gap: 10px; padding: 6px 0; cursor: pointer; }
+.dup-member input { margin-top: 4px; }
+.dup-member-text { display: flex; flex-direction: column; min-width: 0; }
+.dup-member-text small { color: var(--text-secondary, #64748b); overflow-wrap: anywhere; }
+.dup-actions { justify-content: flex-end; flex-wrap: wrap; margin-top: 6px; }
+
+/* Rôles et permissions : jamais de nom de rôle coupé au milieu d'un mot */
+.perm-role { overflow-wrap: normal; word-break: keep-all; hyphens: none; }
+.perm-role-short { display: none; }
+@media (max-width: 899.98px) {
+    .perm-role-full { display: none; }
+    .perm-role-short { display: inline; }
+}
+@media (min-width: 900px) {
+    .perm-row { grid-template-columns: minmax(0, 1fr) repeat(3, 124px); }
+}
+.perm-label { overflow-wrap: break-word; hyphens: auto; }
+@media (max-width: 519.98px) {
+    .perm-row { grid-template-columns: minmax(0, 1fr) repeat(3, 58px); gap: 4px; }
+}
+
+/* Fiche membre : famille */
+.family-empty { font-size: 13px; margin: 4px 0 8px; }
+.family-row { align-items: flex-start; }
+.family-chips { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 6px; }
+.family-chip { display: inline-flex; align-items: center; border: 1px solid var(--border); border-radius: 999px; background: var(--surface, #fff); overflow: hidden; }
+.family-chip-name { border: 0; background: none; color: var(--accent); font-weight: 600; font-size: 13.5px; padding: 4px 10px; cursor: pointer; }
+.family-chip-name:hover { text-decoration: underline; }
+.family-chip-x { border: 0; border-left: 1px solid var(--border); background: none; color: var(--text-muted, #64748b); padding: 4px 8px; cursor: pointer; font-size: 12px; }
+.family-chip-x:hover { color: var(--danger, #dc2626); }
+.family-pick { display: flex; flex-direction: column; gap: 4px; margin-top: 6px; max-height: 260px; overflow-y: auto; }
+.family-pick-item { display: flex; align-items: center; gap: 10px; text-align: left; border: 1px solid transparent; border-radius: 10px; background: none; padding: 6px 8px; cursor: pointer; color: inherit; }
+.family-pick-item span { display: flex; flex-direction: column; min-width: 0; }
+.family-pick-item small { color: var(--text-muted, #64748b); }
+.family-pick-item:hover { background: var(--hover, rgba(79, 70, 229, .06)); }
+.family-pick-item.active { border-color: var(--accent); background: rgba(79, 70, 229, .08); }
+.family-summary { font-size: 14px; margin: 4px 0 12px; }
+.minor-box .badge { align-self: flex-start; }
