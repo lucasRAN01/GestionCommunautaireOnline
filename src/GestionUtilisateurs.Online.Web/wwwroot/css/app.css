@@ -3545,6 +3545,7 @@ img.cmc-logo { display: block; }
 .ob-nav .btn-secondary { flex: 0 0 auto; }
 .ob-primary {
     flex: 1 1 auto;
+    margin-left: auto;
     border: 0;
     background: #4F46E5;
     color: #ffffff;
@@ -3574,7 +3575,7 @@ img.cmc-logo { display: block; }
     .ob-title { font-size: 26px; margin-top: 0; }
     .ob-text { font-size: 16.5px; }
     .ob-dots { justify-content: flex-start; margin: 22px 0 18px; }
-    .ob-nav { max-width: 420px; }
+    .ob-primary { flex: 0 0 auto; min-width: 220px; }
     .ob-btn { min-height: 54px; font-size: 16px; }
 }
 
@@ -3598,8 +3599,10 @@ img.cmc-logo { display: block; }
    La barre parente est soulevée au-dessus du voile, la cible est entourée
    d'un anneau indigo. La bulle (.ob-pop) est placée côté Blazor. */
 .ob-spot-root { z-index: 201 !important; }
+/* Une barre fixe (barre du bas) garde sa position : la passer en relative
+   la renvoyait en bas de la page, hors écran, et le guide se recentrait. */
+.ob-spot:not(.ob-spot-root) { position: relative; }
 .ob-spot {
-    position: relative;
     z-index: 202;
     border-radius: 16px;
     box-shadow: 0 0 0 3px #4F46E5, 0 0 0 8px rgba(79, 70, 229, .30), 0 10px 28px rgba(15, 23, 42, .35);
@@ -3610,8 +3613,10 @@ img.cmc-logo { display: block; }
 .ob-spot, .ob-spot-root { pointer-events: none !important; }
 .ob-spot *, .ob-spot-root * { pointer-events: none !important; }
 .ob-overlay.ob-popmode { display: block; padding: 0; overflow-y: auto; touch-action: pan-y; }
+.ob-pop-wrap { position: absolute; z-index: 203; }
 .ob-card.ob-pop {
-    position: absolute;
+    position: relative;
+    width: 100%;
     z-index: 203;
     pointer-events: auto;
     touch-action: pan-y;
@@ -3625,7 +3630,7 @@ img.cmc-logo { display: block; }
     animation: ob-pop-in .28s cubic-bezier(.2, .9, .3, 1.12);
 }
 .ob-card.ob-pop *, .ob-card * { pointer-events: auto; }
-.ob-card.ob-pop .ob-btn, .ob-card.ob-pop .ob-dot, .ob-card.ob-pop .ob-skip { position: relative; z-index: 204; }
+.ob-card.ob-pop .ob-btn, .ob-card.ob-pop .ob-dot { position: relative; z-index: 204; }
 /* La bulle reste verticale même en tablette (pas de rangée titre/texte). */
 .ob-pop .ob-anim { display: block; }
 .ob-title-pop { font-size: 18px; text-align: left; margin-top: 0; padding-right: 64px; }
@@ -3633,6 +3638,7 @@ img.cmc-logo { display: block; }
 .ob-pop .ob-dots { justify-content: flex-start; margin: 14px 0 12px; }
 .ob-arrow {
     position: absolute;
+    z-index: 205;
     width: 22px;
     height: 22px;
     background: var(--surface, #ffffff);
@@ -3641,6 +3647,9 @@ img.cmc-logo { display: block; }
 }
 .ob-arrow.ob-up { top: -9px; animation: ob-nudge-down 1.6s ease-in-out infinite; }
 .ob-arrow.ob-down { bottom: -9px; animation: ob-nudge-up 1.6s ease-in-out infinite; }
+.ob-arrow.ob-left { left: -9px; }
+/* Dans la bulle (étroite), « Suivant » occupe la place restante. */
+.ob-pop .ob-primary { flex: 1 1 auto; min-width: 0; }
 @media (min-width: 720px) {
     .ob-card.ob-pop { padding: 24px 24px 20px; border-radius: 24px; }
     .ob-title-pop { font-size: 20px; }

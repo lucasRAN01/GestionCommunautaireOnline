@@ -29,11 +29,20 @@
         }
         else
         {
-            <div class="ob-card ob-pop" id="ob-card" role="dialog" aria-modal="true" aria-label="Mini-guide de démarrage"
-                 tabindex="0" @ref="_cardRef" @onkeydown="OnKeyDown"
-                 style="left:@Px(_place.Left);top:@Px(_place.Top);width:@Px(_place.Width)">
+            @* La flèche est hors de la bulle (qui défile si l'écran est petit),
+               sinon elle serait rognée et ne pointerait plus vers l'élément. *@
+            <div class="ob-pop-wrap" style="left:@Px(_place.Left);@VAnchor(_place.Top, _place.Bottom)width:@Px(_place.Width)">
+            @if (_place.ArrowLeft)
+            {
+                <div class="ob-arrow ob-left" aria-hidden="true" style="@VAnchor(_place.ArrowTop, _place.ArrowBottom)"></div>
+            }
+            else
+            {
                 <div class="ob-arrow @(_place.ArrowDown ? "ob-down" : "ob-up")" aria-hidden="true"
                      style="left:@Px(_place.ArrowX - 11)"></div>
+            }
+            <div class="ob-card ob-pop" id="ob-card" role="dialog" aria-modal="true" aria-label="Mini-guide de démarrage"
+                 tabindex="0" @ref="_cardRef" @onkeydown="OnKeyDown">
                 <button type="button" class="ob-skip" @onclick="Skip">Passer</button>
                 <div class="ob-anim" @key="_index">
                     <h2 class="ob-title ob-title-pop">@Steps[_index].Title</h2>
@@ -41,6 +50,7 @@
                 </div>
                 @NavDots()
                 @NavRow()
+            </div>
             </div>
         }
     </div>
@@ -50,9 +60,16 @@
     [Parameter] public bool Show { get; set; }
     [Parameter] public EventCallback OnClose { get; set; }
 
-    private sealed record Step(string Art, string Title, string Text, string? Target);
-    private sealed record Rect(double X, double Y, double W, double H, double Vw, double Vh);
-    private sealed record Place(bool Below, double Left, double Top, double Width, double ArrowX, bool ArrowDown);
+    private sealed record Step(string Art, string Title, string Text, string? Target, bool Side = false);
+    private sealed record Rect(double X, double Y, double W, double H, double Vw, double Vh, double Br = 0);
+    /// <summary>
+    /// Position de la bulle. Elle est ancrée par le haut (Top) ou par le bas
+    /// (Bottom, distance au bas de l'écran) : la hauteur réelle de la bulle
+    /// n'est pas connue ici, et l'ancrer du côté de la cible garde la flèche
+    /// collée à l'élément, quelle que soit la longueur du texte.
+    /// </summary>
+    private sealed record Place(double Left, double? Top, double? Bottom, double Width,
+        double ArrowX, bool ArrowDown, bool ArrowLeft = false, double? ArrowTop = null, double? ArrowBottom = null);
 
     private List<Step> Steps = new();
     private int _index;
@@ -63,27 +80,49 @@
     private ElementReference _cardRef;
     private double? _touchX;
 
-    protected override void OnInitialized()
+    protected override void OnInitialized() => Steps = BuildSteps(desktop: false);
+
+    /// <summary>
+    /// Étapes du guide. Sur ordinateur (≥ 1024 px), la barre du bas, le menu
+    /// « ⋮ » et le logo du haut sont remplacés par le menu latéral : le guide
+    /// présente donc ce menu à la place.
+    /// </summary>
+    private List<Step> BuildSteps(bool desktop)
     {
         var appName = string.IsNullOrWhiteSpace(Store.Settings.AppName)
             ? "Gestion des utilisateurs" : Store.Settings.AppName;
-        Steps = new()
+        var steps = new List<Step>();
+        if (desktop)
         {
-            new("welcome", "Bienvenue sur " + appName,
-                "Votre gestion communautaire en ligne, partagée avec tous les membres. Laissez-vous guider en 6 étapes.", null),
-            new("", "Tout se passe en bas",
-                "Regardez la barre du bas : Accueil, Utilisateurs, Calendrier, Activité et Paramètres, toujours à portée de pouce.", ".bottom-nav"),
-            new("", "Ici, le menu « ⋮ »",
-                "En haut à droite : Finances, matériel, messagerie, carte de membre, votes… Tout le reste se trouve derrière ce bouton.", "[aria-label=\"Plus d'options\"]"),
-            new("", "Juste à côté : votre avatar",
-                "Touchez votre photo en haut à droite pour ouvrir Mes informations, ou vous déconnecter.", ".avatar-button"),
-            new("", "En haut à gauche : le logo",
-                "Touchez le logo pour afficher l'image en grand et parcourir l'histoire de votre communauté.", ".logo-btn"),
-            new("", "Sur chaque écran : l'aide ⓘ",
-                "Ce bouton ouvre l'aide de la page en cours. En cas de doute, il sait quoi faire.", ".topbar-help-btn"),
-            new("ready", "Vous êtes prêt·e !",
-                "Astuce : glissez du bord gauche vers la droite pour revenir en arrière. Bon usage !", null),
-        };
+            steps.Add(new("", "En haut à gauche : le logo",
+                "Cliquez sur le logo pour afficher l'image en grand et parcourir l'histoire de votre communauté.", ".web-sidebar-logo", Side: true));
+            steps.Add(new("", "À gauche : le menu",
+                "Toutes les pages sont dans ce menu : Accueil, Utilisateurs, Calendrier, Finances, Messagerie, Paramètres…", ".web-sidebar-nav", Side: true));
+            steps.Add(new("", "En haut à droite : votre avatar",
+                "Cliquez sur votre photo pour ouvrir Mes informations, changer votre mot de passe ou vous déconnecter.", ".avatar-button"));
+            steps.Add(new("", "Sur chaque écran : l'aide ⓘ",
+                "Ce bouton, à côté de votre avatar, ouvre l'aide de la page en cours. En cas de doute, il sait quoi faire.", ".topbar-help-btn"));
+            steps.Add(new("ready", "Vous êtes prêt·e !",
+                "Vous pouvez revoir ce guide à tout moment depuis Paramètres, ici dans le menu. Bon usage !", ".web-nav-item[data-nav=\"settings\"]", Side: true));
+        }
+        else
+        {
+            steps.Add(new("", "Tout se passe en bas",
+                "Regardez la barre du bas : Accueil, Utilisateurs, Calendrier et Activité, toujours à portée de pouce.", ".bottom-nav"));
+            steps.Add(new("", "Ici, le menu « ⋮ »",
+                "En haut à droite : Finances, matériel, messagerie, carte de membre, votes… Tout le reste se trouve derrière ce bouton.", "[aria-label=\"Plus d'options\"]"));
+            steps.Add(new("", "Juste à côté : votre avatar",
+                "Touchez votre photo en haut à droite pour ouvrir Mes informations, changer votre mot de passe ou vous déconnecter.", ".avatar-button"));
+            steps.Add(new("", "En haut à gauche : le logo",
+                "Touchez le logo pour afficher l'image en grand et parcourir l'histoire de votre communauté.", ".logo-btn"));
+            steps.Add(new("", "Sur chaque écran : l'aide ⓘ",
+                "Ce bouton ouvre l'aide de la page en cours. En cas de doute, il sait quoi faire.", ".topbar-help-btn"));
+            steps.Add(new("ready", "Vous êtes prêt·e !",
+                "Pour revoir ce guide, ouvrez « ⋮ » puis Paramètres. Astuce : glissez du bord gauche vers la droite pour revenir en arrière.", "[aria-label=\"Plus d'options\"]"));
+        }
+        steps.Insert(0, new("welcome", "Bienvenue sur " + appName,
+            "Votre gestion communautaire en ligne, partagée avec tous les membres. Laissez-vous guider en " + steps.Count + " étapes.", null));
+        return steps;
     }
 
     protected override void OnParametersSet()
@@ -97,6 +136,10 @@
         if (Show && !_openAck)
         {
             _openAck = true;
+            var desktop = false;
+            try { desktop = await JSRuntime.InvokeAsync<bool>("guOnboarding.isDesktop"); } catch { }
+            Steps = BuildSteps(desktop);
+            _index = 0;
             try { await Js.LockBodyScrollAsync(); } catch { }
             try { await JSRuntime.InvokeVoidAsync("guOnboarding.focus", "ob-card"); } catch { }
             await RefreshSpotAsync();
@@ -122,7 +165,7 @@
                 {
                     var rect = await JSRuntime.InvokeAsync<Rect?>("guCoach.spot", target);
                     if (rect != null && rect.W > 0 && rect.H > 0 && rect.Vw > 0 && rect.Vh > 0)
-                        _place = ComputePlace(rect);
+                        _place = ComputePlace(rect, Steps[_index].Side);
                     else
                         try { await JSRuntime.InvokeVoidAsync("guCoach.unspot"); } catch { }
                 }
@@ -140,7 +183,7 @@
         }
     }
 
-    private static Place? ComputePlace(Rect r)
+    private static Place? ComputePlace(Rect r, bool side = false)
     {
         // Hauteur réelle d'une bulle (titre + texte + points + boutons) : ~340-380 px
         // sur téléphone étroit. Marge large pour ne jamais chevaucher la cible
@@ -153,24 +196,37 @@
         var popW = phone ? r.Vw - 24 : 380;
         if (popW < 240) popW = Math.Max(200, r.Vw - 24);
         if (popW > r.Vw - 24) popW = Math.Max(200, r.Vw - 24);
+        // Élément du menu latéral (ordinateur) : bulle à sa droite, flèche vers la gauche.
+        if (side && SidePlace(r, popW, estH) is { } sp) return sp;
         var cx = r.X + r.W / 2;
         var left = Math.Min(Math.Max(cx - popW / 2, 12), Math.Max(12, r.Vw - popW - 12));
         var arrowX = Math.Min(Math.Max(cx - left, 30), popW - 30);
         if (r.Y + r.H + 12 + estH <= r.Vh)
-        {
-            var top = r.Y + r.H + 12;
-            // Repli : la bulle ne doit jamais dépasser le bas de l'écran.
-            top = Math.Min(top, Math.Max(12, r.Vh - estH - 12));
-            return new Place(true, left, top, popW, arrowX, false);
-        }
+            return new Place(left, r.Y + r.H + 12, null, popW, arrowX, false);
         if (r.Y - 12 - estH >= 0)
-        {
-            var top = r.Y - 12 - estH;
-            top = Math.Max(12, Math.Min(top, Math.Max(12, r.Vh - estH - 12)));
-            return new Place(false, left, top, popW, arrowX, true);
-        }
-        return null;
+            return new Place(left, null, r.Vh - r.Y + 12, popW, arrowX, true);
+        return SidePlace(r, popW, estH);
     }
+
+    /// <summary>Bulle à droite de la cible, flèche vers la gauche à hauteur de la cible.</summary>
+    private static Place? SidePlace(Rect r, double popW, double estH)
+    {
+        var left = Math.Max(r.X + r.W, r.Br) + 16;
+        if (left + popW + 12 > r.Vw) return null;
+        // Pointe vers le centre de la cible, ou vers son haut si elle est très haute (menu entier).
+        var targetY = r.H > 120 ? r.Y + 30 : r.Y + r.H / 2;
+        if (targetY <= r.Vh / 2)
+        {
+            var top = Math.Max(12, targetY - 40);
+            return new Place(left, top, null, popW, 0, false, true, ArrowTop: targetY - top - 11);
+        }
+        // Cible dans le bas de l'écran : la bulle monte depuis la cible.
+        var bottom = Math.Max(12, r.Vh - targetY - 40);
+        return new Place(left, null, bottom, popW, 0, false, true, ArrowBottom: r.Vh - targetY - bottom - 11);
+    }
+
+    private static string VAnchor(double? top, double? bottom)
+        => top is { } t ? "top:" + Px(t) + ";" : "bottom:" + Px(bottom ?? 0) + ";";
 
     private static string Px(double v) => v.ToString("0", System.Globalization.CultureInfo.InvariantCulture) + "px";
 

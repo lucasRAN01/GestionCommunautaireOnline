@@ -194,6 +194,8 @@
         gap: 14px;
     }
     .web-sidebar-brand { display: flex; align-items: center; gap: 12px; padding: 4px 8px 10px; }
+    .web-sidebar-logo { border: 0; padding: 0; background: none; border-radius: 12px; cursor: pointer; display: inline-flex; }
+    .web-sidebar-logo:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
     .web-sidebar-brand img { width: 40px; height: 40px; border-radius: 12px; object-fit: cover; }
     .web-sidebar-mark {
         width: 40px; height: 40px; border-radius: 12px;
@@ -256,8 +258,8 @@
     .stats-grid .stat-card { flex-direction: row; text-align: left; }
     .modal { max-width: 640px; border-radius: 18px; }
 
-    /* Menu « … » : inutile avec la barre latérale */
-    .topbar-menu-btn { display: none; }
+    /* Menu « … » : inutile avec la barre latérale (le bouton d'aide ⓘ reste). */
+    .topbar-menu-btn:not(.topbar-help-btn) { display: none; }
 
     /* Connexion : panneau de présentation à gauche, formulaire à droite */
     .online-auth-hero {

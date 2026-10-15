@@ -8,14 +8,16 @@
     @* Navigation latérale de la version web (écrans larges uniquement ; le mobile garde la barre du bas). *@
     <aside class="web-sidebar" aria-label="Navigation principale">
         <div class="web-sidebar-brand">
-            @if (!string.IsNullOrWhiteSpace(Store.Settings.Logo))
-            {
-                <img src="@Store.Settings.Logo" alt="" />
-            }
-            else
-            {
-                <span class="web-sidebar-mark" aria-hidden="true">GU</span>
-            }
+            <button type="button" class="web-sidebar-logo" aria-label="Afficher le logo et l'histoire de la communauté" @onclick="OpenLogo">
+                @if (!string.IsNullOrWhiteSpace(Store.Settings.Logo))
+                {
+                    <img src="@Store.Settings.Logo" alt="" />
+                }
+                else
+                {
+                    <span class="web-sidebar-mark" aria-hidden="true">GU</span>
+                }
+            </button>
             <span class="web-sidebar-name">@Store.Settings.AppName</span>
         </div>
         <nav class="web-sidebar-nav">
@@ -23,7 +25,7 @@
             {
                 var it = item;
                 var badge = it.Key == "storage" ? "" : MoreBadge(it.Key);
-                <button type="button" class="web-nav-item @(NavCls(it.Key))" @onclick="it.Act">
+                <button type="button" class="web-nav-item @(NavCls(it.Key))" data-nav="@it.Key" @onclick="it.Act">
                     <span class="web-nav-icon" aria-hidden="true">@it.Icon</span>
                     <span class="web-nav-label">@it.Label</span>
                     @if (!string.IsNullOrEmpty(badge))
