@@ -2,6 +2,8 @@
 #  - chaque semaine, copie complète de la base (comptes + données) ;
 #  - les fichiers (photos, documents) du stockage Supabase.
 # Les sauvegardes sont téléchargeables dans l'onglet Actions > Sauvegarde.
+# Le dépôt étant public, elles sont chiffrées (archive 7-Zip AES-256) avec le
+# secret SAUVEGARDE_MOT_DE_PASSE : sans lui, personne ne peut les lire.
 name: Sauvegarde
 
 on:
@@ -14,32 +16,55 @@ jobs:
     runs-on: ubuntu-latest
     if: ${{ vars.SUPABASE_URL != '' }}
     steps:
-      - name: Exporter la base
+      - name: Vérifier le mot de passe des sauvegardes
+        env:
+          PASS: ${{ secrets.SAUVEGARDE_MOT_DE_PASSE }}
+        run: |
+          if [ ${#PASS} -lt 12 ]; then
+            echo "::error::Ajoutez le secret SAUVEGARDE_MOT_DE_PASSE (12 caractères minimum) : sans lui, la sauvegarde serait lisible par tous sur ce dépôt public."
+            exit 1
+          fi
+      - name: Exporter et chiffrer la base
         env:
           DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+          PASS: ${{ secrets.SAUVEGARDE_MOT_DE_PASSE }}
         run: |
           set -euo pipefail
           stamp=$(date -u +%Y-%m-%d)
+          work="$RUNNER_TEMP/base"
+          mkdir -p "$work"
           docker run --rm -e DB_URL postgres:17 \
             sh -c 'pg_dump "$DB_URL" --schema=public --schema=auth --no-owner --no-privileges' \
-            | gzip -9 > "base-$stamp.sql.gz"
-          ls -lh base-*.sql.gz
+            > "$work/base-$stamp.sql"
+          command -v 7z >/dev/null || sudo apt-get install -y -qq p7zip-full
+          7z a -t7z -mx=9 -mhe=on -p"$PASS" "base-$stamp.7z" "$work/base-$stamp.sql" > /dev/null
+          rm -rf "$work"
+          ls -lh base-*.7z
       - uses: actions/upload-artifact@v4
         with:
           name: sauvegarde-base
-          path: base-*.sql.gz
+          path: base-*.7z
           retention-days: 90
 
   fichiers:
     runs-on: ubuntu-latest
     if: ${{ vars.SUPABASE_URL != '' }}
     steps:
+      - name: Vérifier le mot de passe des sauvegardes
+        env:
+          PASS: ${{ secrets.SAUVEGARDE_MOT_DE_PASSE }}
+        run: |
+          if [ ${#PASS} -lt 12 ]; then
+            echo "::error::Ajoutez le secret SAUVEGARDE_MOT_DE_PASSE (12 caractères minimum) : sans lui, la sauvegarde serait lisible par tous sur ce dépôt public."
+            exit 1
+          fi
       - name: Télécharger les fichiers
         env:
           SUPABASE_URL: ${{ vars.SUPABASE_URL }}
           SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
         run: |
           set -euo pipefail
+          cd "$RUNNER_TEMP"
           mkdir -p fichiers/f
           offset=0
           while :; do
@@ -55,10 +80,20 @@ jobs:
             offset=$((offset + count))
           done
           echo "$(ls fichiers/f | wc -l) fichier(s)"
+      - name: Chiffrer les fichiers
+        env:
+          PASS: ${{ secrets.SAUVEGARDE_MOT_DE_PASSE }}
+        run: |
+          set -euo pipefail
+          stamp=$(date -u +%Y-%m-%d)
+          command -v 7z >/dev/null || sudo apt-get install -y -qq p7zip-full
+          (cd "$RUNNER_TEMP" && 7z a -t7z -mx=1 -mhe=on -p"$PASS" "$GITHUB_WORKSPACE/fichiers-$stamp.7z" fichiers > /dev/null)
+          rm -rf "$RUNNER_TEMP/fichiers"
+          ls -lh fichiers-*.7z
       - uses: actions/upload-artifact@v4
         with:
           name: sauvegarde-fichiers
-          path: fichiers
-          # Seule la dernière copie des fichiers est gardée longtemps utile :
+          path: fichiers-*.7z
+          # Seule la dernière copie des fichiers est vraiment utile :
           # une durée courte limite l'espace occupé sur GitHub.
           retention-days: 14

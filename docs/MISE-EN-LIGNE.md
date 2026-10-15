@@ -77,6 +77,12 @@ Onglet **Secrets** :
 |---|---|
 | `SUPABASE_SERVICE_ROLE_KEY` | clé `service_role` |
 | `SUPABASE_DB_URL` | adresse *Session pooler* avec le mot de passe |
+| `SAUVEGARDE_MOT_DE_PASSE` | un mot de passe de votre choix (12 caractères minimum) pour chiffrer les sauvegardes |
+
+Le dépôt est public : sans `SAUVEGARDE_MOT_DE_PASSE`, la tâche **Sauvegarde**
+refuse de s'exécuter plutôt que de publier des données lisibles par tous.
+**Notez ce mot de passe en lieu sûr** : sans lui, les sauvegardes ne peuvent
+pas être ouvertes, et personne (pas même GitHub) ne peut le retrouver.
 
 Tant que `SUPABASE_URL` n'est pas renseignée, les tâches automatiques
 attendent sans erreur.
@@ -153,28 +159,29 @@ surveille cet espace et prévient les administrateurs bien avant la limite.
 | Risque | Parade mise en place |
 |---|---|
 | Projet Supabase mis en pause après 7 jours sans activité | La veille quotidienne GitHub interroge Supabase chaque jour. |
-| Aucune sauvegarde automatique dans l'offre gratuite | Tâche **Sauvegarde** chaque dimanche : copie complète de la base (comptes compris, conservée 90 jours) et des fichiers (conservés 14 jours), téléchargeables dans **Actions > Sauvegarde**. |
+| Aucune sauvegarde automatique dans l'offre gratuite | Tâche **Sauvegarde** chaque dimanche : copie complète de la base (comptes compris, conservée 90 jours) et des fichiers (conservés 14 jours), chiffrées avec votre mot de passe et téléchargeables dans **Actions > Sauvegarde**. |
+| Tâches programmées suspendues par GitHub après 60 jours sans activité du dépôt | La veille modifie elle-même un petit fichier (`.github/derniere-activite.txt`) si rien n'a changé depuis 50 jours. |
 | Photos trop lourdes | Compression dans le navigateur avant l'envoi (1600 px maximum, JPEG). |
 | Base gonflée par les fichiers | Photos et documents rangés dans le stockage de fichiers, pas dans la base ; un même fichier n'est stocké qu'une fois. |
 | Transfert mensuel (5 Go) | Cache dans le navigateur : seules les parties modifiées sont retéléchargées, et un fichier n'est téléchargé qu'une fois. |
 | Fichiers orphelins | Recherche et suppression depuis la page Capacité. |
 | Une donnée trop grosse | Le serveur refuse tout enregistrement de plus de 5 Mo, avec un message clair. |
 
-> **Important :** sur un dépôt public, GitHub suspend les tâches programmées
-> après 60 jours sans aucune modification du dépôt (il prévient par e-mail).
-> Si cela arrive, ouvrez **Actions**, choisissez *Veille Supabase* puis
-> **Enable workflow**, et faites de même pour *Sauvegarde*. Sans la veille,
-> Supabase mettra le projet en pause au bout de 7 jours ; il se relance alors
-> depuis le tableau de bord Supabase (**Restore project**), sans perte de
-> données.
+> **Si GitHub suspend quand même les tâches** (il prévient par e-mail) :
+> ouvrez **Actions**, choisissez *Veille Supabase* puis **Enable workflow**,
+> et faites de même pour *Sauvegarde*. Sans la veille, Supabase mettra le
+> projet en pause au bout de 7 jours ; il se relance alors depuis le tableau
+> de bord Supabase (**Restore project**), sans perte de données.
 
 ### Restaurer une sauvegarde
 
 1. Téléchargez l'archive `sauvegarde-base` dans **Actions > Sauvegarde**
-   (choisir une exécution, rubrique *Artifacts*) et décompressez-la.
+   (choisir une exécution, rubrique *Artifacts*). Elle contient un fichier
+   `.7z` : ouvrez-le avec [7-Zip](https://www.7-zip.org) (gratuit) et
+   tapez le mot de passe `SAUVEGARDE_MOT_DE_PASSE`.
 2. Dans un nouveau projet Supabase, restaurez-la avec
    `psql "<adresse Session pooler>" -f base-AAAA-MM-JJ.sql`.
-3. Les fichiers de `sauvegarde-fichiers` se renvoient dans le compartiment
+3. Les fichiers de `sauvegarde-fichiers` (même mot de passe) se renvoient dans le compartiment
    `fichiers`, dossier `f/`, depuis **Storage** dans Supabase.
 
 En cas de doute, faites la première restauration avec de l'aide : c'est

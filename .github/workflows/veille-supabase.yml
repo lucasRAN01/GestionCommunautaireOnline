@@ -4,7 +4,10 @@
 #  2. mesure l'espace utilisé (base + fichiers) et crée une alerte pour les
 #     administrateurs si un seuil est franchi ;
 #  3. ouvre (ou met à jour) un ticket GitHub « Alerte capacité Supabase »
-#     pour prévenir aussi par e-mail GitHub.
+#     pour prévenir aussi par e-mail GitHub ;
+#  4. modifie un petit fichier du dépôt si rien n'a changé depuis 50 jours :
+#     GitHub suspend les tâches programmées d'un dépôt public après 60 jours
+#     sans activité, ce qui arrêterait la veille et les sauvegardes.
 name: Veille Supabase
 
 on:
@@ -64,3 +67,22 @@ jobs:
           else
             gh issue create --title "$title" --body "$body"
           fi
+
+  activite:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Garder les tâches programmées actives
+        run: |
+          set -euo pipefail
+          age=$(( ( $(date +%s) - $(git log -1 --format=%ct) ) / 86400 ))
+          echo "Dernière modification du dépôt il y a $age jour(s)."
+          if [ "$age" -lt 50 ]; then exit 0; fi
+          date -u +%Y-%m-%d > .github/derniere-activite.txt
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add .github/derniere-activite.txt
+          git commit -m "Garder les tâches automatiques actives [skip ci]"
+          git push origin "HEAD:$GITHUB_REF_NAME"
