@@ -8,7 +8,7 @@
 @implements IDisposable
 
 <div class="page-head">
-    <p>Personnalisez l'application et gérez vos données locales.</p>
+    <p>Personnalisez l'application, votre affichage et les données de la communauté.</p>
 </div>
 
 @{
@@ -72,34 +72,27 @@
             <span class="field-hint">Touchez le logo pour l'agrandir.</span>
         </div>
         <div class="form-group">
-            <label for="st-theme">Thème (pour tous)</label>
-            <select id="st-theme" value="@_theme" @onchange="OnThemeChanged">
-                <option value="light">Clair</option>
-                <option value="dark">Sombre</option>
-            </select>
-        </div>
-        <div class="form-group">
             <label>Couleur d'accent</label>
             <div class="color-swatches">
-                @foreach (var c in AccentColors)
+                @foreach (var (c, nom) in CouleursAccent.Toutes)
                 {
-                    <button type="button" class="color-swatch @(c == _color ? "selected" : "")"
-                            style="background:@c" title="@c" @onclick="() => SelectAccentAsync(c)"></button>
+                    <button type="button" class="color-swatch @(string.Equals(c, _color, StringComparison.OrdinalIgnoreCase) ? "selected" : "")"
+                            style="background:@c" title="@nom" aria-label="@nom" @onclick="() => SelectAccentAsync(c)"></button>
                 }
+                <label class="color-swatch color-custom" title="Autre couleur">
+                    <input type="color" value="@_color" aria-label="Choisir une autre couleur" @onchange="e => SelectAccentAsync(e.Value?.ToString() ?? _color)" />
+                </label>
             </div>
         </div>
     }
-    else
-    {
-        <div class="form-group">
-            <label for="st-theme-perso">Mon thème (personnel)</label>
-            <select id="st-theme-perso" value="@_theme" @onchange="OnPersonalThemeChanged">
-                <option value="light">Clair</option>
-                <option value="dark">Sombre</option>
-            </select>
-            <span class="field-hint">Votre choix uniquement : il ne change pas le thème des autres utilisateurs.</span>
-        </div>
-    }
+    <div class="form-group">
+        <label for="st-theme-perso">Mon thème (personnel)</label>
+        <select id="st-theme-perso" value="@_theme" @onchange="OnPersonalThemeChanged">
+            <option value="light">Clair</option>
+            <option value="dark">Sombre</option>
+        </select>
+        <span class="field-hint">Votre choix uniquement : il ne change pas le thème des autres membres. Clair par défaut.</span>
+    </div>
     <div class="appearance-preview @(_theme == "dark" ? "preview-dark" : "preview-light")" style="--preview-accent:@_color">
         <span class="appearance-preview-dot"></span>
         <div><strong>Aperçu instantané</strong><span>Thème @_theme · couleur d'accent</span></div>
@@ -215,6 +208,25 @@
             </div>
             <span class="field-hint">Format standard : 85 × 55 mm. Appliqué au PDF et à l'impression.</span>
         </div>
+        <div class="form-group">
+            <label for="st-matricule">Format du matricule</label>
+            <input id="st-matricule" type="text" value="@_matriculeFormat" maxlength="30"
+                   placeholder="Ex : M-{NNNN}"
+                   @oninput="e => _matriculeFormat = e.Value?.ToString() ?? string.Empty" />
+            <span class="field-hint">Codes : {NNNN} numéro (un N par chiffre), {AAAA} ou {AA} année d'adhésion, {MM} mois, {INI} initiales. Laissez vide pour saisir les matricules à la main.</span>
+            @if (DataStore.ValiderFormatMatricule(_matriculeFormat) is { } errFormat)
+            {
+                <span class="form-error">@errFormat</span>
+            }
+            else if (!string.IsNullOrWhiteSpace(_matriculeFormat))
+            {
+                <span class="field-hint">Prochain matricule : <strong>@Store.ApercuMatricule(_matriculeFormat)</strong></span>
+            }
+            @if (_sansMatricule > 0 && !string.IsNullOrWhiteSpace(Store.Settings.MatriculeFormat) && Store.Can(Permissions.UsersManage))
+            {
+                <button type="button" class="btn btn-secondary btn-sm" style="align-self:flex-start;margin-top:6px" @onclick="AttribuerMatricules">Attribuer un matricule aux @_sansMatricule fiche(s) sans matricule</button>
+            }
+        </div>
         <div class="form-actions">
             <button class="btn btn-primary" @onclick="SaveAppearance" disabled="@_saving">Enregistrer</button>
         </div>
@@ -316,38 +328,8 @@
     </div>
 }
 
-@if (Store.IsAdmin)
-{
-    @if (_dangerUnlocked)
-    {
-        <div class="card settings-card settings-card-danger" style="border-color:var(--danger)">
-            <span class="card-corner" aria-hidden="true"></span>
-            <div class="inline-actions" style="justify-content:space-between">
-                <div class="settings-card-head" style="margin:0">
-                    <span class="settings-deco settings-deco-danger" aria-hidden="true">⚠</span>
-                    <h3 style="color:var(--danger)">Zone dangereuse</h3>
-                </div>
-                <button type="button" class="btn btn-secondary btn-sm" @onclick="LockDangerZone">Masquer</button>
-            </div>
-            <p class="muted">Réinitialise les données locales. Les comptes de départ seront « admin » et « dba ».</p>
-            <div class="form-actions">
-                <button class="btn btn-danger" @onclick="() => _confirmReset = true">Réinitialiser toutes les données</button>
-            </div>
-        </div>
-    }
-    else
-    {
-        <div class="card danger-unlock settings-card settings-card-danger">
-            <span class="card-corner" aria-hidden="true"></span>
-            <div class="settings-card-head">
-                <span class="settings-deco settings-deco-danger" aria-hidden="true">🛡</span>
-                <h3 style="color:var(--danger)">Zone dangereuse masquée</h3>
-            </div>
-            <p class="muted">Saisissez le mot de passe de l'administrateur connecté pour afficher les actions sensibles.</p>
-            <button class="btn btn-danger-outline" @onclick="OpenDangerUnlock">Afficher la zone dangereuse</button>
-        </div>
-    }
-}
+@* La zone dangereuse (réinitialisation des données) n'existe pas en ligne : elle
+   effacerait les données partagées de tous les membres et désactiverait leurs comptes. *@
 
 <div class="card logout-card">
     <button class="btn btn-danger-outline btn-block" @onclick="AskLogout">
@@ -384,27 +366,9 @@
     </FooterContent>
 </Modal>
 
-<ConfirmDialog Show="_confirmReset" Title="Réinitialiser l'application"
-               Message="Toutes les données locales seront supprimées puis les comptes admin et dba seront recréés. Continuer ?"
-               ConfirmLabel="Réinitialiser" Danger="true" OnConfirm="DoReset" OnCancel="() => _confirmReset = false" />
-
 <ConfirmDialog Show="_confirmLogout" Title="Déconnexion"
                Message="Voulez-vous vraiment vous déconnecter ?"
                ConfirmLabel="Se déconnecter" Danger="true" OnConfirm="ConfirmLogout" OnCancel="() => _confirmLogout = false" />
-
-<Modal Title="Déverrouiller la zone dangereuse" Show="_showDangerUnlock" OnClose="CloseDangerUnlock">
-    <ChildContent>
-        <div class="form-group">
-            <label for="danger-password">Mot de passe administrateur</label>
-            <input id="danger-password" type="password" value="@_dangerPassword" @oninput="e => _dangerPassword = e.Value?.ToString() ?? string.Empty" @onkeydown="OnDangerPasswordKeyDown" />
-            <span class="form-error">@_dangerError</span>
-        </div>
-    </ChildContent>
-    <FooterContent>
-        <button type="button" class="btn btn-secondary" @onclick="CloseDangerUnlock">Annuler</button>
-        <button type="button" class="btn btn-danger" @onclick="UnlockDangerZone">Afficher</button>
-    </FooterContent>
-</Modal>
 
 <Modal Title="" Show="_logoPreview" OnClose="() => _logoPreview = false">
     <ChildContent>
@@ -422,10 +386,6 @@
 </Modal>
 
 @code {
-    private static readonly string[] AccentColors =
-    {
-        "#4f46e5", "#0891b2", "#059669", "#d97706", "#dc2626", "#7c3aed", "#0ea5e9"
-    };
 
     private string _name = "Gestion des utilisateurs";    private string _theme = "light";
     private string _color = "#4f46e5";
@@ -438,6 +398,15 @@
     private string _logo = "";
     private string _carteSlogan = "";
     private string _carteCitation = "";
+    private string _matriculeFormat = "";
+    private int _sansMatricule => Store.Users.Count(u => string.IsNullOrWhiteSpace(u.Matricule));
+
+    private void AttribuerMatricules()
+    {
+        var (res, n) = Store.AttribuerMatriculesManquants();
+        if (res.Success) State.NotifySuccess(n + " matricule(s) attribué(s).");
+        else State.NotifyError(res.Error);
+    }
     private int _carteLargeurMm = 85;
     private int _carteHauteurMm = 55;
     private bool _saving;
@@ -638,11 +607,6 @@
 
     private bool ConseilsActifs => Store.GetEffectiveConseils(Store.GetCurrentUser()?.Identifiant);
 
-    private bool _confirmReset;
-    private bool _dangerUnlocked;
-    private bool _showDangerUnlock;
-    private string _dangerPassword = "";
-    private string _dangerError = "";
     private bool _showRestore;
     private string _restoreError = "";
     private List<UserAccount>? _pendingImport;
@@ -658,6 +622,7 @@
         _logo = s.Logo;
         _carteSlogan = s.CarteSlogan;
         _carteCitation = s.CarteCitation;
+        _matriculeFormat = s.MatriculeFormat ?? "";
         _carteLargeurMm = s.CarteLargeurMm > 0 ? s.CarteLargeurMm : 85;
         _carteHauteurMm = s.CarteHauteurMm > 0 ? s.CarteHauteurMm : 55;
         _sessionTimeout = s.SessionTimeoutMinutes;
@@ -739,40 +704,13 @@
         if (e.Key is "Enter" or " ") GoProfile();
     }
 
-    private void OpenDangerUnlock()
-    {
-        _dangerError = "";
-        _dangerPassword = "";
-        _showDangerUnlock = true;
-    }
-
-    private void CloseDangerUnlock()
-    {
-        _showDangerUnlock = false;
-        _dangerPassword = "";
-        _dangerError = "";
-    }
-
-    private void UnlockDangerZone()
-    {
-        if (!Store.VerifyPassword(_dangerPassword))
-        {
-            _dangerError = "Mot de passe incorrect.";
-            return;
-        }
-        _dangerUnlocked = true;
-        CloseDangerUnlock();
-    }
-
-    private void LockDangerZone() => _dangerUnlocked = false;
-
-    private void OnDangerPasswordKeyDown(KeyboardEventArgs e)
-    {
-        if (e.Key == "Enter") UnlockDangerZone();
-    }
-
     private async Task SaveAppearance()
     {
+        if (DataStore.ValiderFormatMatricule(_matriculeFormat) is { } errFormat)
+        {
+            State.NotifyError(errFormat);
+            return;
+        }
         _saving = true;
         try
         {
@@ -788,6 +726,7 @@
                 Logo = _logo,
                 CarteSlogan = _carteSlogan.Trim(),
                 CarteCitation = _carteCitation.Trim(),
+                MatriculeFormat = _matriculeFormat.Trim(),
                 CarteLargeurMm = Math.Clamp(_carteLargeurMm, 50, 150),
                 CarteHauteurMm = Math.Clamp(_carteHauteurMm, 30, 100),
                 SessionTimeoutMinutes = _sessionTimeout,
@@ -802,7 +741,7 @@
                 ThemesUtilisateurs = new Dictionary<string, string>(prev.ThemesUtilisateurs ?? new Dictionary<string, string>()),
                 ConseilsUtilisateurs = new Dictionary<string, bool>(prev.ConseilsUtilisateurs ?? new Dictionary<string, bool>())
             });
-            await Js.ApplySettingsAsync(Store.Settings);
+            await Js.ApplySettingsAsync(Store.SettingsAffichees());
             _quotaDirty = false;
             State.NotifySuccess("Paramètres enregistrés.");
         }
@@ -882,14 +821,6 @@
         _showRestore = false;
         _pendingImport = null;
         State.NotifySuccess(count + " utilisateur(s) ajouté(s) à l'annuaire.");
-    }
-
-    private void DoReset()
-    {
-        _confirmReset = false;
-        Store.ResetAll();
-        _ = Js.ApplySettingsAsync(Store.Settings);
-        State.NotifySuccess("Les données ont été réinitialisées.");
     }
 
     private static string ExportFileName(string stem) => stem + "-" + DateTime.Now.ToString("dd-MM-yyyy_HH-mm-ss") + ".xlsx";

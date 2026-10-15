@@ -33,7 +33,7 @@ else
                     <span class="perm-label"></span>
                     @foreach (var role in Roles.MatrixRoles)
                     {
-                        <span class="perm-cell perm-role">@role</span>
+                        <span class="perm-cell perm-role" title="@role"><span class="perm-role-full">@role</span><span class="perm-role-short" aria-hidden="true">@RoleCourt(role)</span></span>
                     }
                 </div>
                 @foreach (var def in defs)
@@ -132,4 +132,13 @@ else
     }
 
     public void Dispose() => Store.DataChanged -= Refresh;
+
+    /// <summary>Nom court des rôles pour l'en-tête du tableau sur téléphone.</summary>
+    private static string RoleCourt(string role) => role switch
+    {
+        Roles.Administrateur => "Admin",
+        Roles.Gestionnaire => "Gestion.",
+        Roles.Utilisateur => "Membre",
+        _ => role
+    };
 }

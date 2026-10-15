@@ -68,7 +68,7 @@ public class AutoExportService
             var label = "Export automatique mensuel (" + month + ") : "
                 + (jsonPath ?? jsonName) + " + " + (excelPath ?? excelName);
             LastResult = label;
-            if (!silent) _state.NotifySuccess("Sauvegarde mensuelle enregistrée dans Téléchargements.");
+            if (!silent) _state.NotifySuccess("Export enregistré dans vos Téléchargements (fichiers JSON et Excel).");
             return true;
         }
         catch (Exception ex)

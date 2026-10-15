@@ -11,7 +11,8 @@ else if (_viewMode == ViewMode.Detail)
 {
     <UserDetailPage UserId="@_detailUserId"
                     OnBack="@(() => { _viewMode = ViewMode.List; _detailUserId = null; StateHasChanged(); })"
-                    OnEdit="@(id => OpenEdit(id))" />
+                    OnEdit="@(id => OpenEdit(id))"
+                    OnOpenUser="@(id => { _detailUserId = id; StateHasChanged(); })" />
 }
 else
 {
@@ -41,6 +42,14 @@ else
         </div>
     </div>
 
+    @if (CanMerge && _doublons.Count > 0)
+    {
+        <div class="dup-banner" role="status">
+            <span>⚠ @_doublons.Count groupe(s) de fiches en double possible(s).</span>
+            <button class="btn btn-secondary btn-sm" @onclick="() => _doublonsOpen = true">Vérifier</button>
+        </div>
+    }
+
     @if (_filtered.Count == 0)
     {
         <EmptyState Icon="☺" Title="Aucun utilisateur trouvé" Message="Essayez de modifier vos filtres ou ajoutez un nouvel utilisateur." />
@@ -69,6 +78,10 @@ else
                         <div class="user-card-meta">
                             <Badge Text="@u.Role" Kind="role" />
                             <Badge Text="@u.Statut" Kind="@(u.Actif ? "active" : "inactive")" />
+                            @if (u.EstMineur)
+                            {
+                                <span class="badge badge-minor">Mineur</span>
+                            }
                         </div>
                     </div>
                     @if (CanManage)
@@ -197,6 +210,39 @@ else
                    OnCancel="@(() => _confirm = _confirm with { Show = false })" />
 
     <PhotoViewer Current="@_viewer" OnClose="@(() => _viewer = null)" />
+
+    <Modal Show="_doublonsOpen" Title="Fiches en double possibles" OnClose="() => _doublonsOpen = false">
+        <p class="text-muted dup-help">Choisissez la fiche à garder : les autres y sont fusionnées. Leurs cotisations, prêts, tâches, messages, réunions, votes, documents et événements passent sur la fiche gardée. Un compte en ligne est toujours conservé.</p>
+        @if (_doublons.Count == 0)
+        {
+            <p>Aucun doublon à vérifier.</p>
+        }
+        @foreach (var g in _doublons)
+        {
+            var groupe = g;
+            var cle = CleGroupe(groupe);
+            var garder = _garder.TryGetValue(cle, out var gid) ? gid : groupe.Membres[0].Id;
+            <div class="dup-group">
+                <div class="dup-reason">@groupe.Raison</div>
+                @foreach (var m in groupe.Membres)
+                {
+                    var membre = m;
+                    <label class="dup-member">
+                        <input type="radio" name="@("dup-" + cle)" checked="@(membre.Id == garder)" @onchange="() => _garder[cle] = membre.Id" />
+                        <span class="dup-member-text">
+                            <strong>@membre.NomComplet</strong>
+                            <small>@membre.Identifiant@(string.IsNullOrWhiteSpace(membre.Email) ? "" : " · " + membre.Email)@(string.IsNullOrWhiteSpace(membre.Telephone) ? "" : " · " + membre.Telephone)</small>
+                            <small>Créée le @DataStore.FormatDateCourte(membre.DateCreation)@(DataStore.EstCompteEnLigne(membre) ? " · compte en ligne" : "")</small>
+                        </span>
+                    </label>
+                }
+                <div class="inline-actions dup-actions">
+                    <button class="btn btn-secondary btn-sm" @onclick="() => PasDoublon(groupe)">Ce ne sont pas des doublons</button>
+                    <button class="btn btn-primary btn-sm" @onclick="() => AskFusion(groupe, garder)">Fusionner</button>
+                </div>
+            </div>
+        }
+    </Modal>
 }
 
 @code {
@@ -213,6 +259,11 @@ else
 
     private bool IsAdmin => Store.IsAdmin;
     private bool CanManage => Store.IsManager;
+    private bool CanMerge => Store.Can(Permissions.UsersManage);
+
+    private IReadOnlyList<DataStore.DoublonGroupe> _doublons = Array.Empty<DataStore.DoublonGroupe>();
+    private readonly Dictionary<string, string> _garder = new();
+    private bool _doublonsOpen;
 
     private string _search = "";
     private readonly HashSet<string> _statusFilter = new();
@@ -331,6 +382,8 @@ else
 
     private void Recompute()
     {
+        _doublons = CanMerge ? Store.GroupesDeDoublons() : Array.Empty<DataStore.DoublonGroupe>();
+        if (_doublons.Count == 0) _doublonsOpen = false;
         var q = _search.Trim().ToLowerInvariant();
         IEnumerable<UserAccount> query = Store.Users;
 
@@ -650,6 +703,43 @@ else
         var res = Store.ResetPassword(id);
         State.Notify(res.Success ? $"Mot de passe réinitialisé : « {DataStore.DEFAULT_PASSWORD} »." : "Erreur : " + res.Error,
             res.Success ? "success" : "error");
+    }
+
+    private static string CleGroupe(DataStore.DoublonGroupe g)
+        => string.Join("|", g.Membres.Select(m => m.Id).OrderBy(i => i, StringComparer.Ordinal));
+
+    private void PasDoublon(DataStore.DoublonGroupe g)
+    {
+        var res = Store.MarquerPasDoublon(g.Membres.Select(m => m.Id));
+        if (res.Success) State.NotifySuccess("Ces fiches ne seront plus signalées.");
+        else State.NotifyError(res.Error ?? "Action impossible.");
+    }
+
+    private void AskFusion(DataStore.DoublonGroupe g, string garderId)
+    {
+        var garder = g.Membres.FirstOrDefault(m => m.Id == garderId);
+        if (garder == null) return;
+        var autres = g.Membres.Where(m => m.Id != garderId).ToList();
+        _doublonsOpen = false; // la confirmation s'affiche à la place de la liste
+        _confirm = new ConfirmState(true, "Fusionner les fiches",
+            $"Garder « {garder.NomComplet} » ({garder.Identifiant}) et y fusionner : {string.Join(", ", autres.Select(a => a.NomComplet + " (" + a.Identifiant + ")"))}.\nLes fiches fusionnées seront supprimées. Cette action est définitive.",
+            "Fusionner", true, () => ExecuteFusion(garderId, autres.Select(a => a.Id).ToList()));
+    }
+
+    private void ExecuteFusion(string garderId, List<string> retirerIds)
+    {
+        _confirm = ConfirmState.Hidden();
+        var id = garderId;
+        foreach (var r in retirerIds)
+        {
+            var avant = Store.FindUser(id);
+            var res = Store.FusionnerUtilisateurs(id, r);
+            if (!res.Success) { State.NotifyError(res.Error ?? "Fusion impossible."); return; }
+            // La fiche gardée peut avoir pris l'identifiant du compte en ligne.
+            if (Store.FindUser(id) == null)
+                id = Store.Users.FirstOrDefault(u => u.Identifiant == avant?.Identifiant)?.Id ?? id;
+        }
+        State.NotifySuccess(retirerIds.Count > 1 ? "Fiches fusionnées." : "Fiches fusionnées en une seule.");
     }
 
     public void Dispose()

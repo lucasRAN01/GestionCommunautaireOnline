@@ -38,8 +38,8 @@ public class DataStoreWave3Tests
             Periode = "2026", Date = "2026-01-15", Statut = CotisationStatuts.Payee
         }).Success);
         Assert.Equal(5000, store.TotalCotisations("2026"));
-        Assert.DoesNotContain(store.ImpayesCotisations("2026"), u => u.Identifiant == "admin");
-        Assert.Contains(store.ImpayesCotisations("2026"), u => u.Identifiant == "dba");
+        // Aucun impayé tant qu'aucune cotisation attendue n'est configurée.
+        Assert.Empty(store.ImpayesCotisations("2026"));
 
         Assert.False(store.AddCotisation(new Cotisation { MembreIdentifiant = "fantome", Montant = 100 }).Success);
         Assert.False(store.AddCotisation(new Cotisation { MembreIdentifiant = "admin", Montant = 0 }).Success);
@@ -53,6 +53,36 @@ public class DataStoreWave3Tests
             Type = TresorerieTypes.Sortie, Montant = 7500, Motif = "Location salle", Date = "2026-02-10"
         }).Success);
         Assert.Equal(12500, store.SoldeTresorerie());
+    }
+
+    [Fact]
+    public void Finances_ImpayesConfigures_EtEncaissement()
+    {
+        var store = NewStore();
+        LoginAdmin(store);
+        var (res, ajoutes, ignores) = store.AddCotisationsEnAttente(new[] { "admin", "dba", "fantome" }, 5000, "Annuelle", "2026");
+        Assert.True(res.Success, res.Error);
+        Assert.Equal(2, ajoutes);
+        Assert.Equal(1, ignores);
+        Assert.Equal(2, store.ImpayesCotisations("2026").Count);
+        Assert.Empty(store.ImpayesCotisations("2025"));
+
+        // Pas de doublon pour le même motif et la même période.
+        var again = store.AddCotisationsEnAttente(new[] { "admin" }, 5000, "annuelle", "2026");
+        Assert.Equal(0, again.Ajoutes);
+
+        var cot = store.CotisationsEnAttente("2026").Single(c => c.MembreIdentifiant == "admin");
+        Assert.True(store.EncaisserCotisation(cot.Id, "2026-03-01", ajouterTresorerie: true).Success);
+        Assert.DoesNotContain(store.ImpayesCotisations("2026"), u => u.Identifiant == "admin");
+        Assert.Equal(5000, store.TotalCotisations("2026"));
+        Assert.Equal(5000, store.SoldeTresorerie());
+        Assert.False(store.EncaisserCotisation(cot.Id, null, false).Success);
+
+        var dbaCot = store.CotisationsEnAttente("2026").Single();
+        Assert.True(store.UpdateCotisation(new Cotisation { Id = dbaCot.Id, Montant = 3000, Motif = "Annuelle", Periode = "2026", Statut = CotisationStatuts.EnAttente }).Success);
+        Assert.Equal(3000, store.CotisationsEnAttente("2026").Single().Montant);
+        Assert.True(store.DeleteCotisation(dbaCot.Id).Success);
+        Assert.Empty(store.ImpayesCotisations("2026"));
     }
 
     [Fact]

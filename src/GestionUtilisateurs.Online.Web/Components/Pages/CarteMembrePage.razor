@@ -59,6 +59,10 @@ else
                                 <div class="cmc-name">@user.NomComplet</div>
                                 <div class="cmc-status @(isActive ? "is-active" : "is-suspended")">
                                     <span class="cmc-dot" aria-hidden="true"></span>@(isActive ? "Membre actif" : "Carte suspendue")
+                                    @if (user.EstMineur)
+                                    {
+                                        <span class="cmc-minor">Mineur</span>
+                                    }
                                 </div>
                                 @if (!string.IsNullOrWhiteSpace(memberCode))
                                 {
@@ -91,6 +95,11 @@ else
                         <blockquote class="cmc-quote">@Store.Settings.CarteCitation</blockquote>
                     }
                     <p class="cmc-usage">Carte personnelle et non transférable. Elle doit être présentée lors des activités de la communauté. En cas de perte ou de vol, veuillez en informer l'administration.</p>
+                    @if (user.EstMineur)
+                    {
+                        var (respNom, respTel) = Store.ResponsableAffiche(user);
+                        <p class="cmc-guardian"><span>Responsable légal</span> @(string.IsNullOrWhiteSpace(respNom) ? "non renseigné" : respNom)@(string.IsNullOrWhiteSpace(respTel) ? "" : " · " + respTel)</p>
+                    }
                     <div class="cmc-back-foot">
                         @if (!string.IsNullOrWhiteSpace(memberCode))
                         {
@@ -328,6 +337,8 @@ else
             + ".foot{display:flex;justify-content:space-between;align-items:flex-end;gap:18px;gap:3.5cqw;position:absolute;left:24px;right:24px;left:4.6cqw;right:4.6cqw;bottom:22px;bottom:4.2cqw}"
             + ".sign span{display:block;font-size:10.5px;font-size:2cqw;text-transform:uppercase;letter-spacing:.06em;color:#41506b;margin-bottom:4px;margin-bottom:.8cqw}"
             + ".sign img{max-width:150px;max-height:60px;max-width:29cqw;max-height:11.5cqw}"
+            + ".minor{display:inline-block;margin-left:6px;padding:1px 7px;border-radius:999px;background:#fef3c7;color:#92400e;font-size:10px;font-weight:700}"
+            + ".guardian{margin:4px 0 0;font-size:11px;color:#0b2a6b}.guardian span{font-weight:700;margin-right:4px}"
             + ".signline{border-bottom:1.5px solid #0b2a6b;width:150px;width:29cqw;height:38px;height:7.3cqw}"
             + "</style></head><body>";
     }
@@ -346,7 +357,7 @@ else
             + "<div class=\"brand\"><strong>" + H(appName) + "</strong><span>" + H(slogan) + "</span></div></div>"
             + "<div class=\"body\"><div class=\"id\"><div class=\"photo\">" + (string.IsNullOrWhiteSpace(photo) ? H(Initials(user)) : "<img src=\"" + photo + "\" alt=\"\" />") + "</div>"
             + "<div class=\"idtext\"><div class=\"name\">" + H(user.NomComplet) + "</div>"
-            + "<div class=\"status\"><span class=\"dot\"></span>" + (user.Actif ? "Membre actif" : "Carte suspendue") + "</div>"
+            + "<div class=\"status\"><span class=\"dot\"></span>" + (user.Actif ? "Membre actif" : "Carte suspendue") + (user.EstMineur ? "<span class=\"minor\">Mineur</span>" : "") + "</div>"
             + (string.IsNullOrWhiteSpace(memberCode) ? "" : "<div class=\"field\"><span>Matricule</span>" + H(memberCode) + "</div>")
             + "<div class=\"field\"><span>Adhésion</span>" + H(DataStore.FormatDateCourte(user.DateCreation)) + "</div></div></div>"
             + "<div class=\"qr\"><img src=\"" + QrPng(user, memberCode) + "\" alt=\"QR code de la fiche contact\" /><span>Scanner pour identifier le membre</span></div></div></div>";
@@ -360,11 +371,13 @@ else
         var appName = Store.Settings.AppName;
         var citation = Store.Settings.CarteCitation;
         var signature = user.Signature ?? "";
+        var resp = Store.ResponsableAffiche(user);
         return "<div class=\"card back\"><span class=\"wave\" style=\"background:rgba(30,79,176,.08)\"></span>"
             + "<div class=\"head\"><div class=\"logo\">" + (string.IsNullOrWhiteSpace(logo) ? "GU" : "<img src=\"" + logo + "\" alt=\"\" />") + "</div>"
             + "<div class=\"brand\"><strong>" + H(appName) + "</strong></div></div>"
             + (string.IsNullOrWhiteSpace(citation) ? "" : "<blockquote class=\"quote\">" + H(citation) + "</blockquote>")
             + "<p class=\"usage\">Carte personnelle et non transférable. Elle doit être présentée lors des activités de la communauté. En cas de perte ou de vol, veuillez en informer l'administration.</p>"
+            + (user.EstMineur ? "<p class=\"guardian\"><span>Responsable légal</span> " + H(string.IsNullOrWhiteSpace(resp.Nom) ? "non renseigné" : resp.Nom) + (string.IsNullOrWhiteSpace(resp.Telephone) ? "" : " · " + H(resp.Telephone)) + "</p>" : "")
             + "<div class=\"foot\">" + (string.IsNullOrWhiteSpace(memberCode) ? "" : "<div class=\"field\"><span>N° de membre</span><strong>" + H(memberCode) + "</strong></div>")
             + "<div class=\"sign\"><span>Signature du membre</span>" + (string.IsNullOrWhiteSpace(signature) ? "<div class=\"signline\"></div>" : "<img src=\"" + signature + "\" alt=\"\" />") + "</div></div></div>";
     }

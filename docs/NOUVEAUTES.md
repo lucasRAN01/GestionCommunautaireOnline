@@ -4,6 +4,48 @@ Les nouveautés de la version en ligne, de la plus récente à la plus ancienne.
 Après chaque mise à jour, le site affiche un bandeau « Nouvelle version
 disponible » : un clic sur **Mettre à jour** suffit.
 
+## 15 octobre 2026 (soir)
+
+**Finances**
+- Les impayés ne sont plus créés automatiquement pour tous les membres :
+  « ＋ Impayés » choisit les membres, le montant, le motif et la période.
+- « Encaisser » règle une cotisation en attente, avec l'entrée de trésorerie
+  en option ; une cotisation peut être modifiée.
+
+**Membres**
+- Doublons : l'application prévient avant d'ajouter une fiche qui existe
+  peut-être déjà, propose de relier une inscription à la fiche existante, et
+  la liste des utilisateurs signale les fiches en double à fusionner.
+- Famille : chaque fiche peut relier parents, enfants, conjoint(e), frères et
+  sœurs ; grands-parents et petits-enfants s'affichent tout seuls.
+- Moins de 18 ans : badge « Mineur », responsable légal demandé (ou parent
+  relié), et indiqué sur la carte de membre.
+- Format du matricule réglable (ex. M-{NNNN}) dans Paramètres › Carte de
+  membre, attribué automatiquement aux nouveaux membres.
+- « Gestion de données » est ouverte aux administrateurs.
+
+**Affichage**
+- Thème clair par défaut ; chacun choisit le sien, même l'administrateur.
+- Vingt couleurs d'accent, plus une couleur libre.
+- « Administrateur » n'est plus coupé dans le tableau des rôles.
+
+**Corrections**
+- L'accueil ne plante plus quand un membre est né un 29 février.
+- Les filtres du calendrier s'appliquent de nouveau ; l'âge affiché est celui
+  fêté ce jour-là.
+- Modifier un membre depuis « Gestion de données » n'efface plus sa photo, sa
+  signature ni ses champs.
+- Restaurer un membre archivé lui rend l'accès à son compte en ligne.
+- Le journal d'activité ne s'efface plus quand un simple membre se connecte,
+  et affiche l'heure.
+- Un vote dont la date de clôture est passée apparaît clos ; corriger le texte
+  d'une option garde ses voix.
+- Un membre archivé ne bloque plus la modification des tâches, réunions et
+  conversations où il figurait.
+- Les mots de passe et la zone de réinitialisation hérités de l'application
+  hors ligne ont été retirés : les mots de passe se gèrent dans « Comptes en
+  ligne ».
+
 ## 15 octobre 2026 (suite)
 
 **Mini-guide de démarrage**

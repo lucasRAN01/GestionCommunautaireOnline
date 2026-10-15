@@ -1,6 +1,7 @@
 ﻿@inject DataStore Store
 @inject AppState State
 @inject NativeFileSaver Saver
+@implements IDisposable
 
 <div class="page-head">
     <p>Historique des opérations effectuées (les 500 dernières).</p>
@@ -65,10 +66,17 @@ else
     private bool _confirmClear;
     private IReadOnlyList<ActivityEntry> _list = new List<ActivityEntry>();
 
+    protected override void OnInitialized() => Store.DataChanged += OnDataChanged;
+
     protected override void OnParametersSet()
     {
         Refresh();
     }
+
+    // Les actions des autres membres arrivent avec l'actualisation automatique.
+    private void OnDataChanged() => _ = InvokeAsync(() => { Refresh(); StateHasChanged(); });
+
+    public void Dispose() => Store.DataChanged -= OnDataChanged;
 
     private void Refresh()
     {
@@ -142,7 +150,7 @@ else
         _ => "•"
     };
 
-    private static string FormatTimeAgo(string iso) => DataStore.FormatDateCourte(iso);
+    private static string FormatTimeAgo(string iso) => DataStore.FormatDateHeure(iso);
 
     private void ClearActivity()
     {

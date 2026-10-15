@@ -292,7 +292,7 @@
 
     <Modal Title="Espace de stockage utilisé" Show="_showStorage" CssClass="modal-storage" OnClose="() => _showStorage = false">
         <ChildContent>
-            <p class="muted" style="margin-top:0">Répartition du stockage local par source de données. Touchez une source pour voir le détail en popup.</p>
+            <p class="muted" style="margin-top:0">Répartition des données de la communauté par module. Touchez un module pour voir le détail.</p>
             <div class="storage-items">
                 @foreach (var item in _storageBreakdown)
                 {
@@ -553,6 +553,9 @@
         new("archive", "Archives des utilisateurs", "🗃", "menu-archive", () => Store.IsAdmin, () => Go("archive")),
         new("comptes", "Comptes en ligne", "👤", "menu-comptes", () => Store.Can(Permissions.UsersManage), () => Go("comptes")),
         new("capacite", "Capacité du serveur", "📊", "menu-storage", () => Store.IsAdmin, () => Go("capacite")),
+        // En ligne, aucun compte n'a le rôle technique « Administrateur de la base » :
+        // la gestion directe des données est ouverte aux administrateurs.
+        new("data", "Gestion de données", "🗄", "menu-data", () => Store.IsAdmin && !Store.IsBaseAdmin, () => Go("data")),
         new("documents", "Gestion documentaire", "📄", "menu-docs", () => !Store.IsBaseAdmin, () => Go("documents")),
         new("community", "Histoire de la communauté", "📖", "menu-community", () => true, () => Go("community")),
         new("roles", "Rôles et permissions", "🛡", "menu-roles", () => Store.Can(Permissions.RolesManage), () => Go("roles")),
@@ -655,7 +658,7 @@
                     n = Store.Reunions.Count(r => string.Compare(r.Date, todayR, StringComparison.Ordinal) >= 0);
                     break;
                 case "votes":
-                    n = Store.Votes.Count(v => v.Statut == VoteStatuts.Ouvert
+                    n = Store.Votes.Count(v => v.EstOuvert
                         && !v.Bulletins.Any(b => b.VotantIdentifiant.Equals(me, StringComparison.OrdinalIgnoreCase)));
                     break;
                 case "finances":
@@ -956,7 +959,7 @@
     {
         var today = DateTime.Today;
         _calKey = today.ToString("yyyy-MM-dd");
-        _calEventsToday = Store.Events.Count(e => e.Date == _calKey);
+        _calEventsToday = Store.Events.Count(e => CalendarPage.OccursOn(e, today));
         var abbr = today.ToString("dddd", Fr)[..3];
         _calWeekday = char.ToUpperInvariant(abbr[0]) + abbr[1..];
         _calDay = today.Day.ToString();

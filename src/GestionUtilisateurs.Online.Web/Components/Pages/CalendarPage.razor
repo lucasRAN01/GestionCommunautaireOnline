@@ -144,7 +144,7 @@ else
             <div class="cal-events">
                 @foreach (var evt in _dayAll)
                 {
-                    @RenderEventCard(evt)
+                    @RenderEventCard(evt, _selectedDay ?? DateTime.Today)
                 }
             </div>
         }
@@ -404,13 +404,13 @@ else
         <div class="divider-section">Utilisateurs</div>
         <div class="radio-row">
             <label class="radio-option">
-                <input type="radio" name="ev-user" checked="@(_userFilter == null)" @onchange="() => _userFilter = null" />
+                <input type="radio" name="ev-user" checked="@(_userFilter == null)" @onchange="() => { _userFilter = null; Compute(); }" />
                 Tous
             </label>
             @foreach (var u in Store.Users.Where(u => u.Actif).OrderBy(u => u.NomComplet))
             {
                 <label class="radio-option">
-                    <input type="radio" name="ev-user" checked="@(_userFilter == u.Identifiant)" @onchange="() => _userFilter = u.Identifiant" />
+                    <input type="radio" name="ev-user" checked="@(_userFilter == u.Identifiant)" @onchange="() => { _userFilter = u.Identifiant; Compute(); }" />
                     @u.NomComplet
                 </label>
             }
@@ -420,7 +420,7 @@ else
             @foreach (var (key, label) in PriorityFilterChoices)
             {
                 <label class="radio-option">
-                    <input type="radio" name="ev-prio" checked="@(_priorityFilter == key)" @onchange="() => _priorityFilter = key" />
+                    <input type="radio" name="ev-prio" checked="@(PriorityChecked(key))" @onchange="() => SetPriority(key)" />
                     @label
                 </label>
             }
@@ -428,7 +428,7 @@ else
     </div>
     <div class="form-actions filter-actions">
         <button type="button" class="btn btn-secondary" @onclick="ResetFilters">Réinitialiser</button>
-        <button type="button" class="btn btn-primary" @onclick="() => _filtersOpen = false">Appliquer les filtres</button>
+        <button type="button" class="btn btn-primary" @onclick="() => { _filtersOpen = false; Compute(); }">Appliquer les filtres</button>
     </div>
 </Modal>
 
@@ -762,7 +762,7 @@ else
             .ToList();
 
     /// <summary>Dit si un événement a lieu un jour donné (date exacte ou répétition).</summary>
-    private static bool OccursOn(CalendarEvent e, DateTime day)
+    internal static bool OccursOn(CalendarEvent e, DateTime day)
     {
         if (!TryDate(e.Date, out var d)) return false;
         if (d.Date == day.Date) return true;
@@ -778,7 +778,9 @@ else
             CalendarEventTypes.RepetitionQuotidienne => day.Date >= d.Date,
             CalendarEventTypes.RepetitionHebdomadaire => day.Date >= d.Date && (day.Date - d.Date).Days % 7 == 0,
             CalendarEventTypes.RepetitionMensuelle => day.Date >= d.Date && day.Day == d.Day,
-            CalendarEventTypes.RepetitionAnnuelle => day.Month == d.Month && day.Day == d.Day,
+            // Né un 29 février : fêté le 28 les années non bissextiles.
+            CalendarEventTypes.RepetitionAnnuelle => (day.Month == d.Month && day.Day == d.Day)
+                || (d.Month == 2 && d.Day == 29 && day.Month == 2 && day.Day == 28 && !DateTime.IsLeapYear(day.Year)),
             _ => false
         };
     }
@@ -978,7 +980,7 @@ else
         if (target == null) return;
         var result = Store.DeleteEvent(target.Id);
         if (result.Success)
-            State.NotifyError("Événement supprimé.");
+            State.NotifySuccess("Événement supprimé.");
         else
             State.NotifyError(result.Error);
     }
@@ -993,12 +995,22 @@ else
         Compute();
     }
 
+    private bool PriorityChecked(string key) => (_priorityFilter ?? string.Empty) == key;
+
+    /// <summary>« Toutes » (clé vide) retire le filtre au lieu de chercher une priorité vide.</summary>
+    private void SetPriority(string key)
+    {
+        _priorityFilter = string.IsNullOrEmpty(key) ? null : key;
+        Compute();
+    }
+
     private void ToggleType(string key)
     {
         if (!_typeFilter.Add(key)) _typeFilter.Remove(key);
+        Compute();
     }
 
-    private RenderFragment RenderEventCard(CalendarEvent e) => __builder =>
+    private RenderFragment RenderEventCard(CalendarEvent e, DateTime? jour = null) => __builder =>
     {
         var c = CalendarEventTypes.Color(e.Type);
         var (m, _) = TimeLabel(e);
@@ -1014,7 +1026,7 @@ else
                 }
                 @if (_draft_isAnniversaire(e.Type))
                 {
-                    var age = AgeLabel(e);
+                    var age = AgeLabel(e, jour);
                     if (age != "")
                     {
                         <div class="cal-card-meta">@age</div>
@@ -1321,13 +1333,14 @@ else
 
     private static string Soft(string hex) => hex.Length == 7 ? hex + "24" : hex;
 
-    private static string AgeLabel(CalendarEvent e)
+    /// <summary>Âge fêté le jour affiché (ou âge actuel dans la liste).</summary>
+    private static string AgeLabel(CalendarEvent e, DateTime? jour = null)
     {
         if (!TryDate(e.Date, out var birth)) return "";
-        var today = DateTime.Today;
-        var age = today.Year - birth.Year;
-        if (today < birth.AddYears(age)) age--;
-        return age < 0 ? "" : "🎂 " + age + " ans";
+        var ref_ = (jour ?? DateTime.Today).Date;
+        var age = ref_.Year - birth.Year;
+        if (ref_ < birth.AddYears(age)) age--;
+        return age <= 0 ? "" : "🎂 " + age + " ans";
     }
 
     private string UserName(string identifiant)

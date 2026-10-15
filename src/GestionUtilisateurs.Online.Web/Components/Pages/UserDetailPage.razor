@@ -15,9 +15,13 @@
             <div class="detail-badges">
                 <Badge Text="@_user.Role" Kind="role" />
                 <Badge Text="@_user.Statut" Kind="@(_user.Actif ? "active" : "inactive")" />
+                @if (_user.EstMineur)
+                {
+                    <span class="badge badge-minor">Mineur</span>
+                }
             </div>
         </div>
-        @if (Store.IsManager || SelfView)
+        @if (Store.Can(Permissions.UsersManage))
         {
             <button class="btn btn-primary detail-edit-btn" @onclick="() => OnEdit.InvokeAsync(_user.Id)">✎ Modifier</button>
         }
@@ -28,15 +32,84 @@
         <div class="kv-row"><span class="kv-label">E-mail</span><span class="kv-value">@(string.IsNullOrWhiteSpace(_user.Email) ? "—" : _user.Email)</span></div>
         <div class="kv-row"><span class="kv-label">Téléphone</span><span class="kv-value">@(string.IsNullOrWhiteSpace(_user.Telephone) ? "—" : _user.Telephone)</span></div>
         <div class="kv-row"><span class="kv-label">Matricule</span><span class="kv-value">@(string.IsNullOrWhiteSpace(_user.Matricule) ? "—" : _user.Matricule)</span></div>
+        @if (_user.EstMineur || !string.IsNullOrWhiteSpace(_user.ResponsableLegal))
+        {
+            var (respNom, respTel) = Store.ResponsableAffiche(_user);
+            <div class="kv-row"><span class="kv-label">Responsable légal</span><span class="kv-value">@(string.IsNullOrWhiteSpace(respNom) ? "À renseigner" : respNom)</span></div>
+            @if (!string.IsNullOrWhiteSpace(respTel))
+            {
+                <div class="kv-row"><span class="kv-label">Tél. du responsable</span><span class="kv-value">@respTel</span></div>
+            }
+        }
     </div>
+
+    var famille = Store.Famille(_user);
+    var peutGererFamille = Store.Can(Permissions.UsersManage);
+    @if (!famille.EstVide || peutGererFamille)
+    {
+        <div class="section family-section">
+            <h3>👪 Famille</h3>
+            @if (famille.EstVide)
+            {
+                <p class="text-muted family-empty">Aucun lien de famille. Reliez ses parents, enfants, conjoint(e) ou frères et sœurs déjà inscrits.</p>
+            }
+            @FamilleLigne("Parents", famille.Parents)
+            @FamilleLigne("Conjoint(e)", famille.Conjoints)
+            @FamilleLigne("Enfants", famille.Enfants)
+            @FamilleLigne("Frères et sœurs", famille.FreresSoeurs)
+            @FamilleLigne("Grands-parents", famille.GrandsParents)
+            @FamilleLigne("Petits-enfants", famille.PetitsEnfants)
+            @if (peutGererFamille)
+            {
+                <div class="form-actions" style="margin:8px 0 4px">
+                    <button class="btn btn-secondary btn-sm" @onclick="OuvrirLien">＋ Ajouter un lien de famille</button>
+                </div>
+            }
+        </div>
+    }
+
+    <Modal Show="_lienOpen" Title="Ajouter un lien de famille" OnClose="() => _lienOpen = false">
+        <div class="form-group">
+            <label for="fam-type">Lien</label>
+            <select id="fam-type" value="@_lienType" @onchange="e => _lienType = e.Value?.ToString() ?? LiensFamille.Parent">
+                <option value="@LiensFamille.Parent">Son parent (père, mère)</option>
+                <option value="@LiensFamille.Enfant">Son enfant</option>
+                <option value="@LiensFamille.Conjoint">Son conjoint ou sa conjointe</option>
+                <option value="@LiensFamille.Fratrie">Son frère ou sa sœur</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label for="fam-search">Membre</label>
+            <input id="fam-search" type="text" placeholder="Écrire pour chercher un membre…" value="@_lienSearch"
+                   @oninput="e => { _lienSearch = e.Value?.ToString() ?? string.Empty; _lienChoix = null; }" />
+            <div class="family-pick">
+                @foreach (var m in LienCandidats())
+                {
+                    var membre = m;
+                    <button type="button" class="family-pick-item @(_lienChoix == membre.Identifiant ? "active" : "")" @onclick="() => _lienChoix = membre.Identifiant">
+                        <Avatar UserName="@membre.NomComplet" Seed="@membre.Identifiant" Size="sm" Photo="@membre.Photo" />
+                        <span><strong>@membre.NomComplet</strong><small>@@@membre.Identifiant</small></span>
+                    </button>
+                }
+            </div>
+        </div>
+        @if (_lienChoix != null && Store.FindUserByIdentifier(_lienChoix) is { } choisi)
+        {
+            <p class="family-summary">@choisi.NomComplet sera indiqué(e) comme <strong>@LienPhrase(_lienType)</strong> de @_user.NomComplet.</p>
+        }
+        <div class="form-actions">
+            <button class="btn btn-secondary" @onclick="() => _lienOpen = false">Annuler</button>
+            <button class="btn btn-primary" disabled="@(_lienChoix == null)" @onclick="AjouterLien">Ajouter</button>
+        </div>
+    </Modal>
 
     <div class="section">
         <h3>Organisation</h3>
         <div class="kv-row"><span class="kv-label">Rôle</span><span class="kv-value">@_user.Role</span></div>
         <div class="kv-row"><span class="kv-label">Créé le</span><span class="kv-value">@FormatDate(_user.DateCreation)</span></div>
-        @if (_user.Role != Roles.Utilisateur)
+        @if (!string.IsNullOrWhiteSpace(_user.DerniereConnexion))
         {
-            <div class="kv-row"><span class="kv-label">Dernière connexion</span><span class="kv-value">@(_user.DerniereConnexion == null ? "Jamais" : FormatDate(_user.DerniereConnexion))</span></div>
+            <div class="kv-row"><span class="kv-label">Dernière connexion</span><span class="kv-value">@FormatDate(_user.DerniereConnexion)</span></div>
         }
     </div>
 
@@ -156,10 +229,6 @@
                     {
                         <button class="btn btn-secondary" @onclick="AskToggle">@(_user.Actif ? "⛔ Désactiver" : "✓ Activer")</button>
                     }
-                    @if (_user.Role != Roles.Utilisateur)
-                    {
-                        <button class="btn btn-secondary" @onclick="AskReset">🔑 Réinitialiser le mot de passe</button>
-                    }
                     @if (Store.Can(Permissions.CarteMembreView))
                     {
                         <button class="btn btn-secondary" @onclick="OpenCarte">🪪 Voir la carte de membre</button>
@@ -176,7 +245,7 @@
             <div class="section">
                 <h3>Actions</h3>
                 <div class="form-actions">
-                    <button class="btn btn-primary btn-block" @onclick="() => OnEdit.InvokeAsync(_user.Id)">✎ Modifier mes informations</button>
+                    <p class="text-muted" style="margin:0 0 8px">Pour corriger vos informations, demandez à un gestionnaire. Votre mot de passe se change depuis votre avatar, en haut.</p>
                     @if (Store.Can(Permissions.CarteMembreView))
                     {
                         <button class="btn btn-secondary btn-block" @onclick="OpenCarte">🪪 Voir ma carte de membre</button>
@@ -236,6 +305,92 @@ else
     [Parameter] public EventCallback OnBack { get; set; }
     [Parameter] public EventCallback<string> OnEdit { get; set; }
     [Parameter] public bool SelfView { get; set; }
+    /// <summary>Ouvre la fiche d'un autre membre (lien de famille).</summary>
+    [Parameter] public EventCallback<string> OnOpenUser { get; set; }
+
+    private bool _lienOpen;
+    private string _lienType = LiensFamille.Parent;
+    private string _lienSearch = "";
+    private string? _lienChoix;
+
+    private RenderFragment FamilleLigne(string titre, IReadOnlyList<UserAccount> membres) => __builder =>
+    {
+        if (membres.Count == 0) return;
+        <div class="kv-row family-row">
+            <span class="kv-label">@titre</span>
+            <span class="kv-value family-chips">
+                @foreach (var m in membres)
+                {
+                    var membre = m;
+                    var direct = _user != null && Store.LienEntre(_user, membre.Identifiant) != null;
+                    <span class="family-chip">
+                        <button type="button" class="family-chip-name" @onclick="() => OuvrirMembre(membre)">@membre.NomComplet</button>
+                        @if (direct && Store.Can(Permissions.UsersManage))
+                        {
+                            <button type="button" class="family-chip-x" aria-label="Retirer le lien avec @membre.NomComplet" @onclick="() => AskRetirerLien(membre)">✕</button>
+                        }
+                    </span>
+                }
+            </span>
+        </div>
+    };
+
+    private async Task OuvrirMembre(UserAccount m)
+    {
+        if (OnOpenUser.HasDelegate) await OnOpenUser.InvokeAsync(m.Id);
+        else State.NavigateToUser(m.Id);
+    }
+
+    private void OuvrirLien()
+    {
+        _lienType = LiensFamille.Parent;
+        _lienSearch = "";
+        _lienChoix = null;
+        _lienOpen = true;
+    }
+
+    private IEnumerable<UserAccount> LienCandidats()
+    {
+        if (_user == null) return Enumerable.Empty<UserAccount>();
+        var q = _lienSearch.Trim();
+        return Store.Users
+            .Where(u => u.Id != _user.Id && Store.LienEntre(_user, u.Identifiant) == null)
+            .Where(u => q.Length == 0 || (u.NomComplet + " " + u.Identifiant).Contains(q, StringComparison.CurrentCultureIgnoreCase))
+            .OrderBy(u => u.NomComplet, StringComparer.CurrentCultureIgnoreCase)
+            .Take(8);
+    }
+
+    private static string LienPhrase(string type) => type switch
+    {
+        LiensFamille.Parent => "parent",
+        LiensFamille.Enfant => "enfant",
+        LiensFamille.Conjoint => "conjoint(e)",
+        _ => "frère ou sœur"
+    };
+
+    private void AjouterLien()
+    {
+        if (_user == null || _lienChoix == null) return;
+        var res = Store.AjouterLienFamille(_user.Id, _lienChoix, _lienType);
+        if (!res.Success) { State.NotifyError(res.Error); return; }
+        _lienOpen = false;
+        State.NotifySuccess("Lien de famille ajouté.");
+    }
+
+    private void AskRetirerLien(UserAccount m)
+    {
+        if (_user == null) return;
+        var userId = _user.Id;
+        _confirm = new ConfirmState(true, "Retirer le lien de famille",
+            $"Retirer le lien entre « {_user.NomComplet} » et « {m.NomComplet} » ? Les deux fiches restent inchangées.",
+            "Retirer", true, () =>
+            {
+                _confirm = ConfirmState.Hidden();
+                var res = Store.RetirerLienFamille(userId, m.Identifiant);
+                if (res.Success) State.NotifySuccess("Lien retiré.");
+                else State.NotifyError(res.Error);
+            });
+    }
 
     private UserAccount? _user;
     private UserAccount? _viewer;

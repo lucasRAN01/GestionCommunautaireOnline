@@ -56,25 +56,27 @@ public static class HelpCatalog
                 {
                     "Recherchez immédiatement par nom, identifiant ou e-mail depuis le champ en haut.",
                     "Touchez un utilisateur pour ouvrir sa fiche détaillée (photo, signature, documents, cotisations…).",
-                    "« ＋ Ajouter » crée un nouveau compte : identifiant et rôle, avec mot de passe par défaut si laissé vide.",
-                    "Le bouton ⋮ d'une fiche permet de modifier, désactiver ou archiver le compte."
+                    "« ＋ Ajouter » crée une fiche (nom, contacts, matricule…). Pour se connecter, la personne crée elle-même son compte sur le site, puis un administrateur le valide.",
+                    "Le badge « Mineur » signale les moins de 18 ans : leur fiche demande le responsable légal.",
+                    "La section « Famille » d'une fiche relie parents, enfants, conjoint(e) et frères et sœurs ; grands-parents et petits-enfants s'en déduisent.",
+                    "Le bandeau « fiches en double possibles » propose de fusionner deux fiches de la même personne, ou de les marquer comme différentes."
                 }),
                 new HelpSection("Bon à savoir", new[]
                 {
                     "Un compte inactif ne peut plus se connecter mais reste consultable.",
+                    "Avant d'ajouter une fiche, l'application prévient si un membre porte déjà le même nom, e-mail, téléphone ou matricule.",
                     "Archiver range le compte dans « Archives des utilisateurs ». Supprimer est définitif."
                 })
             }),
         new("profile", "Mes informations", "👤",
-            "Votre propre fiche : modifiez vos coordonnées, votre photo, votre signature et votre mot de passe.",
+            "Votre propre fiche : vos coordonnées, votre photo, votre signature et votre carte de membre.",
             new[]
             {
                 new HelpSection("Comment faire", new[]
                 {
                     "Touchez le bouton en haut à droite (votre avatar) puis « Mes informations ».",
-                    "La photo de profil peut venir de la galerie ou d'une photo prise sur le moment.",
-                    "La signature se remplit via « Ouvrir » : écrivez ou dessinez, puis validez.",
-                    "Changez votre mot de passe depuis l'onglet dédié."
+                    "Pour corriger vos coordonnées, votre photo ou votre signature, demandez à un gestionnaire.",
+                    "Changez votre mot de passe depuis votre avatar : « Changer mon mot de passe »."
                 }),
                 new HelpSection("Bon à savoir", new[]
                 {
@@ -95,7 +97,7 @@ public static class HelpCatalog
                 new HelpSection("Bon à savoir", new[]
                 {
                     "Le journal est partagé : il est enregistré sur le serveur et consultable selon les permissions.",
-                    "Une activité conservée trop longtemps peut être vidée depuis la gestion des données."
+                    "Le journal garde les 500 dernières actions ; il se met à jour tout seul quand d'autres membres agissent."
                 })
             }),
         new("calendar", "Calendrier", "📅",
@@ -132,9 +134,9 @@ public static class HelpCatalog
             {
                 new HelpSection("Comprendre", new[]
                 {
-                    "« Apparence » choisit le thème clair/sombre et la couleur principale.",
-                    "« Configuration carte de membre » ajuste slogan et citation imprimés sur la carte.",
-                    "Le thème clair/sombre et les conseils au premier usage sont personnels : ils sont gardés dans votre navigateur.",
+                    "« Apparence » : votre thème clair ou sombre (clair par défaut, choix personnel) et la couleur principale de la communauté.",
+                    "« Configuration carte de membre » ajuste slogan, citation, taille et format du matricule (ex. M-{NNNN}).",
+                    "Le thème et les conseils au premier usage sont personnels : chacun garde les siens, même l'administrateur.",
                     "« Ordre du menu » (gestionnaires) réorganise les cartes du menu « … » pour toute la communauté.",
                     "Les données sont sauvegardées chaque semaine sur le serveur ; l'export Excel reste disponible à tout moment."
                 }),
@@ -207,18 +209,18 @@ public static class HelpCatalog
                 new HelpSection("Bon à savoir", new[]
                 {
                     "Des verrous empêchent de bloquer l'accès des administrateurs.",
-                    "Le compte « dba » gère la base ; le compte « admin » administre l'application."
+                    "L'« Administrateur de la base » a tous les droits ; les autres rôles se règlent ici."
                 })
             }),
         new("messagerie", "Messagerie", "✉",
-            "Échangez des messages entre membres, visibles par les destinataires sur tous leurs appareils.",
+            "Échangez des messages entre membres, sur tous leurs appareils.",
             new[]
             {
                 new HelpSection("Comment faire", new[]
                 {
                     "« ＋ Nouveau message » choisit un ou plusieurs destinataires.",
-                    "La liste indique les messages en attente de votre réponse, en cours et clos.",
-                    "Touchez un message pour répondre, marquer comme traité ou le relancer.",
+                    "Le canal « Annonces » s'adresse à toute la communauté.",
+                    "Touchez une conversation pour la lire et répondre.",
                     "Le compteur sur le menu « … » signale les conversations non lues."
                 })
             }),
@@ -230,7 +232,7 @@ public static class HelpCatalog
                 {
                     "« ＋ Nouvelle tâche » : intitulé, assigné, échéance, priorité.",
                     "Dépliez les sections « À faire », « En cours », « Terminées ».",
-                    "Une tâche peut être commentée puis archivée une fois close."
+                    "Une tâche avance de « À faire » à « En cours » puis « Terminée »."
                 })
             }),
         new("finances", "Finances", "💰",
@@ -239,10 +241,10 @@ public static class HelpCatalog
             {
                 new HelpSection("Comprendre", new[]
                 {
-                    "Trois cartes : Solde disponible, Cotisations en cours et Impayés.",
-                    "« Cotisation » enregistre le règlement annuel d'un membre (montant, date, échéance).",
-                    "« Trésorerie » saisit chaque mouvement de caisse ; le solde en découle.",
-                    "Les impayés se régularisent depuis la fiche du membre concerné."
+                    "Trois cartes : Solde disponible, Cotisations et Impayés.",
+                    "Les impayés ne sont pas automatiques : « ＋ Impayés » choisit les membres concernés, le montant, le motif et la période.",
+                    "« Encaisser » règle une cotisation en attente et peut ajouter l'entrée dans la trésorerie.",
+                    "« ＋ Paiement » enregistre directement un règlement ; « Trésorerie » saisit chaque mouvement de caisse."
                 })
             }),
         new("materiel", "Matériel", "🧰",
@@ -252,7 +254,7 @@ public static class HelpCatalog
                 new HelpSection("Comment faire", new[]
                 {
                     "« ＋ Ajouter un matériel » : nom, référence, état.",
-                    "Un prêt associe un matériel à un membre et demande une date de retour.",
+                    "Un prêt associe un matériel à un membre ; « Retour » le clôt.",
                     "Les prêts en cours apparaissent avec le membre concerné ; le compteur du menu « … » les signale."
                 })
             }),
@@ -263,7 +265,7 @@ public static class HelpCatalog
                 new HelpSection("Comment faire", new[]
                 {
                     "« ＋ Réunion » saisit la date, l'objet et les participants.",
-                    "Un membre peut confirmer sa présence depuis sa fiche ou depuis la réunion.",
+                    "Les gestionnaires notent la présence de chaque participant dans la réunion.",
                     "L'historique des présences aide à préparer les prochaines rencontres."
                 })
             }),
@@ -274,7 +276,7 @@ public static class HelpCatalog
                 new HelpSection("Comprendre", new[]
                 {
                     "L'application regroupe les échéances proches : tâches, prêts, cotisations, événements.",
-                    "Marquer un rappel « traité » le retire de la liste.",
+                    "Un rappel disparaît quand l'échéance est réglée dans son module.",
                     "Les ajustements de rappel dépendent des dates saisies dans chaque module."
                 })
             }),
@@ -295,6 +297,7 @@ public static class HelpCatalog
                 new HelpSection("Comment faire", new[]
                 {
                     "La carte se compose d'une face avant (photo, identité, QR) et d'un dos (signature, citation).",
+                    "Pour un membre de moins de 18 ans, la carte indique « Mineur » et le responsable légal.",
                     "Touchez le QR code pour l'agrandir et le faire scanner facilement.",
                     "« Exporter en PDF » ouvre la fenêtre d'impression : choisissez « Enregistrer au format PDF » pour obtenir une carte utilisable hors application.",
                     "Slogan et citation du dos se personnalisent dans les Paramètres."
@@ -308,7 +311,7 @@ public static class HelpCatalog
                 {
                     "« ＋ Créer un vote » : question, choix multiples, date de clôture.",
                     "Chaque membre disposant de la permission vote une seule fois ; les résultats s'actualisent.",
-                    "Un vote clôturé conserve son résultat et peut être archivé."
+                    "Un vote est clos à sa date de clôture ou par un gestionnaire ; son résultat est conservé."
                 })
             }),
         new("journal", "Journal multimédia", "🎞",
@@ -323,7 +326,7 @@ public static class HelpCatalog
                 })
             }),
         new("data", "Gestion de données", "🗂",
-            "Réservé au gestionnaire de la base : consulter et modifier les données de la communauté sans JSON.",
+            "Réservé aux administrateurs : consulter et modifier les données de la communauté sans JSON.",
             new[]
             {
                 new HelpSection("Comprendre", new[]
@@ -334,8 +337,8 @@ public static class HelpCatalog
                 }),
                 new HelpSection("Bon à savoir", new[]
                 {
-                    "Les droits de ce module sont réservés au compte « dba ».",
-                    "La réinitialisation vide les données de la communauté et ne garde que votre compte."
+                    "Ce module est réservé aux administrateurs : une erreur ici touche toute la communauté.",
+                    "Les mots de passe ne s'y trouvent pas : ils se gèrent dans « Comptes en ligne »."
                 })
             }),
         new("capacite", "Capacité du serveur", "📊",
