@@ -189,6 +189,25 @@ l'opération la plus délicate.
 
 ---
 
+## Entretien : ce qui vous prévient tout seul
+
+GitHub vous envoie un e-mail (et une notification sur github.com) dans ces
+cas, sans que vous ayez rien à surveiller :
+
+| Quand | Ce que vous recevez | Ce qu'il faut faire |
+| --- | --- | --- |
+| Une tâche automatique échoue | E-mail « Run failed » de GitHub | Ouvrir l'exécution en rouge et lire le message |
+| Supabase dépasse 70 % (puis 90 %) | Ticket « Alerte capacité Supabase » | Voir *Que faire en cas d'alerte* plus haut |
+| Quelqu'un s'inscrit | Ticket « N compte(s) en attente de validation » | Menu > **Comptes en ligne** : accepter ou refuser |
+| 1er janvier, avril, juillet, octobre | Ticket « Vérification trimestrielle » | Suivre la liste de contrôle du ticket |
+
+Pour recevoir ces e-mails, gardez les réglages par défaut de GitHub :
+**Settings > Notifications**, « Watching » et « Actions » cochés avec
+**Email**, et le dépôt en **Watch > All Activity** (c'est le cas d'un
+dépôt que vous avez créé).
+
+---
+
 ## Limites connues de cette première version
 
 - **Données partagées par blocs.** Chaque partie de l'application (membres,
