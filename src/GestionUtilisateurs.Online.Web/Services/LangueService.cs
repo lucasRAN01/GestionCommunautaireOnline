@@ -28,7 +28,7 @@ public sealed class LangueService
         var me = _store.GetCurrentUser()?.Identifiant;
         if (!string.IsNullOrWhiteSpace(me)) _store.SetLangue(me, code);
         if (code == L.Langue) return;
-        try { await _js.InvokeVoidAsync("guLangue.set", code); } catch { }
+        try { await _js.InvokeVoidAsync("guLangue.recharger", code); } catch { }
         _nav.Refresh(forceReload: true);
     }
 
@@ -48,7 +48,7 @@ public sealed class LangueService
         }
         if (L.Normaliser(pref) != L.Langue)
         {
-            try { await _js.InvokeVoidAsync("guLangue.set", L.Normaliser(pref)); } catch { }
+            try { await _js.InvokeVoidAsync("guLangue.recharger", L.Normaliser(pref)); } catch { }
             _nav.Refresh(forceReload: true);
         }
     }

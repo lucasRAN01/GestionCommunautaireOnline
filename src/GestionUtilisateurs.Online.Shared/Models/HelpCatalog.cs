@@ -151,6 +151,7 @@ public static class HelpCatalog
                     "« Apparence » : votre thème clair ou sombre (clair par défaut, choix personnel) et la couleur principale de la communauté.",
                     "« Configuration carte de membre » ajuste slogan, citation, taille et format du matricule (ex. M-{NNNN}).",
                     "Le thème et les conseils au premier usage sont personnels : chacun garde les siens, même l'administrateur.",
+                    "« Ma langue » : français, anglais ou malgache, au choix de chacun ; elle se choisit aussi sur l'écran de connexion.",
                     "« Ordre du menu » (gestionnaires) réorganise les cartes du menu « … » pour toute la communauté.",
                     "Les données sont sauvegardées chaque semaine sur le serveur ; l'export Excel reste disponible à tout moment."
                 }),

@@ -19,7 +19,7 @@
                     <span class="web-sidebar-mark" aria-hidden="true">GU</span>
                 }
             </button>
-            <span class="web-sidebar-name">@Store.Settings.AppName</span>
+            <span class="web-sidebar-name">@L.T(Store.Settings.AppName)</span>
         </div>
         <nav class="web-sidebar-nav">
             @foreach (var item in SidebarItems)
@@ -449,7 +449,7 @@
         "votes" => L.T("Votes"),
         "journal" => L.T("Journal multimédia"),
         "guide" => L.T("Guide utilisateur"),
-        _ => (Store.Settings.AppName ?? L.T("Gestion des utilisateurs"))
+        _ => L.T(Store.Settings.AppName ?? "Gestion des utilisateurs")
     };
 
     private string NavCls(string page) => State.CurrentPage == page ? "active" : "";
