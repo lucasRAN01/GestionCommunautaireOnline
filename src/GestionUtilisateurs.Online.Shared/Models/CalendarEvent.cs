@@ -1,3 +1,5 @@
+using GestionUtilisateurs.Shared.Services;
+
 namespace GestionUtilisateurs.Shared.Models;
 
 public class CalendarEvent
@@ -50,14 +52,14 @@ public static class CalendarEventTypes
 
     public static string Label(string type) => type switch
     {
-        Anniversaire => "Anniversaire",
-        Reunion => "Réunion",
-        Rappel => "Rappel",
-        Tache => "Tâche",
-        Evenement => "Événement",
-        Conge => "Congé / Absence",
-        Echeance => "Échéance",
-        _ => "Autre"
+        Anniversaire => L.T("Anniversaire"),
+        Reunion => L.T("Réunion"),
+        Rappel => L.T("Rappel"),
+        Tache => L.T("Tâche"),
+        Evenement => L.T("Événement"),
+        Conge => L.T("Congé / Absence"),
+        Echeance => L.T("Échéance"),
+        _ => L.T("Autre")
     };
 
     public static string Icon(string type) => type switch
