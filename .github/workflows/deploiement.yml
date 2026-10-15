@@ -1,36 +1,65 @@
-# Publie le site sur Azure Static Web Apps (offre gratuite) à chaque
+# Publie le site sur GitHub Pages (gratuit, sans carte bancaire) à chaque
 # modification de la branche main. Voir docs/MISE-EN-LIGNE.md.
-name: Déploiement Azure
+name: Déploiement du site
 
 on:
   push:
     branches: [main]
   workflow_dispatch:
 
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
     if: ${{ vars.SUPABASE_URL != '' }}
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: 9.0.x
-      - name: Configurer l'adresse Supabase
+      - name: Lire l'adresse GitHub Pages
+        id: pages
+        uses: actions/configure-pages@v5
+      - name: Configurer l'adresse Supabase et le sous-dossier du site
         env:
           SUPABASE_URL: ${{ vars.SUPABASE_URL }}
           SUPABASE_ANON_KEY: ${{ vars.SUPABASE_ANON_KEY }}
+          BASE_PATH: ${{ steps.pages.outputs.base_path }}
         run: |
+          set -euo pipefail
+          www=src/GestionUtilisateurs.Online.Web/wwwroot
           jq -n --arg url "$SUPABASE_URL" --arg key "$SUPABASE_ANON_KEY" \
-            '{Supabase: {Url: $url, AnonKey: $key}}' \
-            > src/GestionUtilisateurs.Online.Web/wwwroot/appsettings.json
+            '{Supabase: {Url: $url, AnonKey: $key}}' > "$www/appsettings.json"
+          # Le site est servi depuis https://<compte>.github.io/<dépôt>/ :
+          # le chemin de base est fixé avant la publication pour que les
+          # empreintes du mode hors ligne restent valides.
+          base="${BASE_PATH%/}/"
+          sed -i "s|<base href=\"/\" />|<base href=\"$base\" />|" "$www/index.html"
+          sed -i "s|const base = \"/\";|const base = \"$base\";|" "$www/service-worker.published.js"
+          grep -q "<base href=\"$base\" />" "$www/index.html"
+          grep -q "const base = \"$base\";" "$www/service-worker.published.js"
       - name: Publier
         run: dotnet publish src/GestionUtilisateurs.Online.Web -c Release -o publish
-      - name: Envoyer sur Azure Static Web Apps
-        uses: Azure/static-web-apps-deploy@v1
+      - name: Préparer pour GitHub Pages
+        run: |
+          cd publish/wwwroot
+          cp index.html 404.html
+          touch .nojekyll
+          rm -f staticwebapp.config.json
+      - uses: actions/upload-pages-artifact@v3
         with:
-          azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN }}
-          action: upload
-          app_location: publish/wwwroot
-          skip_app_build: true
-          skip_api_build: true
+          path: publish/wwwroot
+      - name: Envoyer sur GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

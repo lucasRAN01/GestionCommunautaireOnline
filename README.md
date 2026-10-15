@@ -9,8 +9,8 @@ et n'est pas modifiée.
 - **Sur téléphone** : exactement le même design que l'application mobile.
 - **Comptes** : inscription, connexion, validation manuelle par un
   administrateur, rôles et permissions appliqués aussi par le serveur.
-- **Hébergement gratuit** : Supabase (comptes, données, fichiers) et Azure
-  Static Web Apps (site), avec alerte de saturation pour les administrateurs,
+- **Hébergement gratuit** : Supabase (comptes, données, fichiers) et GitHub
+  Pages (site), sans carte bancaire, avec alerte de saturation pour les administrateurs,
   veille quotidienne et sauvegardes hebdomadaires.
 
 👉 **Pour mettre en ligne : [docs/MISE-EN-LIGNE.md](docs/MISE-EN-LIGNE.md).**
@@ -23,7 +23,7 @@ et n'est pas modifiée.
 | `src/GestionUtilisateurs.Online.Shared` | Logique métier, reprise de l'application hors ligne |
 | `tests/GestionUtilisateurs.Online.Tests` | Tests automatiques |
 | `supabase/migrations` | Script SQL à exécuter une fois dans Supabase |
-| `.github/workflows` | Vérification, déploiement Azure, veille Supabase, sauvegarde |
+| `.github/workflows` | Vérification, déploiement GitHub Pages, veille Supabase, sauvegarde |
 
 ## Développement
 

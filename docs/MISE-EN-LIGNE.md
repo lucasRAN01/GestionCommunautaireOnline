@@ -1,14 +1,14 @@
-# Mise en ligne (Supabase + Azure Static Web Apps)
+# Mise en ligne (Supabase + GitHub Pages)
 
 Ce guide met l'application en ligne gratuitement, en une heure environ, sans
-écrire de code. Tout se fait depuis trois sites : **Supabase** (comptes,
-données, fichiers), **Azure** (le site web) et **GitHub** (déploiement,
-surveillance et sauvegardes automatiques).
+écrire de code et sans carte bancaire. Tout se fait depuis deux sites :
+**Supabase** (comptes, données, fichiers) et **GitHub** (le site web,
+la surveillance et les sauvegardes automatiques).
 
 | Service | Rôle | Offre gratuite |
 |---|---|---|
 | Supabase | Comptes, base de données, photos et documents | 500 Mo de base, 1 Go de fichiers, 5 Go de transfert par mois |
-| Azure Static Web Apps | Héberge le site | 100 Go de transfert par mois, certificat HTTPS inclus |
+| GitHub Pages | Héberge le site | 100 Go de transfert par mois, certificat HTTPS inclus (dépôt public) |
 | GitHub Actions | Publie le site, surveille Supabase, sauvegarde | Gratuit (dépôt public) ou 2 000 min/mois (dépôt privé) |
 
 ---
@@ -45,19 +45,20 @@ surveillance et sauvegardes automatiques).
 > ne les mettez jamais dans le code ni dans un message, uniquement dans les
 > secrets GitHub (étape 3).
 
-## 2. Créer le site Azure Static Web Apps
+## 2. Activer GitHub Pages
 
-1. Créez un compte gratuit sur <https://portal.azure.com> (une carte peut
-   être demandée pour vérifier l'identité ; l'offre *Free* ne facture rien).
-2. **Créer une ressource > Static Web App**.
-   - Plan : **Free**.
-   - Source de déploiement : **Other** (le déploiement est déjà prévu dans
-     ce dépôt ; ne laissez pas Azure ajouter son propre fichier GitHub).
-3. Une fois la ressource créée, ouvrez **Manage deployment token** et copiez
-   le jeton.
-4. L'adresse du site est affichée sur la page d'accueil de la ressource
-   (`https://nom-aleatoire.azurestaticapps.net`). Un nom de domaine personnel
-   peut être ajouté plus tard dans **Custom domains**, gratuitement.
+1. Dans le dépôt GitHub : **Settings > Pages**.
+2. Sous **Build and deployment**, choisissez **Source : GitHub Actions**.
+   Il n'y a rien d'autre à régler.
+3. L'adresse du site sera
+   `https://lucasran01.github.io/GestionCommunautaireOnline/` (affichée en
+   haut de cette même page après la première publication). Un nom de domaine
+   personnel peut être ajouté plus tard dans **Custom domain**, gratuitement.
+
+GitHub Pages est gratuit pour un dépôt public et ne demande pas de carte
+bancaire. Le code du site est donc visible de tous, ce qui ne pose pas de
+problème : les données des membres restent dans Supabase, protégées par les
+comptes et les droits.
 
 ## 3. Renseigner GitHub
 
@@ -74,7 +75,6 @@ Onglet **Secrets** :
 
 | Nom | Valeur |
 |---|---|
-| `AZURE_STATIC_WEB_APPS_API_TOKEN` | jeton de déploiement Azure |
 | `SUPABASE_SERVICE_ROLE_KEY` | clé `service_role` |
 | `SUPABASE_DB_URL` | adresse *Session pooler* avec le mot de passe |
 
@@ -84,8 +84,8 @@ attendent sans erreur.
 ## 4. Publier
 
 - Le site est publié automatiquement à chaque modification de la branche
-  `main` (tâche **Déploiement Azure**). Pour le publier tout de suite :
-  **Actions > Déploiement Azure > Run workflow**.
+  `main` (tâche **Déploiement du site**). Pour le publier tout de suite :
+  **Actions > Déploiement du site > Run workflow**.
 - Lancez aussi une fois à la main **Actions > Veille Supabase** et
   **Actions > Sauvegarde** pour vérifier que les secrets sont bons.
 
