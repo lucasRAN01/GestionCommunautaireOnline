@@ -18,12 +18,12 @@ public partial class DataStore
     {
         var f = (format ?? "").Trim();
         if (f.Length == 0) return null;
-        if (f.Length > 30) return "Le format du matricule ne doit pas dépasser 30 caractères.";
+        if (f.Length > 30) return L.T("Le format du matricule ne doit pas dépasser 30 caractères.");
         var numeros = JetonMatricule.Matches(f).Count(m => m.Groups[1].Value.StartsWith('N'));
-        if (numeros != 1) return "Le format doit contenir une seule fois le numéro, par exemple {NNNN}.";
+        if (numeros != 1) return L.T("Le format doit contenir une seule fois le numéro, par exemple {NNNN}.");
         var reste = JetonMatricule.Replace(f, "");
         if (reste.Contains('{') || reste.Contains('}'))
-            return "Code inconnu dans le format. Codes possibles : {NNNN}, {AAAA}, {AA}, {MM}, {INI}.";
+            return L.T("Code inconnu dans le format. Codes possibles : {NNNN}, {AAAA}, {AA}, {MM}, {INI}.");
         return null;
     }
 
@@ -101,9 +101,9 @@ public partial class DataStore
     /// <summary>Donne un matricule à chaque fiche qui n'en a pas, de la plus ancienne à la plus récente.</summary>
     public (OperationResult Result, int Attribues) AttribuerMatriculesManquants()
     {
-        if (!Can(Permissions.UsersManage)) return (OperationResult.Fail("Action réservée à la gestion des utilisateurs."), 0);
+        if (!Can(Permissions.UsersManage)) return (OperationResult.Fail(L.T("Action réservée à la gestion des utilisateurs.")), 0);
         if ((_settings.MatriculeFormat ?? "").Trim().Length == 0)
-            return (OperationResult.Fail("Réglez d'abord le format du matricule."), 0);
+            return (OperationResult.Fail(L.T("Réglez d'abord le format du matricule.")), 0);
         var sans = _users.Where(u => string.IsNullOrWhiteSpace(u.Matricule))
             .OrderBy(u => u.DateCreation ?? "", StringComparer.Ordinal).ToList();
         foreach (var u in sans) u.Matricule = ProchainMatricule(u);

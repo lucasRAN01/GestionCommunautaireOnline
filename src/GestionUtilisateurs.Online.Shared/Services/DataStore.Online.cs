@@ -99,9 +99,9 @@ public partial class DataStore
     {
         var user = _users.FirstOrDefault(u => u.Id == userId);
         if (user == null)
-            return OperationResult.Fail("Votre fiche membre n'existe pas encore. Contactez un administrateur.");
+            return OperationResult.Fail(L.T("Votre fiche membre n'existe pas encore. Contactez un administrateur."));
         if (!user.Actif)
-            return OperationResult.Fail("Ce compte est désactivé. Contactez un administrateur.");
+            return OperationResult.Fail(L.T("Ce compte est désactivé. Contactez un administrateur."));
 
         _session = new SessionInfo
         {
@@ -124,7 +124,7 @@ public partial class DataStore
         string? relierAFicheId = null)
     {
         if (string.IsNullOrWhiteSpace(accountId))
-            return new UserOperationResult { Success = false, Error = "Compte introuvable." };
+            return new UserOperationResult { Success = false, Error = L.T("Compte introuvable.") };
 
         // Relier le compte à une fiche déjà saisie (même personne) au lieu d'en créer une seconde.
         var cible = string.IsNullOrWhiteSpace(relierAFicheId) ? null : _users.FirstOrDefault(u => u.Id == relierAFicheId);
