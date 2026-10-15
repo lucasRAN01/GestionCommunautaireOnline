@@ -4,7 +4,7 @@
 
 <div class="page-head">
     <p class="cal-subtitle">
-        Vos événements et rappels, partagés avec toute la communauté
+        @L.T("Vos événements et rappels, partagés avec toute la communauté")
         <svg class="cal-offline-icon" viewBox="0 0 24 24" width="13" height="13" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M12 3v1M4.2 6.9l.7.7M1 12h1M4.2 17.1l-.7.7M12 20v1M19.8 17.1l.7.7M23 12h-1"/><circle cx="12" cy="15" r="4" fill="none" stroke="currentColor" stroke-width="2"/><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" d="M12 9V6M9.5 12h.5M12 12h.5M14.5 12h.5"/></svg>
     </p>
 </div>
@@ -12,10 +12,10 @@
 <div class="cal-toolbar">
     <div class="search-box cal-search">
         <span class="search-icon" aria-hidden="true">&#128269;</span>
-        <input type="text" placeholder="Rechercher un événement…" value="@_search" @oninput="OnSearch" />
+        <input type="text" placeholder="@L.T("Rechercher un événement…")" value="@_search" @oninput="OnSearch" />
     </div>
     <button class="btn btn-secondary btn-sm cal-filter-btn @(_HasActiveFilters ? "active" : "")" @onclick="OpenFilters">
-        <span aria-hidden="true">⚲</span> Filtres
+        <span aria-hidden="true">⚲</span> @L.T("Filtres")
         @if (_HasActiveFilters)
         {
             <Badge Text="@_activeFilterCount.ToString()" Kind="role" />
@@ -24,18 +24,18 @@
 </div>
 
 <div class="cal-view-tabs">
-    <button class="cal-tab @(ViewCls("mois"))" @onclick="SetViewMois">Mois</button>
-    <button class="cal-tab @(ViewCls("liste"))" @onclick="SetViewListe">Liste</button>
+    <button class="cal-tab @(ViewCls("mois"))" @onclick="SetViewMois">@L.T("Mois")</button>
+    <button class="cal-tab @(ViewCls("liste"))" @onclick="SetViewListe">@L.T("Liste")</button>
 </div>
 
 @if (_view == "mois")
 {
     <div class="cal-month-nav">
-        <button class="cal-month-nav-btn" aria-label="Mois précédent" @onclick="PrevMonth">‹</button>
+        <button class="cal-month-nav-btn" aria-label="@L.T("Mois précédent")" @onclick="PrevMonth">‹</button>
         <button class="cal-month-label" @onclick="GoToday">@MonthLabel</button>
-        <button class="cal-month-nav-btn" aria-label="Mois suivant" @onclick="NextMonth">›</button>
-        <button class="btn btn-secondary btn-sm cal-today-btn" @onclick="GoToday">Aujourd'hui</button>
-        <select class="cal-year-select" aria-label="Choisir l'année" value="@_month.Year" @onchange="OnYear">
+        <button class="cal-month-nav-btn" aria-label="@L.T("Mois suivant")" @onclick="NextMonth">›</button>
+        <button class="btn btn-secondary btn-sm cal-today-btn" @onclick="GoToday">@L.T("Aujourd'hui")</button>
+        <select class="cal-year-select" aria-label="@L.T("Choisir l'année")" value="@_month.Year" @onchange="OnYear">
             @foreach (var y in AvailableYears)
             {
                 <option value="@y">@y</option>
@@ -76,9 +76,9 @@
 
     <div class="cal-add-below">
         <button class="btn btn-primary btn-block cal-add-btn" @onclick="() => OpenTypeSheet(DefaultAddDate)">
-            <span aria-hidden="true">＋</span> Ajouter un évènement
+            <span aria-hidden="true">＋</span> @L.T("Ajouter un évènement")
         </button>
-        <p class="cal-add-hint">Pour le @FrDate(DefaultAddDate) — choisissez le type puis complétez la fiche.</p>
+        <p class="cal-add-hint">@L.F("Pour le {0} — choisissez le type puis complétez la fiche.", FrDate(DefaultAddDate))</p>
     </div>
 }
 else
@@ -86,7 +86,7 @@ else
     <div class="cal-list">
         @if (FilteredEvents.Count == 0)
         {
-            <EmptyState Icon="📅" Title="Aucun événement" Message="Votre calendrier est vide pour le moment. Ajoutez un anniversaire, une réunion ou un rappel." />
+            <EmptyState Icon="📅" Title="@L.T("Aucun événement")" Message="@L.T("Votre calendrier est vide pour le moment. Ajoutez un anniversaire, une réunion ou un rappel.")" />
         }
         else
         {
@@ -95,7 +95,7 @@ else
                 <div class="cal-list-day">
                     <div class="cal-list-header">
                         <span class="cal-list-date">@WeekdayLabel(group.Key) — @FrDate(group.Key)</span>
-                        <span class="cal-list-count">@group.Count() événement(s)</span>
+                        <span class="cal-list-count">@L.F("{0} événement(s)", group.Count())</span>
                     </div>
                     @if (Holidays.GetFixedHoliday(group.Key) is string holidayLabel)
                     {
@@ -125,18 +125,18 @@ else
             }
             @if (_dayAll.Count > 0)
             {
-                <span class="cal-list-count">@_dayAll.Count événement(s) ce jour</span>
+                <span class="cal-list-count">@L.F("{0} événement(s) ce jour", _dayAll.Count)</span>
             }
         </div>
         @if (_dayAll.Count == 0)
         {
             @if (Store.Events.Count == 0)
             {
-                <EmptyState Icon="📅" Title="Aucun événement" Message="Votre calendrier est vide pour le moment. Ajoutez un anniversaire, une réunion ou un rappel." />
+                <EmptyState Icon="📅" Title="@L.T("Aucun événement")" Message="@L.T("Votre calendrier est vide pour le moment. Ajoutez un anniversaire, une réunion ou un rappel.")" />
             }
             else
             {
-                <div class="cal-no-events">Aucun événement ce jour.</div>
+                <div class="cal-no-events">@L.T("Aucun événement ce jour.")</div>
             }
         }
         else
@@ -151,7 +151,7 @@ else
     </div>
 }
 
-<Modal Show="_typeSheet" Title="Ajouter un événement" OnClose="() => _typeSheet = false">
+<Modal Show="_typeSheet" Title="@L.T("Ajouter un événement")" OnClose="() => _typeSheet = false">
     <div class="type-grid">
         @foreach (var t in AllTypes)
         {
@@ -163,13 +163,13 @@ else
     </div>
 </Modal>
 
-<Modal Show="_showForm" Title="@(_editing == null ? "Nouvel événement" : "Modifier l'événement")" OnClose="CancelForm">
+<Modal Show="_showForm" Title="@(_editing == null ? L.T("Nouvel événement") : L.T("Modifier l'événement"))" OnClose="CancelForm">
     <div class="form-group">
-        <label for="ev-titre">Titre *</label>
+        <label for="ev-titre">@L.T("Titre *")</label>
         <input id="ev-titre" type="text" placeholder="@TitrePlaceholder" value="@_draft.Titre" @oninput="OnTitre" />
     </div>
     <div class="form-group">
-        <label>Type d'événement</label>
+        <label>@L.T("Type d'événement")</label>
         <div class="type-chips">
             @foreach (var (key, label) in AllTypes)
             {
@@ -180,7 +180,7 @@ else
         </div>
     </div>
     <div class="form-group">
-        <label for="ev-date">Date * <span class="field-hint" style="display:inline">— format JJ/MM/AAAA</span></label>
+        <label for="ev-date">@L.T("Date *") <span class="field-hint" style="display:inline">@L.T("— format JJ/MM/AAAA")</span></label>
         <button type="button" class="cal-field-btn" @onclick="OpenDatePicker">
             <span class="cal-field-icon" aria-hidden="true"><CalendarTodayIcon Size="sm" /></span>
             <span class="cal-field-value">@DraftDateLabel</span>
@@ -189,13 +189,13 @@ else
     </div>
     <div class="form-check">
         <input id="ev-fullday" type="checkbox" checked="@_draft.TouteLaJournee" @onchange="OnFullDay" />
-        <label for="ev-fullday">Toute la journée</label>
+        <label for="ev-fullday">@L.T("Toute la journée")</label>
     </div>
     @if (!_draft.TouteLaJournee)
     {
         <div class="cal-time-row">
             <div class="form-group cal-time-col">
-                <label for="ev-heure">Début</label>
+                <label for="ev-heure">@L.T("Début")</label>
                 <button type="button" class="cal-field-btn" @onclick="OpenDebutTime">
                     <span class="cal-field-icon" aria-hidden="true">🕐</span>
                     <span class="cal-field-value">@DraftTimeLabel("debut")</span>
@@ -203,7 +203,7 @@ else
                 </button>
             </div>
             <div class="form-group cal-time-col">
-                <label for="ev-fin">Fin</label>
+                <label for="ev-fin">@L.T("Fin")</label>
                 <button type="button" class="cal-field-btn" @onclick="OpenFinTime">
                     <span class="cal-field-icon" aria-hidden="true">🕐</span>
                     <span class="cal-field-value">@DraftTimeLabel("fin")</span>
@@ -215,14 +215,14 @@ else
     @if (ShowLieu)
     {
         <div class="form-group">
-            <label for="ev-lieu">Lieu</label>
-            <input id="ev-lieu" type="text" placeholder="Ex : Salle de réunion" value="@_draft.Lieu" @oninput="OnLieu" />
+            <label for="ev-lieu">@L.T("Lieu")</label>
+            <input id="ev-lieu" type="text" placeholder="@L.T("Ex : Salle de réunion")" value="@_draft.Lieu" @oninput="OnLieu" />
         </div>
     }
     @if (ShowPersonne)
     {
         <div class="form-group">
-            <label>Personne(s) concernée(s) (@_draft.PersonnesConcernees.Count sélectionnée(s))</label>
+            <label>@L.F("Personne(s) concernée(s) ({0} sélectionnée(s))", _draft.PersonnesConcernees.Count)</label>
             @if (_draft.PersonnesConcernees.Count > 0)
             {
                 <div class="person-chips">
@@ -232,19 +232,19 @@ else
                         <span class="person-chip">
                             <Avatar UserName="@UserName(pid)" Seed="@pid" Size="sm" Photo="@person?.Photo" />
                             <span>@UserName(pid)</span>
-                            <button type="button" class="person-chip-remove" aria-label="Retirer @UserName(pid)" @onclick="() => RemovePerson(pid)">×</button>
+                            <button type="button" class="person-chip-remove" aria-label="@L.F("Retirer {0}", UserName(pid))" @onclick="() => RemovePerson(pid)">×</button>
                         </span>
                     }
                 </div>
             }
             <div class="search-box cal-search cal-opt-search">
                 <span class="search-icon" aria-hidden="true">&#128269;</span>
-                <input type="search" placeholder="Rechercher une personne puis l'ajouter…" aria-label="Rechercher une personne"
+                <input type="search" placeholder="@L.T("Rechercher une personne puis l'ajouter…")" aria-label="@L.T("Rechercher une personne")"
                        value="@_personSearch" @oninput="OnPersonSearch" />
             </div>
             <div class="cal-persons-tools">
-                <button type="button" class="btn btn-secondary btn-sm" @onclick="SelectAllPersons">Toutes</button>
-                <button type="button" class="btn btn-secondary btn-sm" @onclick="ClearPersons">Aucune</button>
+                <button type="button" class="btn btn-secondary btn-sm" @onclick="SelectAllPersons">@L.T("Toutes")</button>
+                <button type="button" class="btn btn-secondary btn-sm" @onclick="ClearPersons">@L.T("Aucune")</button>
             </div>
             <div class="cal-persons">
                 @foreach (var u in SearchedPersons)
@@ -258,13 +258,13 @@ else
                 }
                 @if (SearchedPersons.Count == 0)
                 {
-                    <div class="cal-no-events">Aucune personne trouvée pour « @_personSearch ».</div>
+                    <div class="cal-no-events">@L.F("Aucune personne trouvée pour « {0} ».", _personSearch)</div>
                 }
             </div>
         </div>
     }
     <div class="form-group">
-        <label>Répétition</label>
+        <label>@L.T("Répétition")</label>
         <div class="choice-chips">
             @foreach (var (key, label) in RepetitionChoices)
             {
@@ -275,7 +275,7 @@ else
     @if (ShowPriorite)
     {
         <div class="form-group">
-            <label>Priorité</label>
+            <label>@L.T("Priorité")</label>
             <div class="choice-chips">
                 @foreach (var (key, label) in PriorityChoices)
                 {
@@ -287,7 +287,7 @@ else
     @if (ShowRappel)
     {
         <div class="form-group">
-            <label>Rappel</label>
+            <label>@L.T("Rappel")</label>
             <div class="choice-chips">
                 @foreach (var (minutes, label) in ReminderChoices)
                 {
@@ -299,7 +299,7 @@ else
     @if (ShowStatut)
     {
         <div class="form-group">
-            <label>Statut</label>
+            <label>@L.T("Statut")</label>
             <div class="choice-chips">
                 @foreach (var (key, label) in StatutChoices)
                 {
@@ -311,21 +311,21 @@ else
     @if (ShowDescription)
     {
         <div class="form-group">
-            <label for="ev-notes">Notes</label>
-            <textarea id="ev-notes" placeholder="Ajouter une note..." value="@_draft.Notes" @oninput="OnNotes"></textarea>
+            <label for="ev-notes">@L.T("Notes")</label>
+            <textarea id="ev-notes" placeholder="@L.T("Ajouter une note...")" value="@_draft.Notes" @oninput="OnNotes"></textarea>
         </div>
     }
     <div class="form-actions">
-        <button type="button" class="btn btn-secondary" @onclick="CancelForm">Annuler</button>
-        <button type="button" class="btn btn-primary" @onclick="SaveEvent" disabled="@(_saving || string.IsNullOrWhiteSpace(_draft.Titre))">Enregistrer</button>
+        <button type="button" class="btn btn-secondary" @onclick="CancelForm">@L.T("Annuler")</button>
+        <button type="button" class="btn btn-primary" @onclick="SaveEvent" disabled="@(_saving || string.IsNullOrWhiteSpace(_draft.Titre))">@L.T("Enregistrer")</button>
     </div>
 </Modal>
 
-<Modal Show="_datePickerOpen" Title="Choisir la date" OnClose="() => _datePickerOpen = false">
+<Modal Show="_datePickerOpen" Title="@L.T("Choisir la date")" OnClose="() => _datePickerOpen = false">
     <div class="cal-picker-head">
-        <button type="button" class="cal-month-nav-btn" aria-label="Mois précédent" @onclick="DatePickerPrevMonth">‹</button>
+        <button type="button" class="cal-month-nav-btn" aria-label="@L.T("Mois précédent")" @onclick="DatePickerPrevMonth">‹</button>
         <span class="cal-picker-month">@DatePickerMonthLabel</span>
-        <button type="button" class="cal-month-nav-btn" aria-label="Mois suivant" @onclick="DatePickerNextMonth">›</button>
+        <button type="button" class="cal-month-nav-btn" aria-label="@L.T("Mois suivant")" @onclick="DatePickerNextMonth">›</button>
     </div>
     <div class="cal-weekdays">
         @foreach (var wd in WeekDays)
@@ -345,33 +345,33 @@ else
         }
     </div>
     <div class="form-actions" style="margin-top:14px">
-        <button type="button" class="btn btn-secondary" @onclick="() => _datePickerOpen = false">Annuler</button>
+        <button type="button" class="btn btn-secondary" @onclick="() => _datePickerOpen = false">@L.T("Annuler")</button>
         <button type="button" class="btn btn-primary" @onclick="ConfirmDate">OK</button>
     </div>
 </Modal>
 
-<Modal Show="_timePickerOpen" Title="Choisir l'heure" OnClose="() => _timePickerOpen = false">
+<Modal Show="_timePickerOpen" Title="@L.T("Choisir l'heure")" OnClose="() => _timePickerOpen = false">
     <div class="time-tabs">
-        <button type="button" class="time-tab @(_timePickerTarget == "debut" ? "active" : "")" @onclick="SwitchToDebut">🕐 Début</button>
-        <button type="button" class="time-tab @(_timePickerTarget == "fin" ? "active" : "")" @onclick="SwitchToFin">🕐 Fin</button>
+        <button type="button" class="time-tab @(_timePickerTarget == "debut" ? "active" : "")" @onclick="SwitchToDebut">🕐 @L.T("Début")</button>
+        <button type="button" class="time-tab @(_timePickerTarget == "fin" ? "active" : "")" @onclick="SwitchToFin">🕐 @L.T("Fin")</button>
     </div>
     <div class="time-display">@TimePickerLabel</div>
     <div class="time-steppers">
         <div class="time-stepper">
-            <button type="button" class="time-stepper-btn" aria-label="Heure précédente" @onclick="DecHour">−</button>
+            <button type="button" class="time-stepper-btn" aria-label="@L.T("Heure précédente")" @onclick="DecHour">−</button>
             <div class="time-stepper-val">@(_timePickerHours.ToString("00"))</div>
-            <button type="button" class="time-stepper-btn" aria-label="Heure suivante" @onclick="IncHour">+</button>
+            <button type="button" class="time-stepper-btn" aria-label="@L.T("Heure suivante")" @onclick="IncHour">+</button>
             <span class="time-stepper-unit">h</span>
         </div>
         <div class="time-stepper">
-            <button type="button" class="time-stepper-btn" aria-label="Minute précédente" @onclick="DecMinute">−</button>
+            <button type="button" class="time-stepper-btn" aria-label="@L.T("Minute précédente")" @onclick="DecMinute">−</button>
             <div class="time-stepper-val">@(_timePickerMinutes.ToString("00"))</div>
-            <button type="button" class="time-stepper-btn" aria-label="Minute suivante" @onclick="IncMinute">+</button>
+            <button type="button" class="time-stepper-btn" aria-label="@L.T("Minute suivante")" @onclick="IncMinute">+</button>
             <span class="time-stepper-unit">min</span>
         </div>
     </div>
     <div class="time-quick">
-        <span class="time-quick-label">Minutes rapides</span>
+        <span class="time-quick-label">@L.T("Minutes rapides")</span>
         <div class="time-quick-chips">
             @foreach (var m in QuickMinutes)
             {
@@ -381,17 +381,17 @@ else
     </div>
     @if (_timePickerTarget == "fin" && !string.IsNullOrWhiteSpace(_draft.HeureDebut))
     {
-        <button type="button" class="btn btn-secondary btn-block" @onclick="SetFinAsDebut">Même heure que le début</button>
+        <button type="button" class="btn btn-secondary btn-block" @onclick="SetFinAsDebut">@L.T("Même heure que le début")</button>
     }
     <div class="form-actions" style="margin-top:14px">
-        <button type="button" class="btn btn-secondary" @onclick="() => _timePickerOpen = false">Annuler</button>
+        <button type="button" class="btn btn-secondary" @onclick="() => _timePickerOpen = false">@L.T("Annuler")</button>
         <button type="button" class="btn btn-primary" @onclick="ConfirmTime">OK</button>
     </div>
 </Modal>
 
-<Modal Show="_filtersOpen" Title="Filtrer le calendrier" OnClose="() => _filtersOpen = false">
+<Modal Show="_filtersOpen" Title="@L.T("Filtrer le calendrier")" OnClose="() => _filtersOpen = false">
     <div class="cal-filter-section">
-        <div class="divider-section">Types</div>
+        <div class="divider-section">@L.T("Types")</div>
         <div class="check-group">
             @foreach (var (key, label) in AllTypes)
             {
@@ -401,11 +401,11 @@ else
                 </label>
             }
         </div>
-        <div class="divider-section">Utilisateurs</div>
+        <div class="divider-section">@L.T("Utilisateurs")</div>
         <div class="radio-row">
             <label class="radio-option">
                 <input type="radio" name="ev-user" checked="@(_userFilter == null)" @onchange="() => { _userFilter = null; Compute(); }" />
-                Tous
+                @L.T("Tous")
             </label>
             @foreach (var u in Store.Users.Where(u => u.Actif).OrderBy(u => u.NomComplet))
             {
@@ -415,7 +415,7 @@ else
                 </label>
             }
         </div>
-        <div class="divider-section">Priorité</div>
+        <div class="divider-section">@L.T("Priorité")</div>
         <div class="radio-row">
             @foreach (var (key, label) in PriorityFilterChoices)
             {
@@ -427,8 +427,8 @@ else
         </div>
     </div>
     <div class="form-actions filter-actions">
-        <button type="button" class="btn btn-secondary" @onclick="ResetFilters">Réinitialiser</button>
-        <button type="button" class="btn btn-primary" @onclick="() => { _filtersOpen = false; Compute(); }">Appliquer les filtres</button>
+        <button type="button" class="btn btn-secondary" @onclick="ResetFilters">@L.T("Réinitialiser")</button>
+        <button type="button" class="btn btn-primary" @onclick="() => { _filtersOpen = false; Compute(); }">@L.T("Appliquer les filtres")</button>
     </div>
 </Modal>
 
@@ -443,11 +443,11 @@ else
                 <div class="cal-detail-row">📅 @WeekdayLabel(ParseDate(d.Date)) — @FrDate(ParseDate(d.Date))</div>
                 @if (d.TouteLaJournee)
                 {
-                    <div class="cal-detail-row">⏳ Toute la journée</div>
+                    <div class="cal-detail-row">⏳ @L.T("Toute la journée")</div>
                 }
                 else
                 {
-                    <div class="cal-detail-row">🕒 Début @(d.HeureDebut ?? "—")@(d.HeureFin != null ? " · Fin " + d.HeureFin : "")</div>
+                    <div class="cal-detail-row">🕒 @L.T("Début") @(d.HeureDebut ?? "—")@(d.HeureFin != null ? " · " + L.T("Fin") + " " + d.HeureFin : "")</div>
                 }
                 @if (!string.IsNullOrWhiteSpace(d.Lieu))
                 {
@@ -455,7 +455,7 @@ else
                 }
                 @if (EventPersons(d).Count > 0)
                 {
-                    <div class="cal-detail-label">Personne(s) concernée(s)</div>
+                    <div class="cal-detail-label">@L.T("Personne(s) concernée(s)")</div>
                     <div class="cal-detail-persons">
                         @foreach (var pid in EventPersons(d))
                         {
@@ -473,7 +473,7 @@ else
                 }
                 @if (d.RappelAvant > 0)
                 {
-                    <div class="cal-detail-row">⏰ Rappel @ReminderShort(d.RappelAvant)</div>
+                    <div class="cal-detail-row">⏰ @L.T("Rappel") @ReminderShort(d.RappelAvant)</div>
                 }
                 @if (d.Priorite != CalendarEventTypes.PrioriteNormale)
                 {
@@ -481,31 +481,31 @@ else
                 }
                 @if (d.Type == CalendarEventTypes.Tache)
                 {
-                    <div class="cal-detail-row">☑ Statut : @StatutLabel(d.Statut)</div>
+                    <div class="cal-detail-row">☑ @L.F("Statut : {0}", StatutLabel(d.Statut))</div>
                 }
                 @if (!string.IsNullOrWhiteSpace(d.Description))
                 {
-                    <div class="cal-detail-label">Description</div>
+                    <div class="cal-detail-label">@L.T("Description")</div>
                     <div class="cal-detail-notes">@d.Description</div>
                 }
                 @if (!string.IsNullOrWhiteSpace(d.Notes))
                 {
-                    <div class="cal-detail-label">Notes</div>
+                    <div class="cal-detail-label">@L.T("Notes")</div>
                     <div class="cal-detail-notes">@d.Notes</div>
                 }
             </div>
         }
     </ChildContent>
     <FooterContent>
-        <button type="button" class="btn btn-secondary" @onclick="CloseDetail">Fermer</button>
-        <button type="button" class="btn btn-danger-outline" @onclick="DetailDelete">🗑 Supprimer</button>
-        <button type="button" class="btn btn-primary" @onclick="DetailEdit">✏️ Modifier</button>
+        <button type="button" class="btn btn-secondary" @onclick="CloseDetail">@L.T("Fermer")</button>
+        <button type="button" class="btn btn-danger-outline" @onclick="DetailDelete">🗑 @L.T("Supprimer")</button>
+        <button type="button" class="btn btn-primary" @onclick="DetailEdit">✏️ @L.T("Modifier")</button>
     </FooterContent>
 </Modal>
 
-<ConfirmDialog Show="_deleteTarget != null" Title="Supprimer l'événement"
-               Message="@(_deleteTarget == null ? "" : "Supprimer « " + _deleteTarget.Titre + " » du calendrier ?")"
-               ConfirmLabel="Supprimer" Danger="true" OnConfirm="ConfirmDelete" OnCancel="() => _deleteTarget = null" />
+<ConfirmDialog Show="_deleteTarget != null" Title="@L.T("Supprimer l'événement")"
+               Message="@(_deleteTarget == null ? "" : L.F("Supprimer « {0} » du calendrier ?", _deleteTarget.Titre))"
+               ConfirmLabel="@L.T("Supprimer")" Danger="true" OnConfirm="ConfirmDelete" OnCancel="() => _deleteTarget = null" />
 
 @code {
     private static readonly CultureInfo Fr = CultureInfo.GetCultureInfo("fr-FR");
@@ -542,46 +542,46 @@ else
 
     private static readonly (string, string)[] RepetitionChoices = new[]
     {
-        (CalendarEventTypes.RepetitionAucune, "Aucune"),
-        (CalendarEventTypes.RepetitionQuotidienne, "Tous les jours"),
-        (CalendarEventTypes.RepetitionHebdomadaire, "Toutes les semaines"),
-        (CalendarEventTypes.RepetitionMensuelle, "Tous les mois"),
-        (CalendarEventTypes.RepetitionAnnuelle, "Tous les ans")
+        (CalendarEventTypes.RepetitionAucune, L.T("Aucune")),
+        (CalendarEventTypes.RepetitionQuotidienne, L.T("Tous les jours")),
+        (CalendarEventTypes.RepetitionHebdomadaire, L.T("Toutes les semaines")),
+        (CalendarEventTypes.RepetitionMensuelle, L.T("Tous les mois")),
+        (CalendarEventTypes.RepetitionAnnuelle, L.T("Tous les ans"))
     };
 
     private static readonly (string, string)[] PriorityChoices = new[]
     {
-        (CalendarEventTypes.PrioriteNormale, "Normale"),
-        (CalendarEventTypes.PrioriteImportante, "Importante"),
-        (CalendarEventTypes.PrioriteUrgente, "Urgente")
+        (CalendarEventTypes.PrioriteNormale, L.T("Normale")),
+        (CalendarEventTypes.PrioriteImportante, L.T("Importante")),
+        (CalendarEventTypes.PrioriteUrgente, L.T("Urgente"))
     };
 
     private static readonly (string, string)[] PriorityFilterChoices = new[]
     {
-        ("", "Toutes"),
-        (CalendarEventTypes.PrioriteNormale, "Normale"),
-        (CalendarEventTypes.PrioriteImportante, "Importante"),
-        (CalendarEventTypes.PrioriteUrgente, "Urgente")
+        ("", L.T("Toutes")),
+        (CalendarEventTypes.PrioriteNormale, L.T("Normale")),
+        (CalendarEventTypes.PrioriteImportante, L.T("Importante")),
+        (CalendarEventTypes.PrioriteUrgente, L.T("Urgente"))
     };
 
     private static readonly (int, string)[] ReminderChoices = new[]
     {
-        (0, "Aucun"),
-        (5, "5 minutes avant"),
-        (10, "10 minutes avant"),
-        (30, "30 minutes avant"),
-        (60, "1 heure avant"),
-        (1440, "1 jour avant")
+        (0, L.T("Aucun")),
+        (5, L.T("5 minutes avant")),
+        (10, L.T("10 minutes avant")),
+        (30, L.T("30 minutes avant")),
+        (60, L.T("1 heure avant")),
+        (1440, L.T("1 jour avant"))
     };
 
     private static readonly (string, string)[] StatutChoices = new[]
     {
-        (CalendarEventTypes.StatutAFaire, "À faire"),
-        (CalendarEventTypes.StatutEnCours, "En cours"),
-        (CalendarEventTypes.StatutTerminee, "Terminée")
+        (CalendarEventTypes.StatutAFaire, L.T("À faire")),
+        (CalendarEventTypes.StatutEnCours, L.T("En cours")),
+        (CalendarEventTypes.StatutTerminee, L.T("Terminée"))
     };
 
-    private static readonly string[] WeekDays = { "Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim" };
+    private static readonly string[] WeekDays = { L.T("Lun"), L.T("Mar"), L.T("Mer"), L.T("Jeu"), L.T("Ven"), L.T("Sam"), L.T("Dim") };
 
     private sealed class EventDraft
     {
@@ -637,8 +637,7 @@ else
     {
         get
         {
-            var s = _month.ToString("MMMM yyyy", Fr);
-            return s.Length > 0 ? char.ToUpperInvariant(s[0]) + s[1..] : s;
+            return L.Majuscule(L.MoisAnnee(_month));
         }
     }
 
@@ -647,7 +646,7 @@ else
         get
         {
             var d = _selectedDay ?? DateTime.Today;
-            return d == DateTime.Today ? "Aujourd'hui — " + FrDate(d) : WeekdayLabel(d) + " — " + FrDate(d);
+            return d == DateTime.Today ? L.T("Aujourd'hui") + " — " + FrDate(d) : WeekdayLabel(d) + " — " + FrDate(d);
         }
     }
 
@@ -673,14 +672,14 @@ else
 
     private string TitrePlaceholder => _draft.Type switch
     {
-        CalendarEventTypes.Anniversaire => "Ex : Anniversaire de Marie Dupont",
-        CalendarEventTypes.Reunion => "Ex : Réunion équipe",
-        CalendarEventTypes.Rappel => "Ex : Rappel important",
-        CalendarEventTypes.Tache => "Ex : Terminer le rapport",
-        CalendarEventTypes.Evenement => "Ex : Pot de départ",
-        CalendarEventTypes.Conge => "Ex : Congé annuel",
-        CalendarEventTypes.Echeance => "Ex : Rendu du dossier",
-        _ => "Ex : Autre événement"
+        CalendarEventTypes.Anniversaire => L.T("Ex : Anniversaire de Marie Dupont"),
+        CalendarEventTypes.Reunion => L.T("Ex : Réunion équipe"),
+        CalendarEventTypes.Rappel => L.T("Ex : Rappel important"),
+        CalendarEventTypes.Tache => L.T("Ex : Terminer le rapport"),
+        CalendarEventTypes.Evenement => L.T("Ex : Pot de départ"),
+        CalendarEventTypes.Conge => L.T("Ex : Congé annuel"),
+        CalendarEventTypes.Echeance => L.T("Ex : Rendu du dossier"),
+        _ => L.T("Ex : Autre événement")
     };
 
     private bool ShowLieu => _draft.Type is CalendarEventTypes.Reunion or CalendarEventTypes.Evenement or CalendarEventTypes.Autre;
@@ -927,7 +926,7 @@ else
                 });
                 if (result.Success)
                 {
-                    State.NotifySuccess("✓ " + CalendarEventTypes.Label(_draft.Type) + " ajouté au calendrier.");
+                    State.NotifySuccess(L.F("✓ {0} ajouté au calendrier.", CalendarEventTypes.Label(_draft.Type)));
                 }
                 else
                 {
@@ -956,7 +955,7 @@ else
                 });
                 if (result.Success)
                 {
-                    State.NotifyInfo("Événement modifié.");
+                    State.NotifyInfo(L.T("Événement modifié."));
                 }
                 else
                 {
@@ -980,7 +979,7 @@ else
         if (target == null) return;
         var result = Store.DeleteEvent(target.Id);
         if (result.Success)
-            State.NotifySuccess("Événement supprimé.");
+            State.NotifySuccess(L.T("Événement supprimé."));
         else
             State.NotifyError(result.Error);
     }
@@ -1015,14 +1014,14 @@ else
         var c = CalendarEventTypes.Color(e.Type);
         var (m, _) = TimeLabel(e);
         var persons = EventPersons(e);
-        <div class="cal-card" style="--evt-color:@c" role="button" tabindex="0" aria-label="Afficher les détails" @onclick="() => OpenDetail(e)" @onkeydown="(k) => OnCardKeyDown(k, e)">
+        <div class="cal-card" style="--evt-color:@c" role="button" tabindex="0" aria-label="@L.T("Afficher les détails")" @onclick="() => OpenDetail(e)" @onkeydown="(k) => OnCardKeyDown(k, e)">
             <div class="cal-card-time">@m</div>
             <div class="cal-card-main">
                 <div class="cal-card-title">@e.Titre</div>
                 <div class="cal-card-type" style="color:@c;background:@Soft(c)">@CalendarEventTypes.Icon(e.Type) @CalendarEventTypes.Label(e.Type)</div>
                 @if (!string.IsNullOrWhiteSpace(e.Lieu))
                 {
-                    <div class="cal-card-meta"><span role="img" aria-label="Lieu">📍</span> @e.Lieu</div>
+                    <div class="cal-card-meta"><span role="img" aria-label="@L.T("Lieu")">📍</span> @e.Lieu</div>
                 }
                 @if (_draft_isAnniversaire(e.Type))
                 {
@@ -1044,7 +1043,7 @@ else
                 }
                 @if (e.RappelAvant > 0)
                 {
-                    <div class="cal-card-meta">⏰ Rappel @ReminderShort(e.RappelAvant)</div>
+                    <div class="cal-card-meta">⏰ @L.T("Rappel") @ReminderShort(e.RappelAvant)</div>
                 }
                 @if (e.Priorite != CalendarEventTypes.PrioriteNormale)
                 {
@@ -1052,7 +1051,7 @@ else
                 }
                 @if (e.Type == CalendarEventTypes.Tache)
                 {
-                    <div class="cal-card-meta">Statut : @StatutLabel(e.Statut)</div>
+                    <div class="cal-card-meta">@L.F("Statut : {0}", StatutLabel(e.Statut))</div>
                 }
             </div>
             <div class="cal-card-menu" aria-hidden="true">
@@ -1088,7 +1087,7 @@ else
         else
         {
             var u = Store.Users.FirstOrDefault(x => x.Id == userId);
-            State.NotifyInfo("Votre profil : " + (u?.NomComplet ?? "utilisateur inconnu"));
+            State.NotifyInfo(L.F("Votre profil : {0}", u?.NomComplet ?? L.T("utilisateur inconnu")));
         }
     }
 
@@ -1101,7 +1100,7 @@ else
     {
         0 => "",
         1 => persons[0],
-        _ => persons.Count + " personnes"
+        _ => L.F("{0} personnes", persons.Count)
     };
 
     private static List<string> EventPersons(CalendarEvent e)
@@ -1115,10 +1114,10 @@ else
 
     private static string RepetitionShort(string rep) => rep switch
     {
-        CalendarEventTypes.RepetitionQuotidienne => "Tous les jours",
-        CalendarEventTypes.RepetitionHebdomadaire => "Une fois par semaine",
-        CalendarEventTypes.RepetitionMensuelle => "Une fois par mois",
-        CalendarEventTypes.RepetitionAnnuelle => "Une fois par an",
+        CalendarEventTypes.RepetitionQuotidienne => L.T("Tous les jours"),
+        CalendarEventTypes.RepetitionHebdomadaire => L.T("Une fois par semaine"),
+        CalendarEventTypes.RepetitionMensuelle => L.T("Une fois par mois"),
+        CalendarEventTypes.RepetitionAnnuelle => L.T("Une fois par an"),
         _ => CalendarEventTypes.RepetitionAucune
     };
 
@@ -1194,7 +1193,7 @@ else
         {
             if (TryDate(_draft.Date, out var d))
                 return WeekdayLabel(d) + " " + d.ToString("dd/MM/yyyy");
-            return "Choisir une date (JJ/MM/AAAA)";
+            return L.T("Choisir une date (JJ/MM/AAAA)");
         }
     }
 
@@ -1202,8 +1201,7 @@ else
     {
         get
         {
-            var s = _datePickerMonth.ToString("MMMM yyyy", Fr);
-            return s.Length > 0 ? char.ToUpperInvariant(s[0]) + s[1..] : s;
+            return L.Majuscule(L.MoisAnnee(_datePickerMonth));
         }
     }
 
@@ -1319,13 +1317,13 @@ else
 
     private static string FrDate(DateTime d) => d.ToString("dd/MM/yyyy");
 
-    private static string WeekdayLabel(DateTime d) => char.ToUpperInvariant(d.ToString("dddd", Fr)[0]) + d.ToString("dddd", Fr)[1..];
+    private static string WeekdayLabel(DateTime d) => L.Majuscule(L.Jour(d.DayOfWeek));
 
     private static string FrDateCourte(string iso) => DataStore.FormatDateCourte(iso);
 
     private static (string, string?) TimeLabel(CalendarEvent e)
     {
-        if (e.TouteLaJournee) return ("Toute la journée", null);
+        if (e.TouteLaJournee) return (L.T("Toute la journée"), null);
         var h = e.HeureDebut ?? "—";
         if (h.Length >= 8 && h.EndsWith(":00", StringComparison.Ordinal)) h = h[..5];
         return (h, null);
@@ -1340,7 +1338,7 @@ else
         var ref_ = (jour ?? DateTime.Today).Date;
         var age = ref_.Year - birth.Year;
         if (ref_ < birth.AddYears(age)) age--;
-        return age <= 0 ? "" : "🎂 " + age + " ans";
+        return age <= 0 ? "" : L.F("🎂 {0} ans", age);
     }
 
     private string UserName(string identifiant)
@@ -1348,25 +1346,25 @@ else
 
     private static string ReminderShort(int minutes) => minutes switch
     {
-        5 => "5 min avant",
-        10 => "10 min avant",
-        30 => "30 min avant",
-        60 => "1 h avant",
-        1440 => "1 jour avant",
-        _ => minutes + " min avant"
+        5 => L.T("5 min avant"),
+        10 => L.T("10 min avant"),
+        30 => L.T("30 min avant"),
+        60 => L.T("1 h avant"),
+        1440 => L.T("1 jour avant"),
+        _ => L.F("{0} min avant", minutes)
     };
 
     private static string PriorityLabel(string p) => p switch
     {
-        CalendarEventTypes.PrioriteImportante => "Importante",
-        CalendarEventTypes.PrioriteUrgente => "⚠ Urgente",
+        CalendarEventTypes.PrioriteImportante => L.T("Importante"),
+        CalendarEventTypes.PrioriteUrgente => L.T("⚠ Urgente"),
         _ => ""
     };
 
     private static string StatutLabel(string s) => s switch
     {
-        CalendarEventTypes.StatutEnCours => "En cours",
-        CalendarEventTypes.StatutTerminee => "Terminée",
-        _ => "À faire"
+        CalendarEventTypes.StatutEnCours => L.T("En cours"),
+        CalendarEventTypes.StatutTerminee => L.T("Terminée"),
+        _ => L.T("À faire")
     };
 }
