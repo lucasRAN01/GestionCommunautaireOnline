@@ -1,0 +1,180 @@
+@inject DataStore Store
+@inject AppState State
+@inject NativeFileSaver Saver
+
+<div class="page-head">
+    <p>Historique des opérations effectuées (les 500 dernières).</p>
+</div>
+
+<div class="search-box cal-search">
+    <span class="search-icon" aria-hidden="true">⌕</span>
+    <input type="search" placeholder="Rechercher dans le journal (description, utilisateur)…" aria-label="Rechercher dans le journal"
+           value="@_search" @oninput="OnSearch" />
+</div>
+@if (!string.IsNullOrWhiteSpace(_search))
+{
+    <div class="search-summary">@_list.Count entrée(s) trouvée(s) pour « @_search.Trim() »</div>
+}
+
+<div class="chips-row">
+    <button class="chip @(ChipCls(""))" @onclick="@(() => SetFilter(""))">Tous</button>
+    <button class="chip @(ChipCls(ActivityTypes.Login))" @onclick="@(() => SetFilter(ActivityTypes.Login))">Connexions</button>
+    <button class="chip @(ChipCls(ActivityTypes.Create))" @onclick="@(() => SetFilter(ActivityTypes.Create))">Créations</button>
+    <button class="chip @(ChipCls(ActivityTypes.Update))" @onclick="@(() => SetFilter(ActivityTypes.Update))">Modifications</button>
+    <button class="chip @(ChipCls(ActivityTypes.Delete))" @onclick="@(() => SetFilter(ActivityTypes.Delete))">Suppressions</button>
+    <button class="chip @(ChipCls(ActivityTypes.Activate))" @onclick="@(() => SetFilter(ActivityTypes.Activate))">Activations</button>
+    <button class="chip @(ChipCls(ActivityTypes.Deactivate))" @onclick="@(() => SetFilter(ActivityTypes.Deactivate))">Désactivations</button>
+</div>
+
+@if (_list.Count == 0)
+{
+    <EmptyState Icon="📄" Title="Aucune activité" Message="Le journal est vide pour ce filtre." />
+}
+else
+{
+    <div class="activity-list">
+        @foreach (var e in _list)
+        {
+            <div class="activity-item">
+                <span class="activity-icon" aria-hidden="true">@Icon(e.Type)</span>
+                <div class="activity-content">
+                    <div class="activity-desc">@e.Description</div>
+                    <div class="activity-meta">
+                        <span class="activity-user">@e.User</span>
+                        <span class="activity-date">@FormatTimeAgo(e.Date)</span>
+                    </div>
+                </div>
+                <Badge Text="@ActivityLabel(e.Type)" Kind="role" />
+            </div>
+        }
+    </div>
+}
+
+<div class="form-actions" style="margin-top:14px;margin-bottom:8px">
+    <button class="btn btn-secondary" @onclick="ExportExcel">⇩ Exporter Excel</button>
+    <button class="btn btn-danger-outline" @onclick="() => _confirmClear = true">Effacer le journal</button>
+</div>
+
+<ConfirmDialog Show="_confirmClear" Title="Effacer le journal"
+               Message="@ClearMessage"
+               ConfirmLabel="Effacer" Danger="true" OnConfirm="ClearActivity" OnCancel="() => _confirmClear = false" />
+
+@code {
+    private string _filter = "";
+    private string _search = "";
+    private bool _confirmClear;
+    private IReadOnlyList<ActivityEntry> _list = new List<ActivityEntry>();
+
+    protected override void OnParametersSet()
+    {
+        Refresh();
+    }
+
+    private void Refresh()
+    {
+        var all = Store.Activity;
+        if (!string.IsNullOrEmpty(_filter))
+            all = all.Where(a => CategoryOf(a.Type) == _filter).ToList();
+        var q = _search.Trim();
+        if (q.Length > 0)
+        {
+            all = all.Where(a => (a.Description + " " + a.User)
+                .Contains(q, StringComparison.OrdinalIgnoreCase)).ToList();
+        }
+        _list = all;
+    }
+
+    private void OnSearch(ChangeEventArgs e)
+    {
+        _search = e.Value?.ToString() ?? string.Empty;
+        Refresh();
+    }
+
+    /// <summary>
+    /// Regroupe les types d'activité en familles filtrables. Les « ajouts »
+    /// (événement, dossier, document, restauration) sont comptés comme des
+    /// créations.
+    /// </summary>
+    private static string CategoryOf(string type) => type switch
+    {
+        ActivityTypes.Login or ActivityTypes.Logout => ActivityTypes.Login,
+        ActivityTypes.Create or ActivityTypes.CalendarCreate or ActivityTypes.DossierCreate
+            or ActivityTypes.DocumentCreate or ActivityTypes.DocumentRestore or ActivityTypes.Import
+            => ActivityTypes.Create,
+        ActivityTypes.Update or ActivityTypes.CalendarUpdate or ActivityTypes.DossierUpdate
+            or ActivityTypes.DocumentUpdate or ActivityTypes.DocumentShare
+            or ActivityTypes.FieldsChange or ActivityTypes.PasswordReset
+            => ActivityTypes.Update,
+        ActivityTypes.Delete or ActivityTypes.CalendarDelete or ActivityTypes.DossierDelete
+            or ActivityTypes.DocumentDelete
+            => ActivityTypes.Delete,
+        _ => type
+    };
+
+    private string ChipCls(string filter) => _filter == filter ? "active" : "";
+
+    private string ClearMessage => string.IsNullOrEmpty(_filter)
+        ? "Confirmez-vous la suppression de tout l'historique d'activité ?"
+        : "Confirmez-vous la suppression des entrées « " + ActivityTypes.Label(_filter) + " » uniquement ?";
+
+    private void SetFilter(string filter)
+    {
+        _filter = filter;
+        Refresh();
+    }
+
+    private static string ActivityLabel(string type) => ActivityTypes.Label(type);
+
+    private static string Icon(string type) => type switch
+    {
+        ActivityTypes.Login => "🔐",
+        ActivityTypes.Logout => "👋",
+        ActivityTypes.Create => "➕",
+        ActivityTypes.Update => "✏️",
+        ActivityTypes.Delete => "🗑️",
+        ActivityTypes.Activate => "✅",
+        ActivityTypes.Deactivate => "⛔",
+        ActivityTypes.PasswordReset => "🔑",
+        ActivityTypes.Export => "⇩",
+        ActivityTypes.Import => "⇪",
+        ActivityTypes.FieldsChange => "🧩",
+        _ => "•"
+    };
+
+    private static string FormatTimeAgo(string iso) => DataStore.FormatDateCourte(iso);
+
+    private void ClearActivity()
+    {
+        _confirmClear = false;
+        if (string.IsNullOrEmpty(_filter))
+        {
+            Store.ClearActivity(null);
+        }
+        else
+        {
+            var types = Store.Activity
+                .Select(a => a.Type)
+                .Where(t => CategoryOf(t) == _filter)
+                .Distinct()
+                .ToList();
+            Store.ClearActivityByTypes(types);
+        }
+        Refresh();
+        State.NotifyInfo(string.IsNullOrEmpty(_filter) ? "Journal d'activité vidé." : "Entrées sélectionnées supprimées.");
+    }
+
+    private async Task ExportExcel()
+    {
+        var bytes = Store.ExportJournalExcel();
+        var path = await Saver.SaveAsync("journal-activite-" + DateTime.Now.ToString("dd-MM-yyyy_HH-mm-ss") + ".xlsx", bytes, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+        if (path != null)
+        {
+            Store.LogActivity(ActivityTypes.Export, "Export Excel du journal d'activité");
+            State.NotifySuccess("Export réussi : " + path);
+        }
+        else
+        {
+            State.NotifyError("L'export a échoué.");
+        }
+    }
+}

@@ -1,0 +1,56 @@
+@inject OnlineSession Session
+
+<div class="login-view online-status">
+    <div class="login-logo">
+        <div class="login-logo-mark">GU</div>
+        <h1>@Title</h1>
+    </div>
+    <div class="login-card">
+        <p class="online-status-text">@Message</p>
+        @if (Session.Profile != null)
+        {
+            <p class="text-muted online-status-account">Compte : @Session.Profile.Email</p>
+        }
+        @if (Session.State is OnlineSessionState.Pending or OnlineSessionState.NoMemberRecord or OnlineSessionState.Error)
+        {
+            <button type="button" class="btn btn-primary btn-block" disabled="@_busy" @onclick="RecheckAsync">
+                @(_busy ? "Vérification…" : "Vérifier à nouveau")
+            </button>
+        }
+        @if (Session.State != OnlineSessionState.NotConfigured)
+        {
+            <button type="button" class="btn btn-secondary btn-block online-status-logout" @onclick="Session.SignOutAsync">Se déconnecter</button>
+        }
+    </div>
+</div>
+
+@code {
+    private bool _busy;
+
+    private string Title => Session.State switch
+    {
+        OnlineSessionState.Pending => "Compte en attente de validation",
+        OnlineSessionState.Refused => "Inscription refusée",
+        OnlineSessionState.Disabled => "Compte désactivé",
+        OnlineSessionState.NoMemberRecord => "Fiche membre manquante",
+        OnlineSessionState.NotConfigured => "Configuration requise",
+        _ => "Connexion impossible"
+    };
+
+    private string Message => Session.State switch
+    {
+        OnlineSessionState.Pending => "Merci pour votre inscription. Un administrateur doit valider votre compte et vous attribuer un rôle. Revenez un peu plus tard ou cliquez sur « Vérifier à nouveau ».",
+        OnlineSessionState.Refused => "Un administrateur a refusé cette inscription. Contactez la communauté si vous pensez qu'il s'agit d'une erreur.",
+        OnlineSessionState.Disabled => "Ce compte a été désactivé par un administrateur. Contactez la communauté pour le réactiver.",
+        OnlineSessionState.NoMemberRecord => "Votre compte est validé, mais votre fiche membre n'a pas encore été créée. Demandez à un administrateur de valider à nouveau votre compte depuis « Comptes en ligne ».",
+        OnlineSessionState.NotConfigured => "L'adresse du projet Supabase n'est pas configurée (fichier appsettings.json). Suivez le guide de mise en ligne du dépôt.",
+        _ => Session.Error ?? "Une erreur est survenue."
+    };
+
+    private async Task RecheckAsync()
+    {
+        _busy = true;
+        try { await Session.RecheckAsync(); }
+        finally { _busy = false; }
+    }
+}

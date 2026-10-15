@@ -1,0 +1,38 @@
+@if (OnClick.HasDelegate && Clickable)
+{
+    <button type="button" class="stat-card stat-card-btn" @onclick="OnClick">
+        <span class="stat-icon @KindClass" aria-hidden="true">@Icon</span>
+        <span class="stat-info">
+            <span class="stat-value">@Value</span>
+            <span class="stat-label">@Label</span>
+        </span>
+    </button>
+}
+else
+{
+    <div class="stat-card">
+        <span class="stat-icon @KindClass" aria-hidden="true">@Icon</span>
+        <span class="stat-info">
+            <span class="stat-value">@Value</span>
+            <span class="stat-label">@Label</span>
+        </span>
+    </div>
+}
+
+@code {
+    [Parameter] public string? Icon { get; set; }
+    [Parameter] public string? Value { get; set; }
+    [Parameter] public string? Label { get; set; }
+    [Parameter] public string? Kind { get; set; }
+    [Parameter] public string? Title { get; set; }
+    [Parameter] public EventCallback OnClick { get; set; }
+    [Parameter] public bool Clickable { get; set; } = true;
+
+    private string KindClass => Kind switch
+    {
+        "active" => "active",
+        "inactive" => "inactive",
+        "recent" => "recent",
+        _ => ""
+    };
+}

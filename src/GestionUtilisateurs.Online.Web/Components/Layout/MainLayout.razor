@@ -1,0 +1,820 @@
+@implements IDisposable
+@inject DataStore Store
+@inject AppState State
+@inject JavascriptBridge Js
+@inject OnlineSession Online
+
+<div class="app-shell">
+    @* Navigation latérale de la version web (écrans larges uniquement ; le mobile garde la barre du bas). *@
+    <aside class="web-sidebar" aria-label="Navigation principale">
+        <div class="web-sidebar-brand">
+            @if (!string.IsNullOrWhiteSpace(Store.Settings.Logo))
+            {
+                <img src="@Store.Settings.Logo" alt="" />
+            }
+            else
+            {
+                <span class="web-sidebar-mark" aria-hidden="true">GU</span>
+            }
+            <span class="web-sidebar-name">@Store.Settings.AppName</span>
+        </div>
+        <nav class="web-sidebar-nav">
+            @foreach (var item in SidebarItems)
+            {
+                var it = item;
+                var badge = it.Key == "storage" ? "" : MoreBadge(it.Key);
+                <button type="button" class="web-nav-item @(NavCls(it.Key))" @onclick="it.Act">
+                    <span class="web-nav-icon" aria-hidden="true">@it.Icon</span>
+                    <span class="web-nav-label">@it.Label</span>
+                    @if (!string.IsNullOrEmpty(badge))
+                    {
+                        <span class="web-nav-badge">@badge</span>
+                    }
+                </button>
+            }
+        </nav>
+        <div class="web-sidebar-foot">
+            <button type="button" class="web-nav-item" @onclick='() => Go("profile")'>
+                <Avatar UserName="@currentUser?.NomComplet" Seed="@currentUser?.Identifiant" Size="sm" Photo="@currentUser?.Photo" />
+                <span class="web-nav-label">@currentUser?.NomComplet<small>@currentUser?.Role</small></span>
+            </button>
+        </div>
+    </aside>
+
+    <header class="app-topbar">
+        @if (State.HasHistory)
+        {
+            <button class="back-button" aria-label="Retour" @onclick="GoBack">
+                <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" d="M15 18l-6-6 6-6"/></svg>
+            </button>
+        }
+        @if (!string.IsNullOrWhiteSpace(Store.Settings.Logo))
+        {
+            <button type="button" class="logo-btn" aria-label="Afficher le logo et l'histoire de la communauté" @onclick="OpenLogo">
+                <img class="topbar-logo" src="@Store.Settings.Logo" alt="Logo" />
+            </button>
+        }
+        else
+        {
+            <button type="button" class="logo-btn" aria-label="Afficher le logo et l'histoire de la communauté" @onclick="OpenLogo">
+                <span class="topbar-logo-mark" aria-hidden="true">GU</span>
+            </button>
+        }
+        <h2 class="page-title">@PageTitle</h2>
+        <div class="topbar-actions">
+            <div class="dropdown-wrap">
+                <button class="avatar-button" aria-label="Menu utilisateur" @onclick="ToggleMenu">
+                    <Avatar UserName="@currentUser?.NomComplet" Seed="@currentUser?.Identifiant" Size="sm" Photo="@currentUser?.Photo" />
+                </button>
+            </div>
+            <div class="dropdown-wrap">
+                <button class="topbar-menu-btn" aria-label="Plus d'options" @onclick="ToggleMore">
+                    <span class="topbar-menu-icon" aria-hidden="true">⋮</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    @if (_menuOpen)
+    {
+        <div class="user-menu" @onmousedown="NoOp" @onmousedown:stopPropagation="true" @onclick="NoOp" @onclick:stopPropagation="true">
+            <button class="user-menu-header-btn" @onclick='() => Go("profile")'>
+                <div class="user-menu-header">
+                    <strong>@currentUser?.NomComplet</strong>
+                    <Badge Text="@currentUser?.Role" Kind="role" />
+                    <span class="text-muted" style="font-size:12px">@currentUser?.Identifiant</span>
+                </div>
+            </button>
+            <button class="user-menu-item" @onclick='() => Go("profile")'><span class="menu-icon menu-profile" aria-hidden="true"><svg viewBox="0 0 24 24" width="18" height="18"><circle cx="12" cy="8" r="3.6" fill="currentColor" opacity=".25"/><circle cx="12" cy="8" r="3.6" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M4.5 20c1.4-3.4 4.2-5 7.5-5s6.1 1.6 7.5 5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></span><span class="menu-label">Mes informations</span></button>
+            @if (!Store.IsBaseAdmin)
+            {
+                <button class="user-menu-item" @onclick='() => Go("settings")'><span class="menu-icon menu-gear" aria-hidden="true"><svg viewBox="0 0 24 24" width="18" height="18"><circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M12 2.5l1.2 2.7 2.9-.6 1 2.8 2.9.8-.5 2.9 2 2.1-2 2.1.5 2.9-2.9.8-1 2.8-2.9-.6L12 21.5l-1.2-2.7-2.9.6-1-2.8-2.9-.8.5-2.9-2-2.1 2-2.1-.5-2.9 2.9-.8 1-2.8 2.9.6z" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/></svg></span><span class="menu-label">Paramètres</span></button>
+            }
+            <button class="user-menu-item" @onclick="OpenPassword"><span class="menu-icon" aria-hidden="true">🔑</span><span class="menu-label">Changer mon mot de passe</span></button>
+            <button class="user-menu-item danger" @onclick="AskLogout"><span class="menu-icon menu-logout" aria-hidden="true"><svg viewBox="0 0 24 24" width="18" height="18"><path d="M14 4H6a1 1 0 0 0-1 1v14a1 1 0 0 0 1 1h8" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/><path d="M10 12h10m-3-3 3 3-3 3" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span class="menu-label">Déconnexion</span></button>
+        </div>
+    }
+
+    <main class="app-content" @onmousedown="CloseMenuFromOutside">
+        @if (Online.IsAdmin && Online.Admin.Level != "ok")
+        {
+            <div class="quota-banner @(Online.Admin.Level == "critique" ? "quota-banner-critical" : "")" role="alert">
+                <span class="quota-banner-icon" aria-hidden="true">@(Online.Admin.Level == "critique" ? "⛔" : "⚠")</span>
+                <div class="quota-banner-main">
+                    <strong>@(Online.Admin.Level == "critique" ? "Serveur bientôt saturé" : "Espace serveur à surveiller")</strong>
+                    <span>@Online.Admin.OpenAlerts alerte(s) de capacité Supabase à traiter (offre gratuite).</span>
+                </div>
+                <button type="button" class="btn btn-secondary btn-sm" @onclick='() => Go("capacite")'>Voir</button>
+            </div>
+        }
+        @if (Online.Admin.PendingAccounts > 0 && Store.Can(Permissions.UsersManage) && State.CurrentPage != "comptes")
+        {
+            <div class="quota-banner online-pending-banner" role="status">
+                <span class="quota-banner-icon" aria-hidden="true">👤</span>
+                <div class="quota-banner-main">
+                    <strong>@Online.Admin.PendingAccounts inscription(s) à valider</strong>
+                    <span>Ces personnes attendent votre validation pour accéder à l'application.</span>
+                </div>
+                <button type="button" class="btn btn-secondary btn-sm" @onclick='() => Go("comptes")'>Valider</button>
+            </div>
+        }
+        @if (false && _storageLevel != "ok")
+        {
+            <div class="quota-banner @(_storageLevel == "critical" ? "quota-banner-critical" : "")" role="alert">
+                <span class="quota-banner-icon" aria-hidden="true">@(_storageLevel == "critical" ? "⛔" : "⚠")</span>
+                <div class="quota-banner-main">
+                    <strong>@(_storageLevel == "critical" ? "Stockage saturé (" + _storagePercent.ToString("0") + " %)" : "Stockage presque plein (" + _storagePercent.ToString("0") + " %)")</strong>
+                    <span>@FormatSize(Store.StorageUsedBytes()) utilisés sur @_storageQuotaLabel. Videz la corbeille et les archives pour libérer de l'espace.</span>
+                </div>
+                <button type="button" class="btn btn-secondary btn-sm" @onclick="OpenStorage">Voir</button>
+            </div>
+        }
+        @ChildContent
+    </main>
+
+    <nav class="bottom-nav">
+        @if (Store.IsBaseAdmin)
+        {
+            <button class="bottom-nav-item @(NavCls("data"))" @onclick="@(() => Go("data"))">
+                <span class="bn-icon nav-svg nav-data" aria-hidden="true"><svg viewBox="0 0 24 24" width="24" height="24"><ellipse cx="12" cy="5.5" rx="7" ry="2.8" fill="currentColor" opacity=".3"/><path d="M5 5.5v13c0 1.5 3.1 2.8 7 2.8s7-1.3 7-2.8v-13" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M5 12c0 1.5 3.1 2.8 7 2.8s7-1.3 7-2.8" fill="none" stroke="currentColor" stroke-width="1.8" opacity=".7"/></svg></span><span class="bn-label">Gestion de données</span>
+            </button>
+        }
+        else
+        {
+            <button class="bottom-nav-item @(NavCls("dashboard"))" @onclick="@(() => Go("dashboard"))">
+                <span class="bn-icon nav-svg nav-home" aria-hidden="true"><svg viewBox="0 0 24 24" width="24" height="24"><path d="M4 10.5 12 3.5l8 7" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/><path d="M6 9.5V20h12V9.5" fill="currentColor" opacity=".18"/><path d="M6 9.5V20h12V9.5" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"/><circle cx="12" cy="14.5" r="1.6" fill="currentColor"/></svg></span><span class="bn-label">Accueil</span>
+            </button>
+            <button class="bottom-nav-item @(NavCls("users"))" @onclick="@(() => Go("users"))">
+                <span class="bn-icon nav-svg nav-users" aria-hidden="true"><svg viewBox="0 0 24 24" width="24" height="24"><circle cx="9" cy="8" r="3.2" fill="currentColor" opacity=".25"/><circle cx="9" cy="8" r="3.2" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M3 19c1-3 3.2-4.5 6-4.5s5 1.5 6 4.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><circle cx="16.5" cy="9" r="2.4" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M16 14.6c2 .3 3.6 1.5 4.5 3.9" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></span><span class="bn-label">@(Store.IsManager ? "Utilisateurs" : "Mes informations")</span>
+            </button>
+            <button class="bottom-nav-item cal-nav-item @(NavCls("calendar"))" @onclick="@(() => Go("calendar"))" aria-label="Calendrier — @_calWeekday @_calDay">
+                <span class="bn-icon cal-nav-icon nav-cal" aria-hidden="true">
+                    <span class="cal-nav-weekday">@_calWeekday</span>
+                    <span class="cal-nav-day">@_calDay</span>
+                </span>
+                @if (_calEventsToday > 0)
+                {
+                    <span class="cal-nav-badge" aria-label="@_calEventsToday événement(s) aujourd'hui">@_calEventsToday</span>
+                }
+                <span class="bn-label">Calendrier</span>
+            </button>
+            @if (Store.IsManager)
+            {
+                <button class="bottom-nav-item @(NavCls("activity"))" @onclick="@(() => Go("activity"))">
+                    <span class="bn-icon nav-svg nav-activity" aria-hidden="true"><svg viewBox="0 0 24 24" width="24" height="24"><rect x="5" y="4" width="14" height="17" rx="2.5" fill="currentColor" opacity=".15"/><rect x="5" y="4" width="14" height="17" rx="2.5" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M9 9.5h6M9 13h6M9 16.5h3.5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/><path d="M15.5 2.8v3.5h3.5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg></span><span class="bn-label">Activité</span>
+                </button>
+            }
+        }
+    </nav>
+
+    @if (_moreOpen)
+    {
+        <div class="more-overlay" @onclick="CloseMore">
+            <div class="user-menu more-sheet" role="dialog" aria-label="Menu" @onmousedown="NoOp" @onmousedown:stopPropagation="true" @onclick="NoOp" @onclick:stopPropagation="true">
+                <div class="more-head">
+                    <strong>Menu</strong>
+                    <button type="button" class="modal-close" aria-label="Fermer le menu" @onclick="CloseMore">×</button>
+                </div>
+                <div class="more-sheet-grid @MenuGridCls">
+                    @foreach (var menuItem in VisibleMoreItems)
+                    {
+                        var it = menuItem;
+                        var badge = MoreBadge(it.Key);
+                        <button type="button" class="user-menu-item more-card" @onclick="it.Act">
+                            <span class="menu-icon @it.IconClass" aria-hidden="true">@it.Icon</span>
+                            <span class="menu-label">@it.Label</span>
+                            @if (!string.IsNullOrEmpty(badge))
+                            {
+                                <span class="menu-badge" aria-label="@badge notification(s)">@badge</span>
+                            }
+                        </button>
+                    }
+                </div>
+            </div>
+        </div>
+    }
+
+    <Modal Title="Changer mon mot de passe" Show="_pwdOpen" OnClose="() => _pwdOpen = false">
+        <ChildContent>
+            <div class="form-group">
+                <label for="me-pwd">Nouveau mot de passe</label>
+                <input id="me-pwd" type="password" autocomplete="new-password" @bind="_pwd1" />
+            </div>
+            <div class="form-group">
+                <label for="me-pwd2">Confirmer</label>
+                <input id="me-pwd2" type="password" autocomplete="new-password" @bind="_pwd2" />
+                <span class="field-hint">8 caractères minimum.</span>
+            </div>
+        </ChildContent>
+        <FooterContent>
+            <button type="button" class="btn btn-secondary" @onclick="() => _pwdOpen = false">Annuler</button>
+            <button type="button" class="btn btn-primary" disabled="@_pwdBusy" @onclick="SavePasswordAsync">Enregistrer</button>
+        </FooterContent>
+    </Modal>
+
+    <ConfirmDialog Show="_confirmLogout" Title="Déconnexion"
+                   Message="Voulez-vous vraiment vous déconnecter ?"
+                   ConfirmLabel="Se déconnecter" Danger="true"
+                   OnConfirm="ConfirmLogout" OnCancel="() => _confirmLogout = false" />
+
+    <Modal Title="Logo et histoire de la communauté" Show="_logoOpen" OnClose="() => _logoOpen = false">
+        <ChildContent>
+            <div class="logo-modal">
+                @if (!string.IsNullOrWhiteSpace(Store.Settings.Logo))
+                {
+                    <img class="logo-modal-img" src="@Store.Settings.Logo" alt="Logo de la communauté" />
+                }
+                else
+                {
+                    <div class="logo-modal-mark" aria-hidden="true">GU</div>
+                }
+                @if (_logoHasStory)
+                {
+                    <div class="logo-modal-story">
+                        @if (!string.IsNullOrWhiteSpace(Store.Community.Titre))
+                        {
+                            <div class="logo-modal-title">@Store.Community.Titre</div>
+                        }
+                        @if (!string.IsNullOrWhiteSpace(Store.Community.SousTitre))
+                        {
+                            <div class="logo-modal-subtitle">@Store.Community.SousTitre</div>
+                        }
+                        @if (Store.Community.Chapitres.Count > 0)
+                        {
+                            <div class="logo-modal-chapters">
+                                @foreach (var ch in Store.Community.Chapitres.Take(3))
+                                {
+                                    <div class="logo-modal-chapter">
+                                        <span class="logo-modal-chapter-dot" aria-hidden="true">●</span>
+                                        <div>
+                                            <div class="logo-modal-chapter-title">@ch.Titre</div>
+                                            @if (!string.IsNullOrWhiteSpace(ch.Date))
+                                            {
+                                                <div class="logo-modal-chapter-date">@DataStore.FormatDateCourte(ch.Date)</div>
+                                            }
+                                        </div>
+                                    </div>
+                                }
+                                @if (Store.Community.Chapitres.Count > 3)
+                                {
+                                    <div class="logo-modal-more">… et @(Store.Community.Chapitres.Count - 3) autre(s) chapitre(s)</div>
+                                }
+                            </div>
+                            <button type="button" class="btn btn-primary btn-block" style="margin-top:12px" @onclick="OpenCommunityFromLogo">📖 Ouvrir l'histoire complète</button>
+                        }
+                    </div>
+                }
+            </div>
+        </ChildContent>
+    </Modal>
+
+    <Modal Title="Espace de stockage utilisé" Show="_showStorage" CssClass="modal-storage" OnClose="() => _showStorage = false">
+        <ChildContent>
+            <p class="muted" style="margin-top:0">Répartition du stockage local par source de données. Touchez une source pour voir le détail en popup.</p>
+            <div class="storage-items">
+                @foreach (var item in _storageBreakdown)
+                {
+                    <div class="storage-item storage-item-link" role="button" tabindex="0" aria-label="Voir le détail @item.Label" @onclick="() => OpenStorageDetail(item.Key)" @onkeydown="(k) => OnStorageKey(k, item.Key)">
+                        <div class="storage-item-main">
+                            <div class="storage-item-label">@item.Label</div>
+                            <div class="storage-item-desc">@item.Description</div>
+                            <div class="storage-item-meta">
+                                <span class="storage-item-count">@StorageCountLabel(item.Key)</span>
+                                <span class="storage-item-pct">@StoragePercentOf(item.Bytes).ToString("0.0") %</span>
+                            </div>
+                            <div class="storage-item-bar">
+                                <div class="storage-item-fill" style="width:@Math.Min(StoragePercentOf(item.Bytes), 100).ToString("0.0", System.Globalization.CultureInfo.InvariantCulture)%"></div>
+                            </div>
+                        </div>
+                        <span class="storage-item-size">@FormatSize(item.Bytes)</span>
+                        <span class="storage-item-go" aria-hidden="true">ⓘ</span>
+                    </div>
+                }
+            </div>
+            <div class="storage-item storage-item-total">
+                <div class="storage-item-main">
+                    <div class="storage-item-label">Total utilisé</div>
+                    <div class="storage-item-desc">@FormatSize(Store.StorageUsedBytes()) / @FormatSize(StorageQuotaBytes) · @StorageQuotaPercent().ToString("0.000") % du quota</div>
+                    <div class="storage-item-bar">
+                        <div class="storage-item-fill" style="width:@Math.Min(StorageQuotaPercent(), 100).ToString("0.0", System.Globalization.CultureInfo.InvariantCulture)%"></div>
+                    </div>
+                </div>
+                <span class="storage-item-size">@FormatSize(Store.StorageUsedBytes())</span>
+            </div>
+        </ChildContent>
+        <FooterContent>
+            <button type="button" class="btn btn-primary" @onclick="() => _showStorage = false">Fermer</button>
+        </FooterContent>
+    </Modal>
+
+    <Modal Title="@(_storageDetail == null ? "Détail du stockage" : _storageDetail.Label)" Show="_storageDetail != null" OnClose="CloseStorageDetail">
+        <ChildContent>
+            @if (_storageDetail != null)
+            {
+                <div class="storage-detail-hero">
+                    <span class="storage-detail-icon" aria-hidden="true">@StorageIcon(_storageDetail.Key)</span>
+                    <div class="storage-detail-value">@FormatSize(_storageDetail.Bytes)</div>
+                    <div class="storage-detail-sub">@StorageCountLabel(_storageDetail.Key) · @StoragePercentOf(_storageDetail.Bytes).ToString("0.0") % du stockage utilisé</div>
+                </div>
+                <p class="muted">@_storageDetail.Description</p>
+                <div class="storage-item-bar storage-detail-bar">
+                    <div class="storage-item-fill" style="width:@Math.Min(StoragePercentOf(_storageDetail.Bytes), 100).ToString("0.0", System.Globalization.CultureInfo.InvariantCulture)%"></div>
+                </div>
+                <div class="storage-detail-lines">
+                    <div class="storage-line"><span>Source</span><strong>@_storageDetail.Label</strong></div>
+                    <div class="storage-line"><span>Taille</span><strong>@FormatSize(_storageDetail.Bytes)</strong></div>
+                    <div class="storage-line"><span>Éléments</span><strong>@StorageCountLabel(_storageDetail.Key)</strong></div>
+                    <div class="storage-line storage-total"><span>Part du total</span><strong>@StoragePercentOf(_storageDetail.Bytes).ToString("0.0") %</strong></div>
+                </div>
+            }
+        </ChildContent>
+        <FooterContent>
+            <button type="button" class="btn btn-secondary" @onclick="BackToStorageList">← Retour à la liste</button>
+            <button type="button" class="btn btn-primary" @onclick="CloseStorageDetail">Fermer</button>
+        </FooterContent>
+    </Modal>
+
+</div>
+
+
+@code {
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+
+    private UserAccount? currentUser;
+    private bool _menuOpen;
+    private bool _moreOpen;
+    private bool _moreScrollLocked;
+    private bool _confirmLogout;
+    private bool _logoOpen;
+    private DotNetObjectReference<MainLayout>? _swipeRef;
+    private bool _swipeStarted;
+    private string _calWeekday = "";
+    private string _calDay = "";
+    private int _calEventsToday;
+    private string? _calMonthLabel;
+    private string _calKey = "";
+    private System.Threading.Timer? _calTimer;
+    private bool _showStorage;
+    private StorageUsageItem? _storageDetail;
+    private IReadOnlyList<StorageUsageItem> _storageBreakdown = Array.Empty<StorageUsageItem>();
+    private static readonly CultureInfo Fr = CultureInfo.GetCultureInfo("fr-FR");
+
+    private string PageTitle => State.CurrentPage switch
+    {
+        "dashboard" => "Accueil",
+        "users" => Store.IsManager ? "Utilisateurs" : "Mes informations",
+        "profile" => "Mes informations",
+        "activity" => "Journal d'activité",
+        "calendar" => _calMonthLabel ?? "Calendrier",
+        "fields" => "Champs personnalisés",
+        "settings" => "Paramètres",
+        "documents" => "Documents",
+        "data" => "Gestion de données",
+        "archive" => "Archives des utilisateurs",
+        "community" => "Communauté",
+        "comptes" => "Comptes en ligne",
+        "capacite" => "Capacité du serveur",
+        "roles" => "Rôles et permissions",
+        "messagerie" => "Messagerie",
+        "taches" => "Tâches",
+        "finances" => "Finances",
+        "materiel" => "Matériel",
+        "reunions" => "Réunions",
+        "rappels" => "Rappels",
+        "situations" => "Situations",
+        "carte" => "Carte membre",
+        "votes" => "Votes",
+        "journal" => "Journal multimédia",
+        _ => (Store.Settings.AppName ?? "Gestion des utilisateurs")
+    };
+
+    private string NavCls(string page) => State.CurrentPage == page ? "active" : "";
+
+    protected override async Task OnInitializedAsync()
+    {
+        Store.DataChanged += OnChanged;
+        Store.SessionChanged += OnChanged;
+        State.PageChanged += OnChanged;
+        Online.Changed += OnOnlineChanged;
+        currentUser = Store.GetCurrentUser();
+        await Js.ApplySettingsAsync(Store.Settings);
+        ComputeCalDate();
+        RefreshStorageAlert();
+        // L'icône calendrier affiche toujours la date du jour : rafraîchit après minuit.
+        _calTimer = new System.Threading.Timer(_ =>
+        {
+            var key = DateTime.Today.ToString("yyyy-MM-dd");
+            if (key != _calKey) _ = InvokeAsync(() => { ComputeCalDate(); StateHasChanged(); });
+        }, null, TimeSpan.FromSeconds(30), TimeSpan.FromSeconds(30));
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            _swipeRef = DotNetObjectReference.Create(this);
+            await Js.EnableSwipeBackAsync(_swipeRef);
+            _swipeStarted = true;
+        }
+    }
+
+    [JSInvokable]
+    public void OnSwipeBack()
+    {
+        if (!State.HasHistory) return;
+        _ = InvokeAsync(State.GoBack);
+    }
+
+    private void OnChanged()
+    {
+        currentUser = Store.GetCurrentUser();
+        ComputeCalDate();
+        RefreshStorageAlert();
+        _ = InvokeAsync(StateHasChanged);
+    }
+
+    private void ToggleMenu()
+    {
+        CloseMore();
+        _menuOpen = !_menuOpen;
+    }
+
+    /// <summary>Entrées du menu « … » : grandes cartes centrées, Paramètres replacé au milieu.</summary>
+    private sealed record MoreItem(string Key, string Label, string Icon, string IconClass, Func<bool> Visible, Action Act);
+
+    private List<MoreItem> AllMoreItems => new()
+    {
+        new("archive", "Archives des utilisateurs", "🗃", "menu-archive", () => Store.IsAdmin, () => Go("archive")),
+        new("comptes", "Comptes en ligne", "👤", "menu-comptes", () => Store.Can(Permissions.UsersManage), () => Go("comptes")),
+        new("capacite", "Capacité du serveur", "📊", "menu-storage", () => Store.IsAdmin, () => Go("capacite")),
+        new("documents", "Gestion documentaire", "📄", "menu-docs", () => !Store.IsBaseAdmin, () => Go("documents")),
+        new("settings", "Paramètres", "⚙", "menu-gear", () => !Store.IsBaseAdmin, () => Go("settings")),
+        new("community", "Histoire de la communauté", "📖", "menu-community", () => true, () => Go("community")),
+        new("roles", "Rôles et permissions", "🛡", "menu-roles", () => Store.Can(Permissions.RolesManage), () => Go("roles")),
+        new("messagerie", "Messagerie", "✉", "menu-msg", () => Store.Can(Permissions.MessagerieUse), () => Go("messagerie")),
+        new("taches", "Tâches et suivi", "☑", "menu-tasks", () => Store.Can(Permissions.TachesUse), () => Go("taches")),
+        new("finances", "Finances", "💰", "menu-finances", () => Store.Can(Permissions.FinancesManage), () => Go("finances")),
+        new("materiel", "Matériel", "🧰", "menu-materiel", () => Store.Can(Permissions.MaterielManage), () => Go("materiel")),
+        new("reunions", "Présence et réunions", "👥", "menu-reunions", () => Store.Can(Permissions.PresenceManage), () => Go("reunions")),
+        new("rappels", "Rappels intelligents", "⏰", "menu-rappels", () => Store.Can(Permissions.RappelsUse), () => Go("rappels")),
+        new("situations", "Situations particulières", "🤝", "menu-situations", () => Store.Can(Permissions.SituationsManage), () => Go("situations")),
+        new("carte", "Carte de membre", "🪪", "menu-carte", () => Store.Can(Permissions.CarteMembreView), () => Go("carte")),
+        new("votes", "Votes et décisions", "🗳", "menu-votes", () => true, () => Go("votes")),
+        new("journal", "Journal multimédia", "🎞", "menu-journal", () => Store.Can(Permissions.JournalMediaUse), () => Go("journal"))
+    };
+
+    private List<MoreItem> VisibleMoreItems
+    {
+        get
+        {
+            var list = AllMoreItems.Where(i => i.Visible()).ToList();
+            var settings = list.FirstOrDefault(i => i.Key == "settings");
+            if (settings != null)
+            {
+                list.Remove(settings);
+                list.Insert(list.Count / 2, settings);
+            }
+            return list;
+        }
+    }
+
+    /// <summary>Colonnes de la grille : 3 sur téléphone dès 8 menus pour que tout tienne sans défilement.</summary>
+    private string MenuGridCls => VisibleMoreItems.Count >= 8 ? "mcg-3" : "";
+
+    /// <summary>Badge de notification sur une carte du menu « … » quand quelque chose est à voir.</summary>
+    private string MoreBadge(string key)
+    {
+        try
+        {
+            var me = Store.GetCurrentUser()?.Identifiant ?? "";
+            int n;
+            switch (key)
+            {
+                case "messagerie":
+                    n = Store.UnreadCount(me);
+                    break;
+                case "rappels":
+                    n = Store.GetRappels().Count;
+                    break;
+                case "taches":
+                    n = Store.GetTachesForUser(me, true).Count(t => t.Statut != TacheStatuts.Terminee);
+                    break;
+                case "reunions":
+                    var todayR = DateTime.Today.ToString("yyyy-MM-dd");
+                    n = Store.Reunions.Count(r => string.Compare(r.Date, todayR, StringComparison.Ordinal) >= 0);
+                    break;
+                case "votes":
+                    n = Store.Votes.Count(v => v.Statut == VoteStatuts.Ouvert
+                        && !v.Bulletins.Any(b => b.VotantIdentifiant.Equals(me, StringComparison.OrdinalIgnoreCase)));
+                    break;
+                case "finances":
+                    n = Store.ImpayesCotisations().Count;
+                    break;
+                case "situations":
+                    n = Store.Situations.Count(s => s.Statut != SituationStatuts.Resolu);
+                    break;
+                case "materiel":
+                    n = Store.Prets.Count(p => string.IsNullOrWhiteSpace(p.DateRetour));
+                    break;
+                case "documents":
+                    n = Store.Documents.Count(d => d.Supprime);
+                    break;
+                case "comptes":
+                    n = Online.Admin.PendingAccounts;
+                    break;
+                case "capacite":
+                    n = Online.Admin.OpenAlerts;
+                    break;
+                default:
+                    return "";
+            }
+            return n > 0 ? n.ToString() : "";
+        }
+        catch
+        {
+            return "";
+        }
+    }
+
+    private bool _logoHasStory =>
+        !string.IsNullOrWhiteSpace(Store.Community.Titre)
+        || !string.IsNullOrWhiteSpace(Store.Community.SousTitre)
+        || Store.Community.Chapitres.Count > 0;
+
+    private void OpenLogo()
+    {
+        if (_logoOpen) return;
+        _menuOpen = false;
+        CloseMore();
+        _logoOpen = true;
+    }
+
+    private void OpenCommunityFromLogo()
+    {
+        _logoOpen = false;
+        Go("community");
+    }
+
+    private void ToggleMore()
+    {
+        _menuOpen = false;
+        if (_moreOpen) CloseMore();
+        else
+        {
+            _moreOpen = true;
+            LockMoreScroll();
+        }
+    }
+
+    private void CloseMore()
+    {
+        if (!_moreOpen && !_moreScrollLocked) return;
+        _moreOpen = false;
+        UnlockMoreScroll();
+    }
+
+    private void LockMoreScroll()
+    {
+        if (_moreScrollLocked) return;
+        _moreScrollLocked = true;
+        try { _ = Js.LockBodyScrollAsync(); } catch { }
+    }
+
+    private void UnlockMoreScroll()
+    {
+        if (!_moreScrollLocked) return;
+        _moreScrollLocked = false;
+        try { _ = Js.UnlockBodyScrollAsync(); } catch { }
+    }
+
+    private void NoOp(MouseEventArgs e) { }
+
+    private void CloseMenuFromOutside()
+    {
+        _menuOpen = false;
+        CloseMore();
+    }
+
+    private void OpenStorage()
+    {
+        _menuOpen = false;
+        CloseMore();
+        _storageDetail = null;
+        _storageBreakdown = Store.StorageBreakdown();
+        _showStorage = true;
+    }
+
+    private void OpenStorageDetail(string key)
+    {
+        _storageDetail = _storageBreakdown.FirstOrDefault(x => x.Key == key);
+    }
+
+    private void OnStorageKey(KeyboardEventArgs k, string key)
+    {
+        if (k.Key is "Enter" or " ") OpenStorageDetail(key);
+    }
+
+    private void CloseStorageDetail()
+    {
+        _storageDetail = null;
+    }
+
+    private void BackToStorageList()
+    {
+        _storageDetail = null;
+    }
+
+    private static string StorageIcon(string key) => key switch
+    {
+        "users" => "👥",
+        "fields" => "🧩",
+        "activity" => "📝",
+        "archives" => "🗃️",
+        "events" => "📅",
+        "documents" => "📄",
+        "folders" => "📁",
+        "community" => "📖",
+        "permissions" => "🛡",
+        "messages" => "✉",
+        "taches" => "☑",
+        "cotisations" => "🧾",
+        "tresorerie" => "💰",
+        "materiels" => "🧰",
+        "reunions" => "👥",
+        "situations" => "🤝",
+        "votes" => "🗳",
+        "journal_media" => "🎞",
+        "settings" => "⚙️",
+        "session" => "🔑",
+        _ => "💾"
+    };
+
+    private static string FormatSize(long bytes)
+    {
+        if (bytes < 1024) return bytes + " o";
+        if (bytes < 1024 * 1024) return (bytes / 1024.0).ToString("0.0") + " Ko";
+        if (bytes < 1024L * 1024L * 1024L) return (bytes / (1024.0 * 1024)).ToString("0.0") + " Mo";
+        return (bytes / (1024.0 * 1024 * 1024)).ToString("0.0") + " Go";
+    }
+
+    private const long StorageQuotaBytes = DataStore.StorageQuotaBytes;
+
+    private string _storageLevel = "ok";
+    private double _storagePercent;
+    private string _storageQuotaLabel = "50 Mo";
+    private string _lastStorageToast = "ok";
+
+    private void RefreshStorageAlert()
+    {
+        // Version en ligne : la saturation est suivie côté serveur (page Capacité).
+        _storageLevel = "ok";
+        _storagePercent = Store.StorageQuotaPercent();
+        _storageQuotaLabel = FormatSize(StorageQuotaBytes);
+        if (_storageLevel != _lastStorageToast)
+        {
+            if (_storageLevel == "critical")
+                State.NotifyError("Stockage saturé (" + _storagePercent.ToString("0") + " %) : videz la corbeille et les archives.");
+            else if (_storageLevel == "warning")
+                State.NotifyWarning("Stockage presque plein (" + _storagePercent.ToString("0") + " %) : pensez à libérer de l'espace.");
+            _lastStorageToast = _storageLevel;
+        }
+    }
+
+    private double StorageQuotaPercent()
+    {
+        return Store.StorageQuotaPercent();
+    }
+
+    private double StoragePercentOf(long bytes)
+    {
+        var total = Store.StorageUsedBytes();
+        if (total <= 0) return 0;
+        return Math.Min((double)bytes / total * 100.0, 100.0);
+    }
+
+    private string StorageCountLabel(string key) => key switch
+    {
+        "users" => Store.Users.Count + " compte(s)",
+        "fields" => Store.Fields.Count(f => !f.SystemField) + " champ(s) personnalisé(s)",
+        "activity" => Store.Activity.Count + " entrée(s)",
+        "archives" => Store.ArchivedUsers.Count + " archive(s)",
+        "events" => Store.Events.Count + " événement(s)",
+        "documents" => Store.Documents.Count(d => !d.Supprime) + " document(s)",
+        "folders" => Store.Folders.Count + " dossier(s)",
+        "community" => Store.Community.Chapitres.Count + " chapitre(s)",
+        "permissions" => Store.RolePermissions.Count + " rôle(s)",
+        "messages" => Store.Messages.Count + " message(s)",
+        "taches" => Store.Taches.Count + " tâche(s)",
+        "cotisations" => Store.Cotisations.Count + " cotisation(s)",
+        "tresorerie" => Store.Tresorerie.Count + " mouvement(s)",
+        "materiels" => Store.Materiels.Count + " matériel(s)",
+        "reunions" => Store.Reunions.Count + " réunion(s)",
+        "situations" => Store.Situations.Count + " suivi(s)",
+        "votes" => Store.Votes.Count + " vote(s)",
+        "journal_media" => Store.JournalMedia.Count + " média(s)",
+        "settings" => "1 configuration",
+        "session" => Store.GetCurrentUser() == null ? "aucune session" : "1 session active",
+        _ => ""
+    };
+
+    private void ComputeCalDate()
+    {
+        var today = DateTime.Today;
+        _calKey = today.ToString("yyyy-MM-dd");
+        _calEventsToday = Store.Events.Count(e => e.Date == _calKey);
+        var abbr = today.ToString("dddd", Fr)[..3];
+        _calWeekday = char.ToUpperInvariant(abbr[0]) + abbr[1..];
+        _calDay = today.Day.ToString();
+        var month = today.ToString("MMMM yyyy", Fr);
+        _calMonthLabel = month.Length > 0 ? char.ToUpperInvariant(month[0]) + month[1..] : month;
+    }
+
+    /// <summary>Entrées de la barre latérale web : navigation principale puis menu « … ».</summary>
+    private List<MoreItem> SidebarItems
+    {
+        get
+        {
+            var list = new List<MoreItem>();
+            if (Store.IsBaseAdmin)
+                list.Add(new("data", "Gestion de données", "🗄", "", () => true, () => Go("data")));
+            else
+            {
+                list.Add(new("dashboard", "Accueil", "🏠", "", () => true, () => Go("dashboard")));
+                list.Add(new("users", Store.IsManager ? "Utilisateurs" : "Mes informations", "👥", "", () => true, () => Go("users")));
+                list.Add(new("calendar", "Calendrier", "📅", "", () => true, () => Go("calendar")));
+                if (Store.IsManager) list.Add(new("activity", "Activité", "🧾", "", () => true, () => Go("activity")));
+            }
+            list.AddRange(AllMoreItems.Where(i => i.Visible()));
+            return list;
+        }
+    }
+
+    private bool _pwdOpen;
+    private bool _pwdBusy;
+    private string _pwd1 = "";
+    private string _pwd2 = "";
+
+    private void OpenPassword()
+    {
+        _menuOpen = false;
+        _pwd1 = _pwd2 = "";
+        _pwdOpen = true;
+    }
+
+    private async Task SavePasswordAsync()
+    {
+        if (_pwd1.Length < 8) { State.NotifyError("Le mot de passe doit contenir au moins 8 caractères."); return; }
+        if (_pwd1 != _pwd2) { State.NotifyError("Les deux mots de passe ne correspondent pas."); return; }
+        _pwdBusy = true;
+        var error = await Online.ChangePasswordAsync(_pwd1);
+        _pwdBusy = false;
+        if (error != null) { State.NotifyError(error); return; }
+        _pwdOpen = false;
+        State.NotifySuccess("Mot de passe modifié.");
+    }
+
+    private void OnOnlineChanged() => _ = InvokeAsync(StateHasChanged);
+
+    private void Go(string page)
+    {
+        _menuOpen = false;
+        CloseMore();
+        State.Navigate(page);
+    }
+
+    private void GoBack()
+    {
+        _menuOpen = false;
+        CloseMore();
+        State.GoBack();
+    }
+
+    private void AskLogout()
+    {
+        _menuOpen = false;
+        CloseMore();
+        _confirmLogout = true;
+    }
+
+    private void ConfirmLogout()
+    {
+        _confirmLogout = false;
+        State.ResetNavigation();
+        Store.Logout();
+    }
+
+    public async void Dispose()
+    {
+        _calTimer?.Dispose();
+        CloseMore();
+        if (_swipeStarted)
+        {
+            try { await Js.DisableSwipeBackAsync(); } catch { }
+            _swipeRef?.Dispose();
+        }
+        Store.DataChanged -= OnChanged;
+        Store.SessionChanged -= OnChanged;
+        State.PageChanged -= OnChanged;
+        Online.Changed -= OnOnlineChanged;
+    }
+}

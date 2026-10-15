@@ -1,0 +1,29 @@
+@inject DataStore Store
+@inject AppState State
+
+@if (_editing)
+{
+    <UserFormPage EditingId="@(Store.GetCurrentUser()?.Id)"
+                  OnClose="@(() => { _editing = false; StateHasChanged(); })" />
+}
+else
+{
+    @if (Store.GetCurrentUser() is { } me)
+    {
+        <UserDetailPage UserId="@me.Id"
+                        SelfView="true"
+                        OnBack="@Back"
+                        OnEdit="@(id => { _editing = true; StateHasChanged(); })" />
+    }
+    else
+    {
+        <EmptyState Icon="☹" Title="Session expirée" Message="Veuillez vous reconnecter." />
+    }
+}
+
+@code {
+    private bool _editing;
+
+    private void Back()
+        => State.GoBack();
+}

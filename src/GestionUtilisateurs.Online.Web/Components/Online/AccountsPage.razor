@@ -1,0 +1,207 @@
+@inject AccountService Accounts
+@inject OnlineSession Session
+@inject DataStore Store
+@inject AppState State
+
+@if (!Store.Can(Permissions.UsersManage))
+{
+    <EmptyState Icon="🔒" Title="Accès réservé" Message="La validation des comptes est réservée aux personnes qui gèrent les utilisateurs." />
+}
+else
+{
+    <div class="page-head">
+        <p>Chaque inscription doit être validée ici avant que le membre puisse se connecter. Choisissez son rôle au moment de la validation ; il pourra être changé ensuite depuis la fiche du membre.</p>
+    </div>
+
+    @if (_loading)
+    {
+        <div class="card online-muted">Chargement des comptes…</div>
+    }
+    else if (_error != null)
+    {
+        <div class="card online-error" role="alert">@_error</div>
+    }
+    else
+    {
+        <section class="card online-section">
+            <div class="online-section-head">
+                <h3>Demandes en attente</h3>
+                <span class="online-count @(Pending.Count > 0 ? "online-count-hot" : "")">@Pending.Count</span>
+            </div>
+            @if (Pending.Count == 0)
+            {
+                <p class="text-muted">Aucune demande en attente.</p>
+            }
+            else
+            {
+                <div class="online-account-list">
+                    @foreach (var p in Pending)
+                    {
+                        var profile = p;
+                        <div class="online-account">
+                            <div class="online-account-main">
+                                <Avatar UserName="@profile.NomComplet" Seed="@profile.Email" Size="sm" />
+                                <div>
+                                    <strong>@profile.NomComplet</strong>
+                                    <div class="text-muted online-account-meta">@profile.Email@(string.IsNullOrWhiteSpace(profile.Telephone) ? "" : " · " + profile.Telephone)</div>
+                                    <div class="text-muted online-account-meta">Inscrit le @Date(profile.CreatedAt)</div>
+                                </div>
+                            </div>
+                            <div class="online-account-actions">
+                                <select aria-label="Rôle attribué à @profile.NomComplet" value="@RoleFor(profile)" @onchange="e => _roles[profile.Id] = e.Value?.ToString() ?? Roles.Utilisateur">
+                                    @foreach (var role in AssignableRoles)
+                                    {
+                                        <option value="@role">@role</option>
+                                    }
+                                </select>
+                                <button type="button" class="btn btn-primary btn-sm" disabled="@_busy" @onclick="() => ApproveAsync(profile)">Valider</button>
+                                <button type="button" class="btn btn-secondary btn-sm" disabled="@_busy" @onclick="() => RejectAsync(profile)">Refuser</button>
+                            </div>
+                        </div>
+                    }
+                </div>
+            }
+        </section>
+
+        <section class="card online-section">
+            <div class="online-section-head">
+                <h3>Comptes en ligne</h3>
+                <span class="online-count">@Others.Count</span>
+            </div>
+            <div class="online-account-list">
+                @foreach (var p in Others)
+                {
+                    var profile = p;
+                    <div class="online-account">
+                        <div class="online-account-main">
+                            <Avatar UserName="@profile.NomComplet" Seed="@profile.Email" Size="sm" />
+                            <div>
+                                <strong>@profile.NomComplet</strong>
+                                <span class="online-status-pill online-status-@profile.Statut">@OnlineStatuts.Label(profile.Statut)</span>
+                                <div class="text-muted online-account-meta">@profile.Email · @profile.Role</div>
+                                <div class="text-muted online-account-meta">Dernière visite : @Date(profile.LastSeenAt)</div>
+                            </div>
+                        </div>
+                        <div class="online-account-actions">
+                            @if (profile.Statut == OnlineStatuts.Actif && Store.IsAdmin && profile.Id != Session.Profile?.Id)
+                            {
+                                <button type="button" class="btn btn-secondary btn-sm" @onclick="() => OpenPassword(profile)">Nouveau mot de passe</button>
+                            }
+                            @if (profile.Statut == OnlineStatuts.Refuse)
+                            {
+                                <button type="button" class="btn btn-secondary btn-sm" disabled="@_busy" @onclick="() => ApproveAsync(profile)">Valider quand même</button>
+                                <button type="button" class="btn btn-danger btn-sm" disabled="@_busy" @onclick="() => _toDelete = profile">Supprimer</button>
+                            }
+                        </div>
+                    </div>
+                }
+            </div>
+            <p class="field-hint">Pour changer le rôle d'un membre ou désactiver son compte, modifiez sa fiche dans « Utilisateurs » : le compte en ligne suit automatiquement.</p>
+        </section>
+    }
+}
+
+<Modal Title="Nouveau mot de passe" Show="_pwdFor != null" OnClose="() => _pwdFor = null">
+    <ChildContent>
+        <p>Définissez un mot de passe provisoire pour <strong>@_pwdFor?.NomComplet</strong> et transmettez-le-lui. Il pourra le changer depuis « Mes informations ».</p>
+        <div class="form-group">
+            <label for="new-pwd">Mot de passe provisoire</label>
+            <input id="new-pwd" type="text" autocomplete="off" @bind="_newPassword" />
+            <span class="field-hint">8 caractères minimum.</span>
+        </div>
+    </ChildContent>
+    <FooterContent>
+        <button type="button" class="btn btn-secondary" @onclick="() => _pwdFor = null">Annuler</button>
+        <button type="button" class="btn btn-primary" disabled="@_busy" @onclick="SavePasswordAsync">Enregistrer</button>
+    </FooterContent>
+</Modal>
+
+<ConfirmDialog Show="_toDelete != null" Title="Supprimer la demande"
+               Message="@($"Supprimer définitivement la demande de {_toDelete?.NomComplet} ? La personne pourra se réinscrire.")"
+               ConfirmLabel="Supprimer" Danger="true"
+               OnConfirm="DeleteAsync" OnCancel="() => _toDelete = null" />
+
+@code {
+    private List<OnlineProfile> _profiles = new();
+    private readonly Dictionary<string, string> _roles = new();
+    private bool _loading = true;
+    private bool _busy;
+    private string? _error;
+    private OnlineProfile? _pwdFor;
+    private OnlineProfile? _toDelete;
+    private string _newPassword = "";
+
+    private List<OnlineProfile> Pending => _profiles.Where(p => p.Statut == OnlineStatuts.EnAttente).ToList();
+    private List<OnlineProfile> Others => _profiles.Where(p => p.Statut != OnlineStatuts.EnAttente).ToList();
+
+    /// <summary>Un gestionnaire ne peut pas nommer d'administrateur (vérifié aussi par le serveur).</summary>
+    private IEnumerable<string> AssignableRoles => Store.IsAdmin
+        ? Roles.MatrixRoles
+        : Roles.MatrixRoles.Where(r => !Roles.IsAdmin(r));
+
+    protected override async Task OnInitializedAsync() => await LoadAsync();
+
+    private async Task LoadAsync()
+    {
+        _loading = true;
+        var res = await Accounts.ListAsync();
+        _error = res.Error;
+        _profiles = res.Data ?? new List<OnlineProfile>();
+        _loading = false;
+        await Session.RefreshAdminStatusAsync();
+    }
+
+    private string RoleFor(OnlineProfile p) => _roles.TryGetValue(p.Id, out var r) ? r : Roles.Utilisateur;
+
+    private async Task ApproveAsync(OnlineProfile profile)
+    {
+        _busy = true;
+        var role = profile.Statut == OnlineStatuts.Refuse ? Roles.Utilisateur : RoleFor(profile);
+        var error = await Accounts.ApproveAsync(profile, role);
+        _busy = false;
+        if (error != null) { State.NotifyError(error); return; }
+        State.NotifySuccess(profile.NomComplet + " peut maintenant se connecter (" + role + ").");
+        await LoadAsync();
+    }
+
+    private async Task RejectAsync(OnlineProfile profile)
+    {
+        _busy = true;
+        var error = await Accounts.RejectAsync(profile);
+        _busy = false;
+        if (error != null) { State.NotifyError(error); return; }
+        State.NotifyInfo("Inscription de " + profile.NomComplet + " refusée.");
+        await LoadAsync();
+    }
+
+    private async Task DeleteAsync()
+    {
+        var profile = _toDelete;
+        _toDelete = null;
+        if (profile == null) return;
+        var error = await Accounts.DeleteRequestAsync(profile);
+        if (error != null) { State.NotifyError(error); return; }
+        State.NotifySuccess("Demande supprimée.");
+        await LoadAsync();
+    }
+
+    private void OpenPassword(OnlineProfile profile)
+    {
+        _newPassword = "";
+        _pwdFor = profile;
+    }
+
+    private async Task SavePasswordAsync()
+    {
+        if (_pwdFor == null) return;
+        if (_newPassword.Length < 8) { State.NotifyError("Le mot de passe doit contenir au moins 8 caractères."); return; }
+        _busy = true;
+        var error = await Accounts.SetPasswordAsync(_pwdFor, _newPassword);
+        _busy = false;
+        if (error != null) { State.NotifyError(error); return; }
+        State.NotifySuccess("Mot de passe de " + _pwdFor.NomComplet + " modifié. Transmettez-le-lui.");
+        _pwdFor = null;
+    }
+
+    private static string Date(DateTimeOffset? d) => d == null ? "jamais" : d.Value.ToLocalTime().ToString("dd/MM/yyyy à HH:mm");
+}

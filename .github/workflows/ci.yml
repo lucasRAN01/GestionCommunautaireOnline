@@ -1,0 +1,19 @@
+name: Vérification
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  build-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 9.0.x
+      - name: Compiler
+        run: dotnet build GestionCommunautaireOnline.sln -c Release
+      - name: Tests
+        run: dotnet test tests/GestionUtilisateurs.Online.Tests -c Release --no-build

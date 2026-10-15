@@ -1,0 +1,14 @@
+<span class="badge @KindClass">@Text</span>
+
+@code {
+    [Parameter] public string? Text { get; set; }
+    [Parameter] public string? Kind { get; set; }
+
+    private string KindClass => Kind switch
+    {
+        "role" => "badge-role",
+        "active" => "badge-active",
+        "inactive" => "badge-inactive",
+        _ => ""
+    };
+}

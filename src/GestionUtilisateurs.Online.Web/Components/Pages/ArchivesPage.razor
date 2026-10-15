@@ -1,0 +1,132 @@
+@implements IDisposable
+@inject DataStore Store
+@inject AppState State
+
+<div class="page-head">
+    <p>Comptes utilisateurs supprimés puis archivés. Seul un administrateur peut consulter ou restaurer ces comptes.</p>
+</div>
+
+<div class="search-box cal-search">
+    <span class="search-icon" aria-hidden="true">⌕</span>
+    <input type="search" placeholder="Rechercher dans les archives (nom, identifiant, e-mail, rôle)…" aria-label="Rechercher dans les archives"
+           value="@_search" @oninput="OnSearch" />
+</div>
+@if (!string.IsNullOrWhiteSpace(_search))
+{
+    <div class="search-summary">@_list.Count archive(s) trouvée(s) pour « @_search.Trim() »</div>
+}
+
+@if (_list.Count == 0)
+{
+    <EmptyState Icon="🗃" Title="Aucun utilisateur archivé" Message="Les comptes supprimés apparaîtront ici." />
+}
+else
+{
+    <div class="user-list">
+        @foreach (var a in _list)
+        {
+            var user = a.User;
+            <div class="user-card">
+                <Avatar UserName="@user.NomComplet" Seed="@user.Identifiant" Size="sm" />
+                <div class="user-card-main">
+                    <div class="user-card-name">@user.NomComplet</div>
+                    <div class="user-card-sub">@(string.IsNullOrWhiteSpace(user.Email) ? user.Role : user.Email)</div>
+                    <div class="user-card-meta">
+                        <Badge Text="Archivé" Kind="inactive" />
+                        <span class="text-muted" style="font-size:12px">Supprimé le @FormatDate(a.DeletedAt) par @a.DeletedBy</span>
+                    </div>
+                </div>
+                <div class="user-card-actions" @onclick:stopPropagation="true">
+                    <button class="btn btn-secondary btn-sm" @onclick="@(() => AskRestore(user.Id))">♻ Restaurer</button>
+                    <button class="btn btn-danger-outline btn-sm" @onclick="@(() => AskPurge(user.Id))">🗑</button>
+                </div>
+            </div>
+        }
+    </div>
+}
+
+<div class="form-actions" style="margin-top:14px;margin-bottom:8px">
+    <button class="btn btn-danger-outline" disabled="@(_list.Count == 0)" @onclick="AskPurgeAll">Vider les archives</button>
+</div>
+
+<ConfirmDialog Show="@_confirm.Show" Title="@_confirm.Title" Message="@_confirm.Message"
+               ConfirmLabel="@_confirm.ConfirmLabel" Danger="@_confirm.Danger"
+               OnConfirm="@(() => _confirm.Action?.Invoke())"
+               OnCancel="@(() => _confirm = _confirm with { Show = false })" />
+
+@code {
+    private sealed record ConfirmState(bool Show, string Title, string Message, string ConfirmLabel, bool Danger, Action? Action)
+    {
+        public static ConfirmState Hidden() => new(false, "", "", "OK", true, null);
+    }
+
+    private ConfirmState _confirm = ConfirmState.Hidden();
+    private IReadOnlyList<ArchivedUser> _list = new List<ArchivedUser>();
+    private string _search = "";
+
+    protected override void OnInitialized()
+    {
+        Store.DataChanged += Refresh;
+        Refresh();
+    }
+
+    protected override void OnParametersSet() => Refresh();
+
+    private void Refresh()
+    {
+        var q = _search.Trim();
+        _list = q.Length == 0
+            ? Store.ArchivedUsers
+            : Store.ArchivedUsers.Where(a => (a.User.NomComplet + " " + a.User.Identifiant + " " + a.User.Email + " " + a.User.Role)
+                .Contains(q, StringComparison.OrdinalIgnoreCase)).ToList();
+        StateHasChanged();
+    }
+
+    private void OnSearch(ChangeEventArgs e)
+    {
+        _search = e.Value?.ToString() ?? string.Empty;
+        Refresh();
+    }
+
+    private static string FormatDate(string iso) => DataStore.FormatDateCourte(iso);
+
+    private void AskRestore(string id)
+    {
+        var u = Store.FindArchivedUser(id);
+        if (u == null) return;
+        _confirm = new ConfirmState(true, "Restaurer l'utilisateur",
+            $"Restaurer « {u.NomComplet} » dans la liste des utilisateurs actifs ?",
+            "Restaurer", false, () =>
+            {
+                var res = Store.RestoreArchivedUser(id);
+                if (res.Success) State.NotifySuccess("Utilisateur restauré.");
+                else State.NotifyError("Erreur : " + res.Error);
+            });
+    }
+
+    private void AskPurge(string id)
+    {
+        var u = Store.FindArchivedUser(id);
+        if (u == null) return;
+        _confirm = new ConfirmState(true, "Supprimer définitivement",
+            $"Supprimer définitivement l'archivage de « {u.NomComplet} » ? Action irréversible.",
+            "Supprimer", true, () =>
+            {
+                Store.PurgeUser(id);
+                State.NotifySuccess("Archivage définitivement supprimé.");
+            });
+    }
+
+    private void AskPurgeAll()
+    {
+        _confirm = new ConfirmState(true, "Vider les archives",
+            "Supprimer définitivement tous les comptes archivés ? Cette action est irréversible.",
+            "Vider", true, () =>
+            {
+                Store.PurgeAllArchive();
+                State.NotifySuccess("Les archives ont été vidées.");
+            });
+    }
+
+    public void Dispose() => Store.DataChanged -= Refresh;
+}

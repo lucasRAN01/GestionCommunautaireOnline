@@ -1,0 +1,143 @@
+@implements IDisposable
+@inject DataStore Store
+@inject AppState State
+
+<div class="page-head dash-head">
+    <h1>Bienvenue, @(Store.GetCurrentUser()?.Prenom ?? "invité")</h1>
+    <p>Voici un aperçu de votre annuaire.</p>
+</div>
+
+<div class="stats-grid">
+    <StatCard Icon="☺" Value="@total.ToString()" Label="Utilisateurs total" OnClick='() => GoToUsers(null, null)' Clickable="@Store.IsManager" />
+    <StatCard Icon="✓" Value="@actifs.ToString()" Label="Actifs" Kind="active" OnClick='() => GoToUsers("Actif", null)' Clickable="@Store.IsManager" />
+    <StatCard Icon="✗" Value="@inactifs.ToString()" Label="Inactifs" Kind="inactive" OnClick='() => GoToUsers("Inactif", null)' Clickable="@Store.IsManager" />
+    <StatCard Icon="★" Value="@admins.ToString()" Label="Administrateurs" OnClick='() => GoToUsers(null, "Administrateur")' Clickable="@Store.IsManager" />
+    <StatCard Icon="🗄" Value="@archives.ToString()" Label="Archivés" Kind="recent" OnClick='() => State.Navigate("archive")' Clickable="@Store.IsAdmin" />
+    <StatCard Icon="✤" Value="@gestionnaires.ToString()" Label="Gestionnaires" Kind="recent" OnClick='() => GoToUsers(null, "Gestionnaire")' Clickable="@(Store.IsManager)" />
+</div>
+
+<div class="card dashboard-card-full">
+    <h3>Répartition par rôle</h3>
+    <ChartBars Items="@roleChart" />
+</div>
+
+<div class="card">
+    <h3>Derniers utilisateurs ajoutés</h3>
+    @if (RecentUsers.Count == 0)
+    {
+        <EmptyState Icon="☺" Title="Aucun utilisateur" Message="Aucun utilisateur pour le moment." />
+    }
+    else
+    {
+        <div class="recent-users">
+            @foreach (var u in RecentUsers)
+            {
+                <div class="recent-user recent-user-row" @onclick="() => GoToUser(u.Id)">
+                    <button class="avatar-btn" type="button" @onclick:stopPropagation="true" @onclick="() => OpenPhoto(u)" aria-label="Agrandir la photo">
+                        <Avatar UserName="@u.NomComplet" Seed="@u.Identifiant" Size="sm" Photo="@u.Photo" />
+                    </button>
+                    <div class="recent-user-main">
+                        <div class="recent-user-name">@u.NomComplet</div>
+                        <div class="recent-user-sub">@(string.IsNullOrWhiteSpace(u.Email) ? u.Role : u.Email)</div>
+                    </div>
+                    <Badge Text="@u.Statut" Kind="@(u.Actif ? "active" : "inactive")" />
+                </div>
+            }
+        </div>
+    }
+</div>
+
+<div class="card">
+    <h3>Dernière activité</h3>
+    @if (Store.Activity.Count == 0)
+    {
+        <EmptyState Icon="✎" Title="Aucune activité" Message="Le journal est vide pour le moment." />
+    }
+    else
+    {
+        <div class="activity-list">
+            @foreach (var e in Store.Activity.Take(6))
+            {
+                <div class="activity-item">
+                    <span class="activity-icon" aria-hidden="true">@ActivityIcon(e.Type)</span>
+                    <div class="activity-content">
+                        <div class="activity-desc"><strong>@ActivityTypes.Label(e.Type)</strong> — @e.Description</div>
+                        <div class="activity-meta">
+                            <span class="activity-user">@e.User</span>
+                            <span class="activity-date">@FormatTimeAgo(e.Date)</span>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+</div>
+
+<PhotoViewer Current="@_viewer" OnClose="@(() => _viewer = null)" />
+
+@code {
+    private int total, actifs, inactifs, admins, archives, gestionnaires;
+    private IReadOnlyList<ChartBars.ChartItem> roleChart = Array.Empty<ChartBars.ChartItem>();
+    private List<UserAccount> RecentUsers = new();
+    private UserAccount? _viewer;
+
+    protected override void OnInitialized()
+    {
+        Store.DataChanged += Refresh;
+        Compute();
+    }
+
+    protected override void OnParametersSet() => Compute();
+
+    private void Refresh() => _ = InvokeAsync(() => { Compute(); StateHasChanged(); });
+
+    private void GoToUsers(string? status, string? role)
+        => State.NavigateWithUsersFilter(status, role);
+
+    private void GoToUser(string id) => State.NavigateToUser(id);
+
+    private void OpenPhoto(UserAccount u) => _viewer = u;
+
+    private void Compute()
+    {
+        var users = Store.Users;
+        total = users.Count;
+        actifs = users.Count(u => u.Actif);
+        inactifs = users.Count(u => !u.Actif);
+        admins = users.Count(u => u.Role == "Administrateur");
+        archives = Store.ArchivedUsers.Count;
+        gestionnaires = users.Count(u => u.Role == "Gestionnaire");
+
+        static int R(IReadOnlyList<UserAccount> list, string role) => list.Count(u => u.Role == role);
+        roleChart = new List<ChartBars.ChartItem>
+        {
+            new("Administrateur", R(users, "Administrateur"), "#4f46e5"),
+            new("Gestionnaire", R(users, "Gestionnaire"), "#0891b2"),
+            new("Utilisateur", R(users, "Utilisateur"), "#059669")
+        };
+
+        RecentUsers = users.OrderByDescending(u => u.DateCreation)
+            .Take(5)
+            .ToList();
+    }
+
+    private static string ActivityIcon(string type) => type switch
+    {
+        ActivityTypes.Login => "🔐",
+        ActivityTypes.Logout => "👋",
+        ActivityTypes.Create => "➕",
+        ActivityTypes.Update => "✏️",
+        ActivityTypes.Delete => "🗑️",
+        ActivityTypes.Activate => "✅",
+        ActivityTypes.Deactivate => "⛔",
+        ActivityTypes.PasswordReset => "🔑",
+        ActivityTypes.Export => "⇩",
+        ActivityTypes.Import => "⇪",
+        ActivityTypes.FieldsChange => "🧩",
+        _ => "•"
+    };
+
+    private static string FormatTimeAgo(string iso) => DataStore.FormatDateCourte(iso);
+
+    public void Dispose() => Store.DataChanged -= Refresh;
+}

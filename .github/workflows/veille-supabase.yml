@@ -1,0 +1,66 @@
+# Chaque jour :
+#  1. appelle Supabase, ce qui évite la mise en pause du projet gratuit
+#     après 7 jours sans activité ;
+#  2. mesure l'espace utilisé (base + fichiers) et crée une alerte pour les
+#     administrateurs si un seuil est franchi ;
+#  3. ouvre (ou met à jour) un ticket GitHub « Alerte capacité Supabase »
+#     pour prévenir aussi par e-mail GitHub.
+name: Veille Supabase
+
+on:
+  schedule:
+    - cron: "17 6 * * *"
+  workflow_dispatch:
+
+permissions:
+  issues: write
+
+jobs:
+  veille:
+    runs-on: ubuntu-latest
+    if: ${{ vars.SUPABASE_URL != '' }}
+    steps:
+      - name: Mesurer la capacité (et garder le projet actif)
+        id: mesure
+        env:
+          SUPABASE_URL: ${{ vars.SUPABASE_URL }}
+          SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: |
+          set -euo pipefail
+          for i in 1 2 3; do
+            if curl -sS --fail-with-body -X POST "$SUPABASE_URL/rest/v1/rpc/record_capacity_snapshot" \
+                 -H "apikey: $SERVICE_KEY" -H "Authorization: Bearer $SERVICE_KEY" \
+                 -H "Content-Type: application/json" -d '{"p_source":"github"}' -o mesure.json; then
+              break
+            fi
+            echo "Nouvel essai dans 30 s…"; sleep 30
+          done
+          cat mesure.json; echo
+          echo "level=$(jq -r .level mesure.json)" >> "$GITHUB_OUTPUT"
+          echo "db=$(jq -r .db_pct mesure.json)" >> "$GITHUB_OUTPUT"
+          echo "files=$(jq -r .storage_pct mesure.json)" >> "$GITHUB_OUTPUT"
+          echo "pending=$(jq -r .members_pending mesure.json)" >> "$GITHUB_OUTPUT"
+
+      - name: Prévenir par ticket GitHub
+        if: ${{ steps.mesure.outputs.level != 'ok' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          LEVEL: ${{ steps.mesure.outputs.level }}
+          DB: ${{ steps.mesure.outputs.db }}
+          FILES: ${{ steps.mesure.outputs.files }}
+        run: |
+          set -euo pipefail
+          title="Alerte capacité Supabase"
+          body="Niveau : **${LEVEL}** ($(date -u +%d/%m/%Y))
+
+          - Base de données : ${DB} % de la limite gratuite (500 Mo)
+          - Fichiers : ${FILES} % de la limite gratuite (1 Go)
+
+          Ouvrez l'application > menu > **Capacité du serveur** pour voir le détail et libérer de l'espace."
+          number=$(gh issue list --state open --search "in:title \"$title\"" --json number -q '.[0].number' || true)
+          if [ -n "$number" ]; then
+            gh issue comment "$number" --body "$body"
+          else
+            gh issue create --title "$title" --body "$body"
+          fi

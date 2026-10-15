@@ -1,0 +1,480 @@
+@inject DataStore Store
+@inject AppState State
+@inject PhotoService Photos
+
+<div class="form-group" style="display:flex;align-items:center;gap:10px;margin-bottom:6px">
+    <button class="btn btn-secondary btn-sm" @onclick="OnClose">← Annuler</button>
+    <h2 style="margin:0;font-size:18px;font-weight:700">@(_isNew ? "Nouvel utilisateur" : "Modifier l'utilisateur")</h2>
+</div>
+
+<div class="card">
+    <div class="divider-section">Identité</div>
+    <div class="form-group">
+        <label for="uf-nom">Nom <span class="required">*</span></label>
+        <input id="uf-nom" type="text" value="@_model.Nom" @oninput="e => _model.Nom = (e.Value?.ToString() ?? string.Empty).ToUpperInvariant()" />
+        <span class="form-error">@Err("nom")</span>
+    </div>
+    <div class="form-group">
+        <label for="uf-prenom">Prénom(s) <span class="required">*</span></label>
+        <input id="uf-prenom" type="text" value="@_model.Prenom" @oninput="e => _model.Prenom = e.Value?.ToString() ?? string.Empty" />
+        <span class="form-error">@Err("prenom")</span>
+    </div>
+    <div class="form-group">
+        <label for="uf-matricule">Matricule (facultatif, unique)</label>
+        <input id="uf-matricule" type="text" placeholder="Ex : M-0001" value="@_model.Matricule" @oninput="e => _model.Matricule = e.Value?.ToString() ?? string.Empty" />
+        <span class="field-hint">Affiché sur la carte de membre à la place du code automatique.</span>
+        <span class="form-error">@Err("matricule")</span>
+    </div>
+    <div class="form-group">
+        <label for="uf-photo">Photo</label>
+        <div class="photo-control">
+            @if (!string.IsNullOrWhiteSpace(_model.Photo))
+            {
+                <img class="photo-preview" src="@_model.Photo" alt="Photo de l'utilisateur" />
+            }
+            else
+            {
+                <div class="photo-placeholder">Aucune photo</div>
+            }
+            @if (CanEditPhoto)
+            {
+                <div class="photo-actions">
+                    <button type="button" class="btn btn-secondary btn-sm" @onclick="CapturePhoto">📷 Prendre une photo</button>
+                    <button type="button" class="btn btn-secondary btn-sm" @onclick="PickPhoto">🖼 Choisir une image</button>
+                    @if (!string.IsNullOrWhiteSpace(_model.Photo))
+                    {
+                        <button type="button" class="btn btn-secondary btn-sm" @onclick="() => _model.Photo = string.Empty">Retirer</button>
+                    }
+                </div>
+            }
+        </div>
+    </div>
+
+    <div class="divider-section">Compte</div>
+    @if (!IsSelfSimpleUser)
+    {
+        <div class="form-group">
+            <label for="uf-role">Rôle <span class="required">*</span></label>
+            <select id="uf-role" value="@_model.Role" disabled="@(!Store.IsManager)" @onchange="OnRoleChanged">
+                @if (Store.IsManager)
+                {
+                    <option value="Administrateur">Administrateur</option>
+                }
+                <option value="Gestionnaire">Gestionnaire</option>
+                <option value="Utilisateur">Utilisateur</option>
+            </select>
+            <span class="form-error">@Err("role")</span>
+        </div>
+    }
+    <div class="form-group">
+        <label for="uf-email">Email (facultatif)</label>
+        <input id="uf-email" type="email" placeholder="exemple@domaine.fr" value="@_model.Email" @oninput="e => _model.Email = e.Value?.ToString() ?? string.Empty" />
+        <span class="form-error">@Err("email")</span>
+    </div>
+    <div class="form-group">
+        <label for="uf-tel">Téléphone (facultatif)</label>
+        <div class="tel-input">
+            <span class="tel-prefix">+261</span>
+            <input id="uf-tel" type="tel" placeholder="xx xx xxx xx" value="@TelDigits"
+                   @oninput="e => OnTelInput(e.Value?.ToString() ?? string.Empty)" aria-label="Numéro de téléphone" />
+        </div>
+        <span class="form-error">@Err("telephone")</span>
+    </div>
+    <div class="form-group">
+        <label for="uf-naissance">Date de naissance (facultatif)</label>
+        <input id="uf-naissance" type="date" value="@_model.DateNaissance" @oninput="e => _model.DateNaissance = e.Value?.ToString() ?? string.Empty" />
+        <span class="field-hint">Affichée JJ/MM/AAAA et liée aux anniversaires du calendrier.</span>
+    </div>
+    @if (!IsSelfSimpleUser)
+    {
+        <div class="form-group">
+            <label for="uf-actif">Statut</label>
+            <select id="uf-actif" value="@(_model.Actif ? "1" : "0")" disabled="@(_statusLocked || !CanChangeStatus)" @onchange="OnStatutChange">
+                <option value="1">Actif</option>
+                <option value="0">Inactif</option>
+            </select>
+            <span class="form-error">@Err("statut")</span>
+        </div>
+    }
+
+    @if (_isNew && !IsSimpleRole)
+    {
+        <div class="form-group">
+            <label for="uf-pwd">Mot de passe <span class="required">*</span></label>
+            <input id="uf-pwd" type="password" value="@_model.Password" @oninput="e => _model.Password = e.Value?.ToString() ?? string.Empty" />
+            <span class="field-hint">Min. 6 caractères</span>
+            <span class="form-error">@Err("password")</span>
+        </div>
+        <div class="form-group">
+            <label for="uf-pwd2">Confirmer le mot de passe <span class="required">*</span></label>
+            <input id="uf-pwd2" type="password" value="@_model.ConfirmPassword" @oninput="e => _model.ConfirmPassword = e.Value?.ToString() ?? string.Empty" />
+            <span class="form-error">@Err("confirmPassword")</span>
+        </div>
+    }
+    else if (!_isNew && !IsSimpleRole)
+    {
+        <div class="form-group">
+            <label class="checkbox-label">
+                <input type="checkbox" checked="@_model.ChangePasswordOnEdit" @onchange="e => _model.ChangePasswordOnEdit = e.Value is true" />
+                Changer le mot de passe
+            </label>
+        </div>
+        @if (_model.ChangePasswordOnEdit)
+        {
+            <div class="form-group">
+                <label for="uf-pwd">Nouveau mot de passe</label>
+                <input id="uf-pwd" type="password" value="@_model.Password" @oninput="e => _model.Password = e.Value?.ToString() ?? string.Empty" />
+                <span class="field-hint">Min. 6 caractères</span>
+                <span class="form-error">@Err("password")</span>
+            </div>
+            <div class="form-group">
+                <label for="uf-pwd2">Confirmer le nouveau mot de passe</label>
+                <input id="uf-pwd2" type="password" value="@_model.ConfirmPassword" @oninput="e => _model.ConfirmPassword = e.Value?.ToString() ?? string.Empty" />
+                <span class="form-error">@Err("confirmPassword")</span>
+            </div>
+        }
+    }
+
+    <div class="form-group">
+        <label for="uf-notes">Notes</label>
+        <textarea id="uf-notes" rows="3" placeholder="Ajouter une note..." value="@_model.Notes" @oninput="e => _model.Notes = e.Value?.ToString() ?? string.Empty"></textarea>
+    </div>
+
+    @if (ActiveFields().Count > 0)
+    {
+        <div class="divider-section">Champs personnalisés</div>
+
+        @foreach (var f in ActiveFields())
+        {
+            var fid = f.Id;
+            <div class="form-group">
+                <label for="cf-@fid">
+                    @f.Label @if (f.Requis) { <span class="required">*</span> }
+                </label>
+
+                @if (f.Id == FieldDefinition.FIELD_IDENTIFIANT)
+                {
+                    @if (!IsSimpleRole)
+                    {
+                        <input id="cf-@fid" type="text" disabled="@(!_isNew)" value="@_model.Identifiant"
+                               @oninput="e => _model.Identifiant = e.Value?.ToString() ?? string.Empty" />
+                        <span class="form-error">@Err("identifiant")</span>
+                    }
+                }
+                else
+                {
+                    @switch (f.Type)
+                    {
+                        case FieldType.Texte:
+                        case FieldType.Email:
+                            <input id="cf-@fid" type="@(f.Type == FieldType.Email ? "email" : "text")"
+                                   value="@_model.FieldText(fid)" @oninput="e => _model.SetFieldText(fid, e.Value?.ToString() ?? string.Empty)" />
+                            break;
+                        case FieldType.TexteMultiligne:
+                            <textarea id="cf-@fid" rows="2" value="@_model.FieldText(fid)" @oninput="e => _model.SetFieldText(fid, e.Value?.ToString() ?? string.Empty)"></textarea>
+                            break;
+                        case FieldType.Nombre:
+                            <input id="cf-@fid" type="text" inputmode="decimal"
+                                   value="@(_model.CustomNumberText.ContainsKey(fid) ? _model.CustomNumberText[fid] : "")"
+                                   @oninput="e => _model.SetFieldNumber(fid, e.Value?.ToString() ?? string.Empty)" />
+                            break;
+                        case FieldType.Date:
+                            <input id="cf-@fid" type="date" value="@_model.FieldText(fid)" @oninput="e => _model.SetFieldText(fid, e.Value?.ToString() ?? string.Empty)" />
+                            <span class="field-hint">Format JJ/MM/AAAA.</span>
+                            break;
+                        case FieldType.Liste:
+                            <select id="cf-@fid" value="@_model.FieldText(fid)" @onchange="e => _model.SetFieldText(fid, e.Value?.ToString() ?? string.Empty)">
+                                <option value="">— Sélectionnez —</option>
+                                @foreach (var opt in f.Options.Where(o => !string.IsNullOrWhiteSpace(o)))
+                                {
+                                    <option value="@opt">@opt</option>
+                                }
+                            </select>
+                            break;
+                        case FieldType.Booleen:
+                            <div class="radio-row">
+                                <label class="radio-option">
+                                    <input type="radio" name="cf-@fid" value="oui" checked="@BoolIs(fid, true)"
+                                           @onchange="() => SetBool(fid, true)" />
+                                    <span>Oui</span>
+                                </label>
+                                <label class="radio-option">
+                                    <input type="radio" name="cf-@fid" value="non" checked="@BoolIs(fid, false)"
+                                           @onchange="() => SetBool(fid, false)" />
+                                    <span>Non</span>
+                                </label>
+                            </div>
+                            break;
+                        case FieldType.ChoixMultiple:
+                            <div class="check-group">
+                                @foreach (var opt in f.Options.Where(o => !string.IsNullOrWhiteSpace(o)))
+                                {
+                                    <label class="checkbox-label">
+                                        <input type="checkbox" value="@opt" checked="@_model.HasChoice(fid, opt)"
+                                               @onchange="e => _model.SetChoice(fid, opt, e.Value is true)" />
+                                        @opt
+                                    </label>
+                                }
+                                @if (!f.Options.Any(o => !string.IsNullOrWhiteSpace(o)))
+                                {
+                                    <span class="text-muted">Aucune option configurée pour ce champ.</span>
+                                }
+                            </div>
+                            break;
+                        case FieldType.PieceJointe:
+                        case FieldType.Image:
+                            <div class="file-field-row">
+                                @if (GetFileRef(fid) != null)
+                                {
+                                    @if (f.Type == FieldType.Image && !string.IsNullOrWhiteSpace(GetFileRef(fid)!.Data))
+                                    {
+                                        <img class="file-preview-img" src="@GetFileRef(fid)!.Data" alt="@GetFileRef(fid)!.Nom" />
+                                    }
+                                    <span class="file-info">
+                                        <span class="file-name">@GetFileRef(fid)!.Nom</span>
+                                        <span class="file-size">(@FormatSize(GetFileRef(fid)!.Taille))</span>
+                                    </span>
+                                }
+                                else
+                                {
+                                    <span class="file-info"><span class="text-muted">Aucun fichier</span></span>
+                                }
+                            </div>
+                            <div class="photo-actions">
+                                <button type="button" class="btn btn-secondary btn-sm" @onclick="() => PickFieldFile(fid, f.Type == FieldType.Image)">📎 Choisir un@(f.Type == FieldType.Image ? "e image (JPG/PNG/GIF, max 5 Mo)" : " fichier (PDF, image, DOCX…, max 5 Mo)")</button>
+                                @if (GetFileRef(fid) != null)
+                                {
+                                    <button type="button" class="btn btn-secondary btn-sm" @onclick="() => _model.ClearFieldFile(fid)">Retirer</button>
+                                }
+                            </div>
+                            <span class="field-hint">Contenu accepté : @(f.Type == FieldType.Image ? "image JPG, PNG, GIF, WEBP" : "PDF, image, DOC, DOCX, TXT, ZIP…") — taille maximale 5 Mo, stocké sur l'appareil.</span>
+                            break;
+                    }
+                }
+
+                <span class="form-error">@Err("field_" + fid)</span>
+            </div>
+        }
+    }
+</div>
+
+<div class="form-actions" style="margin-top:6px;margin-bottom:8px">
+    <button class="btn btn-primary btn-block" @onclick="Save" disabled="@_saving">@(_saving ? "Enregistrement…" : "Enregistrer")</button>
+</div>
+
+@code {
+    [Parameter] public string? EditingId { get; set; }
+    [Parameter] public EventCallback OnClose { get; set; }
+
+    private UserFormModel _model = new();
+    private Dictionary<string, string> _errors = new();
+    private bool _saving;
+    private bool _statusLocked;
+
+    private bool _isNew => string.IsNullOrEmpty(EditingId);
+
+    private bool IsSimpleRole => _model.Role == "Utilisateur";
+
+    private bool IsSelfSimpleUser => !_isNew && IsSelfEditing && !Store.IsManager && IsSimpleRole;
+
+    private bool CanEditPhoto => Store.IsManager || StringEquals(Store.GetCurrentUser()?.Id, EditingId);
+
+    private bool IsSelfEditing => StringEquals(Store.GetCurrentUser()?.Id, EditingId);
+
+    private static bool StringEquals(string? a, string? b) => string.Equals(a, b, StringComparison.Ordinal);
+
+    private bool CanChangeStatus
+    {
+        get
+        {
+            if (_isNew) return true;
+            var u = Store.FindUser(EditingId!);
+            if (u == null) return true;
+            if (u.Role == Roles.BaseAdmin) return Store.IsAdmin; // compte technique : admin/dba uniquement
+            return Store.IsManager;
+        }
+    }
+
+    private string TelDigits
+    {
+        get
+        {
+            var phone = _model.Telephone ?? "";
+            return phone.StartsWith("+261", StringComparison.Ordinal) ? phone.Substring(4) : phone;
+        }
+    }
+
+    private void OnTelInput(string raw)
+    {
+        var digits = new string((raw ?? "").Where(char.IsDigit).ToArray());
+        _model.Telephone = "+261" + digits;
+    }
+
+    private void OnStatutChange(ChangeEventArgs e) => _model.Actif = e.Value?.ToString() == "1";
+
+    private void OnRoleChanged(ChangeEventArgs e)
+    {
+        _model.Role = e.Value?.ToString() ?? "Utilisateur";
+        _model.ChangePasswordOnEdit = false;
+        _model.Password = "";
+        _model.ConfirmPassword = "";
+        _errors.Remove("password");
+        _errors.Remove("confirmPassword");
+        _errors.Remove("identifiant");
+    }
+
+    protected override void OnParametersSet()
+    {
+        if (_isNew)
+        {
+            _model = new UserFormModel { Role = "Utilisateur", Actif = true };
+            _statusLocked = false;
+        }
+        else
+        {
+            var u = Store.FindUser(EditingId!);
+            if (u != null)
+            {
+                _model = UserFormModel.FromUser(u);
+                var isLastAdmin = Store.Users.Count(x => x.Role == "Administrateur") <= 1;
+                _statusLocked = u.Role == "Administrateur" && isLastAdmin;
+            }
+        }
+        _errors = new Dictionary<string, string>();
+    }
+
+    private IReadOnlyList<FieldDefinition> ActiveFields()
+        => Store.Fields.Where(f => f.Actif).OrderBy(f => f.Ordre).ToList();
+
+    private string? Err(string key) => _errors.TryGetValue(key, out var m) ? m : null;
+
+    private bool BoolIs(string fieldId, bool value)
+        => value ? _model.BoolSelection(fieldId) == "oui" : _model.BoolSelection(fieldId) == "non";
+
+    private void SetBool(string fieldId, bool value)
+        => _model.SetBoolSelection(fieldId, value ? "oui" : "non");
+
+    private FileRef? GetFileRef(string fieldId)
+    {
+        if (_model.Custom.TryGetValue(fieldId, out var v)) return v.Fichier;
+        return null;
+    }
+
+    private async Task PickFieldFile(string fieldId, bool imageOnly)
+    {
+        var pick = imageOnly ? await PickImageAsFile() : await Photos.PickAnyFileAsync();
+        if (pick == null)
+        {
+            if (!string.IsNullOrEmpty(Photos.LastError)) State.NotifyError(Photos.LastError);
+            return;
+        }
+        _model.SetFieldFile(fieldId, new FileRef
+        {
+            Key = fieldId,
+            Nom = pick.FileName,
+            Mime = pick.Mime,
+            Taille = pick.Size,
+            Data = pick.DataUrl
+        });
+        StateHasChanged();
+    }
+
+    private async Task<PhotoService.PickResult?> PickImageAsFile()
+    {
+        var dataUrl = await Photos.PickPhotoAsync();
+        if (dataUrl == null)
+        {
+            if (!string.IsNullOrEmpty(Photos.LastError)) State.NotifyError(Photos.LastError);
+            return null;
+        }
+        var comma = dataUrl.IndexOf(',');
+        var mime = comma > 5 ? dataUrl.Substring(5, comma - 5) : "image/jpeg";
+        var b64 = comma >= 0 ? dataUrl.Substring(comma + 1) : "";
+        long size;
+        try { size = (long)((b64.Length - (b64.EndsWith("==")?2: b64.EndsWith("=")?1:0)) * 3 / 4); } catch { size = 0; }
+        return new PhotoService.PickResult { FileName = "image-" + DateTime.Now.ToString("HHmmss") + ".jpg", Mime = mime, Size = size, DataUrl = dataUrl };
+    }
+
+    private async Task PickPhoto()
+    {
+        var data = await Photos.PickPhotoAsync();
+        if (data != null) _model.Photo = data;
+        else if (!string.IsNullOrEmpty(Photos.LastError)) State.NotifyError(Photos.LastError);
+    }
+
+    private async Task CapturePhoto()
+    {
+        var data = await Photos.CapturePhotoAsync();
+        if (data != null) _model.Photo = data;
+        else if (!string.IsNullOrEmpty(Photos.LastError)) State.NotifyError(Photos.LastError);
+    }
+
+    private async Task Save()
+    {
+        _saving = true;
+        try
+        {
+            var draft = _model.ToDraft();
+            if (new string((draft.Telephone ?? "").Where(char.IsDigit).ToArray()).Length == 0)
+                draft.Telephone = "";
+            var isSimple = IsSimpleRole;
+            if (isSimple) _model.ChangePasswordOnEdit = false;
+
+            var passwordProvided = !isSimple && (_isNew || _model.ChangePasswordOnEdit);
+            _errors = Store.ValidateUser(draft, _isNew ? null : EditingId, _isNew, !isSimple, _model.ConfirmPassword, passwordProvided);
+
+            if (!_isNew)
+            {
+                var u = Store.FindUser(EditingId!);
+                if (u is { Role: "Administrateur" } && Store.Users.Count(x => x.Role == "Administrateur") <= 1)
+                {
+                    if (!draft.Actif) _errors.TryAdd("statut", "Impossible de désactiver le dernier administrateur.");
+                    if (draft.Role != "Administrateur") _errors.TryAdd("role", "Impossible de changer le rôle du dernier administrateur.");
+                }
+            }
+
+            if (_errors.Count > 0)
+            {
+                StateHasChanged();
+                return;
+            }
+
+            if (_isNew)
+            {
+                var res = Store.AddUser(draft);
+                if (!res.Success)
+                {
+                    _errors.TryAdd("identifiant", res.Error);
+                    StateHasChanged();
+                    return;
+                }
+                State.NotifySuccess("Utilisateur ajouté avec succès.");
+            }
+            else
+            {
+                var res = Store.UpdateUser(EditingId!, draft, passwordProvided);
+                if (!res.Success)
+                {
+                    _errors.TryAdd("form", res.Error);
+                    State.NotifyError(res.Error);
+                    StateHasChanged();
+                    return;
+                }
+                State.NotifySuccess("Utilisateur modifié avec succès.");
+            }
+
+            await OnClose.InvokeAsync();
+        }
+        finally
+        {
+            _saving = false;
+        }
+    }
+
+    private static string FormatSize(long bytes)
+    {
+        if (bytes < 1024) return bytes + " o";
+        if (bytes < 1024 * 1024) return (bytes / 1024.0).ToString("0.0") + " Ko";
+        return (bytes / (1024.0 * 1024)).ToString("0.0") + " Mo";
+    }
+}

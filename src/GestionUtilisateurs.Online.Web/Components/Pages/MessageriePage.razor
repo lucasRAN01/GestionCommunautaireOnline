@@ -1,0 +1,305 @@
+@implements IDisposable
+@inject DataStore Store
+@inject AppState State
+
+@if (!Store.Can(Permissions.MessagerieUse))
+{
+    <EmptyState Icon="🔒" Title="Accès réservé" Message="La messagerie interne n'est pas autorisée pour votre rôle." />
+}
+else if (_conversation == null)
+{
+    <div class="page-head">
+        <p>Boîte locale partagée : vos messages restent sur l'appareil et voyagent avec la synchronisation.</p>
+    </div>
+    <div class="form-actions" style="margin-bottom:10px">
+        <button class="btn btn-primary btn-sm" @onclick="ShowNewMessage">✉ Nouveau message</button>
+        <button class="btn btn-secondary btn-sm" @onclick="ShowAnnonce">📢 Annonce</button>
+    </div>
+    <div class="search-box cal-search">
+        <span class="search-icon" aria-hidden="true">⌕</span>
+        <input type="search" placeholder="Rechercher une conversation (membre, annonce, texte)…" aria-label="Rechercher une conversation"
+               value="@_search" @oninput="OnSearch" />
+    </div>
+    @if (!string.IsNullOrWhiteSpace(_search))
+    {
+        <div class="search-summary">@VisibleConversations.Count conversation(s) trouvée(s) pour « @_search.Trim() »</div>
+    }
+    @if (_conversations.Count == 0)
+    {
+        <EmptyState Icon="✉" Title="Aucun message" Message="Écrivez le premier message ou publiez une annonce." />
+    }
+    else if (VisibleConversations.Count == 0)
+    {
+        <EmptyState Icon="✉" Title="Aucun résultat" Message="Aucune conversation ne correspond à cette recherche." />
+    }
+    else
+    {
+        <div class="user-list">
+            @foreach (var conv in VisibleConversations)
+            {
+                var cid = conv.ConversationId;
+                var dernier = conv.Dernier;
+                var nonLus = conv.NonLus;
+                <div class="user-card" @onclick="() => OpenConversation(cid)">
+                    <span class="field-type-icon" aria-hidden="true">@(cid == DataStore.ConversationAnnonces ? "📢" : "💬")</span>
+                    <div class="user-card-main">
+                        <div class="user-card-name">@ConversationTitle(cid)</div>
+                        <div class="user-card-sub">@Truncate(dernier.Texte, 80)</div>
+                        <div class="user-card-meta">
+                            <span class="text-muted" style="font-size:12px">@dernier.Expediteur · @DataStore.FormatDateCourte(dernier.Date)</span>
+                            @if (nonLus > 0) { <Badge Text="@nonLus.ToString()" Kind="role" /> }
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+}
+else
+{
+    <div class="form-group" style="display:flex;align-items:center;gap:10px;margin-bottom:6px">
+        <button class="btn btn-secondary btn-sm" @onclick="CloseConversation">← Conversations</button>
+        <h2 style="margin:0;font-size:18px;font-weight:700">@ConversationTitle(_conversation)</h2>
+    </div>
+    <div class="msg-thread">
+        @foreach (var m in _messages)
+        {
+            var mine = m.Expediteur.Equals(Me, StringComparison.OrdinalIgnoreCase);
+            <div class="msg-bubble @(mine ? "msg-mine" : "msg-theirs")">
+                <div class="msg-meta"><strong>@m.Expediteur</strong> · @DataStore.FormatDateCourte(m.Date)</div>
+                <div class="msg-text">@m.Texte</div>
+                @if (mine || Store.IsAdmin)
+                {
+                    <button type="button" class="btn-icon danger msg-del" aria-label="Supprimer" @onclick="() => AskDelete(m)">🗑</button>
+                }
+            </div>
+        }
+    </div>
+    <div class="msg-reply">
+        <input type="text" placeholder="Écrire un message…" aria-label="Répondre"
+               value="@_reply" @oninput="e => _reply = e.Value?.ToString() ?? string.Empty" @onkeydown="OnReplyKey" />
+        <button class="btn btn-primary btn-sm" @onclick="SendReply" disabled="@string.IsNullOrWhiteSpace(_reply)">Envoyer</button>
+    </div>
+}
+
+<Modal Title="@(_annonce ? "Publier une annonce" : "Nouveau message")" Show="_showNew" OnClose="() => _showNew = false">
+    <ChildContent>
+        @if (!_annonce)
+        {
+            <div class="form-group">
+                <label>Destinataires</label>
+                <div class="search-box cal-search cal-opt-search">
+                    <span class="search-icon" aria-hidden="true">⌕</span>
+                    <input type="search" placeholder="Écrire pour chercher un membre…" aria-label="Chercher un membre"
+                           value="@_destSearch" @oninput="e => _destSearch = e.Value?.ToString() ?? string.Empty" />
+                </div>
+                <div class="check-group">
+                    @foreach (var u in FilteredDest)
+                    {
+                        <label class="form-check">
+                            <input type="checkbox" checked="@_dest.Contains(u.Identifiant)" @onchange="() => ToggleDest(u.Identifiant)" />
+                            @u.NomComplet <span class="text-muted" style="font-size:12px">@@@u.Identifiant</span>
+                        </label>
+                    }
+                    @if (FilteredDest.Count == 0)
+                    {
+                        <div class="cal-no-events">Aucun membre trouvé pour « @_destSearch ».</div>
+                    }
+                </div>
+                <span class="field-hint">Sans destinataire : le message part en annonce (tout le monde).</span>
+            </div>
+        }
+        else
+        {
+            <p class="muted" style="margin-top:0">📢 Visible par tous les comptes de l'appareil.</p>
+        }
+        <div class="form-group">
+            <label for="msg-new-text">Message *</label>
+            <textarea id="msg-new-text" rows="3" value="@_newTexte" @oninput="e => _newTexte = e.Value?.ToString() ?? string.Empty"></textarea>
+        </div>
+        <span class="form-error">@_newError</span>
+    </ChildContent>
+    <FooterContent>
+        <button class="btn btn-secondary" @onclick="() => _showNew = false">Annuler</button>
+        <button class="btn btn-primary" @onclick="SendNew">Envoyer</button>
+    </FooterContent>
+</Modal>
+
+<ConfirmDialog Show="_deleteTarget != null" Title="Supprimer le message"
+               Message="Supprimer définitivement ce message ?"
+               ConfirmLabel="Supprimer" Danger="true" OnConfirm="ConfirmDelete" OnCancel="() => _deleteTarget = null" />
+
+@code {
+    private string Me => Store.GetCurrentUser()?.Identifiant ?? "";
+    private List<(string ConversationId, Message Dernier, int NonLus)> _conversations = new();
+    private string? _conversation;
+    private List<Message> _messages = new();
+    private string _reply = "";
+    private string _search = "";
+    private bool _showNew;
+    private bool _annonce;
+    private HashSet<string> _dest = new();
+    private string _newTexte = "";
+    private string _newError = "";
+    private Message? _deleteTarget;
+
+    private IReadOnlyList<UserAccount> ActiveUsers =>
+        Store.Users.Where(u => u.Actif).OrderBy(u => u.NomComplet).ToList();
+
+    private string _destSearch = "";
+
+    private List<UserAccount> FilteredDest
+    {
+        get
+        {
+            var q = _destSearch.Trim();
+            var list = ActiveUsers.Where(u => !u.Identifiant.Equals(Me, StringComparison.OrdinalIgnoreCase));
+            if (q.Length == 0) return list.ToList();
+            return list.Where(u => (u.NomComplet + " " + u.Identifiant + " " + (u.Matricule ?? ""))
+                .Contains(q, StringComparison.OrdinalIgnoreCase)).ToList();
+        }
+    }
+
+    protected override void OnInitialized()
+    {
+        Store.DataChanged += Refresh;
+        RefreshList();
+    }
+
+    private void Refresh() => _ = InvokeAsync(() =>
+    {
+        RefreshList();
+        if (_conversation != null) LoadThread();
+        StateHasChanged();
+    });
+
+    private void RefreshList() => _conversations = Store.GetConversations(Me).ToList();
+
+    private List<(string ConversationId, Message Dernier, int NonLus)> VisibleConversations
+    {
+        get
+        {
+            var q = _search.Trim();
+            if (q.Length == 0) return _conversations;
+            return _conversations.Where(c =>
+                ConversationTitle(c.ConversationId).Contains(q, StringComparison.OrdinalIgnoreCase)
+                || c.Dernier.Texte.Contains(q, StringComparison.OrdinalIgnoreCase)
+                || c.Dernier.Expediteur.Contains(q, StringComparison.OrdinalIgnoreCase)).ToList();
+        }
+    }
+
+    private void OnSearch(ChangeEventArgs e) => _search = e.Value?.ToString() ?? string.Empty;
+
+    private void ShowNewMessage()
+    {
+        _showNew = true;
+        _annonce = false;
+        _newTexte = "";
+        _newError = "";
+        _dest = new HashSet<string>();
+    }
+
+    private void ShowAnnonce()
+    {
+        _showNew = true;
+        _annonce = true;
+        _newTexte = "";
+        _newError = "";
+        _dest = new HashSet<string>();
+    }
+
+    private void OpenConversation(string id)
+    {
+        _conversation = id;
+        Store.MarkConversationRead(id, Me);
+        LoadThread();
+    }
+
+    private void CloseConversation()
+    {
+        _conversation = null;
+        _reply = "";
+        RefreshList();
+    }
+
+    private void LoadThread()
+    {
+        _messages = Store.GetMessages(_conversation ?? "").ToList();
+    }
+
+    private string ConversationTitle(string cid)
+    {
+        if (cid == DataStore.ConversationAnnonces) return "📢 Annonces";
+        var parts = cid.StartsWith("mp:", StringComparison.OrdinalIgnoreCase)
+            ? cid[3..].Split('+', StringSplitOptions.RemoveEmptyEntries)
+            : new[] { cid };
+        var names = parts
+            .Where(p => !p.Equals(Me, StringComparison.OrdinalIgnoreCase))
+            .Select(p => Store.FindUserByIdentifier(p)?.NomComplet ?? p)
+            .ToList();
+        return names.Count == 0 ? "Discussion" : string.Join(", ", names);
+    }
+
+    private static string Truncate(string s, int max)
+    {
+        var v = s ?? "";
+        return v.Length <= max ? v : v[..max] + "…";
+    }
+
+    private void ToggleDest(string identifiant)
+    {
+        if (!_dest.Add(identifiant)) _dest.Remove(identifiant);
+    }
+
+    private void SendNew()
+    {
+        _newError = "";
+        var res = Store.SendMessage(_annonce ? new List<string>() : _dest.ToList(), _newTexte);
+        if (!res.Success) { _newError = res.Error; return; }
+        _showNew = false;
+        State.NotifySuccess(_annonce ? "Annonce publiée." : "Message envoyé.");
+        RefreshList();
+    }
+
+    private void OnReplyKey(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter") SendReply();
+    }
+
+    private void SendReply()
+    {
+        if (_conversation == null || string.IsNullOrWhiteSpace(_reply)) return;
+        List<string> dest;
+        if (_conversation == DataStore.ConversationAnnonces)
+        {
+            dest = new List<string>();
+        }
+        else
+        {
+            var members = Store.GetMessages(_conversation)
+                .SelectMany(m => m.Destinataires.Append(m.Expediteur))
+                .Where(p => !p.Equals(Me, StringComparison.OrdinalIgnoreCase))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToList();
+            dest = members;
+        }
+        var res = Store.SendMessage(dest, _reply);
+        if (!res.Success) { State.NotifyError(res.Error); return; }
+        _reply = "";
+        LoadThread();
+    }
+
+    private void AskDelete(Message m) => _deleteTarget = m;
+
+    private void ConfirmDelete()
+    {
+        var t = _deleteTarget;
+        _deleteTarget = null;
+        if (t == null) return;
+        var res = Store.DeleteMessage(t.Id);
+        if (res.Success) { State.NotifySuccess("Message supprimé."); LoadThread(); RefreshList(); }
+        else State.NotifyError(res.Error);
+    }
+
+    public void Dispose() => Store.DataChanged -= Refresh;
+}

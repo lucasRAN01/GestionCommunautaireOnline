@@ -1,0 +1,609 @@
+@implements IDisposable
+@inject DataStore Store
+@inject AppState State
+@inject NativeFileSaver Saver
+
+@if (_viewMode == ViewMode.Form)
+{
+    <UserFormPage EditingId="@_formUserId" OnClose="@CloseForm" />
+}
+else if (_viewMode == ViewMode.Detail)
+{
+    <UserDetailPage UserId="@_detailUserId"
+                    OnBack="@(() => { _viewMode = ViewMode.List; _detailUserId = null; StateHasChanged(); })"
+                    OnEdit="@(id => OpenEdit(id))" />
+}
+else
+{
+    <div class="filters-panel">
+        <div class="cal-toolbar">
+            <div class="search-box cal-search">
+                <span class="search-icon" aria-hidden="true">&#128269;</span>
+                <input type="text" placeholder="Rechercher un utilisateur..."
+                       aria-label="Rechercher" value="@_search"
+                       @oninput="e => OnSearchChange(e.Value?.ToString() ?? string.Empty)" />
+            </div>
+            <button class="btn btn-secondary btn-sm cal-filter-btn @(_hasActiveFilters ? "active" : "")" @onclick="() => _filtersOpen = true">
+                <span aria-hidden="true">⚲</span> Filtres
+                @if (_hasActiveFilters)
+                {
+                    <Badge Text="@_activeFilterCount.ToString()" Kind="role" />
+                }
+            </button>
+        </div>
+
+        <div class="inline-actions" style="justify-content:space-between;margin-top:12px">
+            <p class="user-count">@_filtered.Count utilisateur(s)</p>
+            @if (CanManage)
+            {
+                <button class="btn btn-secondary btn-sm" disabled="@(_filtered.Count == 0)" @onclick="ExportAsync">⇩ Exporter</button>
+            }
+        </div>
+    </div>
+
+    @if (_filtered.Count == 0)
+    {
+        <EmptyState Icon="☺" Title="Aucun utilisateur trouvé" Message="Essayez de modifier vos filtres ou ajoutez un nouvel utilisateur." />
+        @if (CanManage)
+        {
+            <div class="empty-state-action">
+                <button class="btn btn-primary btn-block" @onclick="OpenAdd">Ajouter un utilisateur</button>
+            </div>
+        }
+    }
+    else
+    {
+        <div class="user-list">
+            @foreach (var u in _filtered)
+            {
+                <div class="user-card" @onclick="() => OpenDetail(u.Id)">
+                    <button class="avatar-btn" type="button" @onclick:stopPropagation="true" @onclick="() => OpenPhoto(u)" aria-label="Agrandir la photo">
+                        <Avatar UserName="@u.NomComplet" Seed="@u.Identifiant" Photo="@u.Photo" />
+                    </button>
+                    <div class="user-card-main">
+                        <div class="user-card-name">@u.NomComplet</div>
+                        @if (!string.IsNullOrWhiteSpace(u.Email))
+                        {
+                            <div class="user-card-sub">@u.Email</div>
+                        }
+                        <div class="user-card-meta">
+                            <Badge Text="@u.Role" Kind="role" />
+                            <Badge Text="@u.Statut" Kind="@(u.Actif ? "active" : "inactive")" />
+                        </div>
+                    </div>
+                    @if (CanManage)
+                    {
+                        <div class="user-card-actions" @onclick:stopPropagation="true">
+                            <button class="btn-icon" aria-label="Modifier" @onclick="@(() => OpenEdit(u.Id))">✎</button>
+                        </div>
+                    }
+                </div>
+            }
+        </div>
+    }
+
+    @if (CanManage)
+    {
+        <button class="fab" aria-label="Ajouter un utilisateur" @onclick="OpenAdd">+</button>
+    }
+
+    <Modal Show="_filtersOpen" Title="Filtrer les utilisateurs" OnClose="() => _filtersOpen = false">
+        <div class="cal-filter-section">
+            <div class="divider-section">Statut</div>
+            <div class="check-group">
+                @foreach (var opt in StatusOptions)
+                {
+                    <label class="form-check">
+                        <input type="checkbox" checked="@_statusFilter.Contains(opt.Value)" @onchange="() => ToggleStatus(opt.Value)" />
+                        @opt.Label
+                    </label>
+                }
+            </div>
+            <div class="divider-section">Rôle</div>
+            <div class="check-group">
+                @foreach (var opt in RoleOptions)
+                {
+                    <label class="form-check">
+                        <input type="checkbox" checked="@_roleFilter.Contains(opt.Value)" @onchange="() => ToggleRole(opt.Value)" />
+                        @opt.Label
+                    </label>
+                }
+            </div>
+            @foreach (var field in DynamicFilterFields)
+            {
+                var cachedField = field;
+                <div class="divider-section">@cachedField.Label <span class="field-type-tag">@FieldTypeInfo.Label(cachedField.Type)</span></div>
+                @if (cachedField.Type is FieldType.Liste or FieldType.ChoixMultiple or FieldType.Booleen)
+                {
+                    <div class="search-box cal-search cal-opt-search">
+                        <span class="search-icon" aria-hidden="true">&#128269;</span>
+                        <input type="search" placeholder="Rechercher une valeur…" aria-label="Rechercher parmi les choix"
+                               value="@(_fieldOptionSearch.TryGetValue(cachedField.Id, out var s) ? s : "")"
+                               @oninput="e => OnFieldOptionSearch(cachedField.Id, e.Value?.ToString() ?? string.Empty)" />
+                    </div>
+                    <div class="check-group">
+                        @foreach (var opt in VisibleOptions(cachedField))
+                        {
+                            <label class="form-check">
+                                <input type="checkbox" checked="@(_fieldFilters.TryGetValue(cachedField.Id, out var set) && set.Contains(opt))" @onchange="() => ToggleFieldOption(cachedField.Id, opt)" />
+                                @opt
+                            </label>
+                        }
+                    </div>
+                }
+                else if (cachedField.Type == FieldType.Nombre)
+                {
+                    <div class="filter-number-row">
+                        <div class="search-box cal-search">
+                            <input type="number" inputmode="decimal" placeholder="Min" aria-label="Valeur minimale"
+                                   value="@(_fieldNumberMin.TryGetValue(cachedField.Id, out var nmin) && nmin.HasValue ? nmin.Value.ToString(System.Globalization.CultureInfo.InvariantCulture) : "")"
+                                   @oninput="e => OnFieldNumber(cachedField.Id, true, e.Value?.ToString() ?? string.Empty)" />
+                        </div>
+                        <span class="filter-number-sep" aria-hidden="true">–</span>
+                        <div class="search-box cal-search">
+                            <input type="number" inputmode="decimal" placeholder="Max" aria-label="Valeur maximale"
+                                   value="@(_fieldNumberMax.TryGetValue(cachedField.Id, out var nmax) && nmax.HasValue ? nmax.Value.ToString(System.Globalization.CultureInfo.InvariantCulture) : "")"
+                                   @oninput="e => OnFieldNumber(cachedField.Id, false, e.Value?.ToString() ?? string.Empty)" />
+                        </div>
+                    </div>
+                }
+                else if (cachedField.Type == FieldType.Date)
+                {
+                    <div class="form-group" style="margin:2px 0 0">
+                        <input type="date" aria-label="Filtrer par date"
+                               value="@(_fieldDateFilters.TryGetValue(cachedField.Id, out var d) ? d : "")"
+                               @onchange="e => OnFieldDate(cachedField.Id, e.Value?.ToString() ?? string.Empty)" />
+                    </div>
+                }
+                else if (cachedField.Type is FieldType.PieceJointe or FieldType.Image)
+                {
+                    var fileChoice = _fieldFileFilters.TryGetValue(cachedField.Id, out var fc) ? fc : null;
+                    <div class="radio-row">
+                        <label class="radio-option">
+                            <input type="radio" name="ff-@cachedField.Id" checked="@(fileChoice == null)" @onchange="() => SetFieldFile(cachedField.Id, null)" />
+                            Tous
+                        </label>
+                        <label class="radio-option">
+                            <input type="radio" name="ff-@cachedField.Id" checked="@(fileChoice == true)" @onchange="() => SetFieldFile(cachedField.Id, true)" />
+                            Avec fichier
+                        </label>
+                        <label class="radio-option">
+                            <input type="radio" name="ff-@cachedField.Id" checked="@(fileChoice == false)" @onchange="() => SetFieldFile(cachedField.Id, false)" />
+                            Sans fichier
+                        </label>
+                    </div>
+                }
+                else
+                {
+                    <div class="search-box cal-search cal-opt-search">
+                        <span class="search-icon" aria-hidden="true">&#128269;</span>
+                        <input type="search" placeholder="Contient…" aria-label="Filtrer par texte"
+                               value="@(_fieldTextFilters.TryGetValue(cachedField.Id, out var t) ? t : "")"
+                               @oninput="e => OnFieldText(cachedField.Id, e.Value?.ToString() ?? string.Empty)" />
+                    </div>
+                }
+            }
+        </div>
+        <div class="form-actions filter-actions">
+            <button type="button" class="btn btn-secondary" @onclick="ResetFilters">Réinitialiser</button>
+            <button type="button" class="btn btn-primary" @onclick="() => _filtersOpen = false">Appliquer les filtres</button>
+        </div>
+    </Modal>
+
+    <ConfirmDialog Show="@_confirm.Show" Title="@_confirm.Title" Message="@_confirm.Message"
+                   ConfirmLabel="@_confirm.ConfirmLabel" Danger="@_confirm.Danger"
+                   OnConfirm="@(() => _confirm.Action?.Invoke())"
+                   OnCancel="@(() => _confirm = _confirm with { Show = false })" />
+
+    <PhotoViewer Current="@_viewer" OnClose="@(() => _viewer = null)" />
+}
+
+@code {
+    private enum ViewMode { List, Detail, Form }
+
+    private sealed record ConfirmState(bool Show, string Title, string Message, string ConfirmLabel, bool Danger, Action? Action)
+    {
+        public static ConfirmState Hidden() => new(false, "", "", "OK", true, null);
+    }
+
+    private ViewMode _viewMode = ViewMode.List;
+    private string? _detailUserId;
+    private string? _formUserId;
+
+    private bool IsAdmin => Store.IsAdmin;
+    private bool CanManage => Store.IsManager;
+
+    private string _search = "";
+    private readonly HashSet<string> _statusFilter = new();
+    private readonly HashSet<string> _roleFilter = new();
+    private readonly Dictionary<string, HashSet<string>> _fieldFilters = new();
+    private readonly Dictionary<string, string> _fieldOptionSearch = new();
+    private readonly Dictionary<string, string> _fieldTextFilters = new();
+    private readonly Dictionary<string, double?> _fieldNumberMin = new();
+    private readonly Dictionary<string, double?> _fieldNumberMax = new();
+    private readonly Dictionary<string, string> _fieldDateFilters = new();
+    private readonly Dictionary<string, bool?> _fieldFileFilters = new();
+    private bool _filtersOpen;
+    private ConfirmState _confirm = ConfirmState.Hidden();
+    private UserAccount? _viewer;
+
+    private static readonly (string Value, string Label)[] StatusOptions =
+    {
+        ("Actif", "Actifs"),
+        ("Inactif", "Inactifs")
+    };
+
+    private static readonly (string Value, string Label)[] RoleOptions =
+    {
+        ("Administrateur de la base", "Administrateur de la base"),
+        ("Administrateur", "Administrateur"),
+        ("Gestionnaire", "Gestionnaire"),
+        ("Utilisateur", "Utilisateur")
+    };
+    private List<UserAccount> _filtered = new();
+    private System.Timers.Timer? _searchTimer;
+
+    protected override void OnInitialized()
+    {
+        Store.DataChanged += OnChanged;
+        var status = State.UsersStatusFilter;
+        var role = State.UsersRoleFilter;
+        if (status != null || role != null)
+        {
+            if (status is "Actif" or "Inactif") _statusFilter.Add(status);
+            if (!string.IsNullOrEmpty(role)) _roleFilter.Add(role);
+            State.ConsumeUsersFilter();
+        }
+        Recompute();
+        var pending = State.PendingUserId;
+        if (!string.IsNullOrEmpty(pending))
+        {
+            State.ConsumePendingUser();
+            if (Store.FindUser(pending) != null)
+            {
+                _detailUserId = pending;
+                _viewMode = ViewMode.Detail;
+            }
+        }
+    }
+
+    private void OnChanged() => _ = InvokeAsync(() => { Recompute(); StateHasChanged(); });
+
+    private void OnSearchChange(string value)
+    {
+        _search = value;
+        _searchTimer?.Dispose();
+        _searchTimer = new System.Timers.Timer(250) { AutoReset = false };
+        _searchTimer.Elapsed += (_, _) => InvokeAsync(() => { _searchTimer!.Dispose(); Recompute(); StateHasChanged(); });
+        _searchTimer.Start();
+    }
+
+    private void Recompute()
+    {
+        var q = _search.Trim().ToLowerInvariant();
+        IEnumerable<UserAccount> query = Store.Users;
+
+        if (q.Length > 0)
+            query = query.Where(u =>
+                (u.Nom + " " + u.Prenom).ToLowerInvariant().Contains(q) ||
+                u.Identifiant.ToLowerInvariant().Contains(q) ||
+                (u.Email ?? "").ToLowerInvariant().Contains(q));
+
+        if (_statusFilter.Count > 0)
+            query = query.Where(u => (_statusFilter.Contains("Actif") && u.Actif) || (_statusFilter.Contains("Inactif") && !u.Actif));
+
+        if (_roleFilter.Count > 0)
+            query = query.Where(u => _roleFilter.Contains(u.Role));
+
+        foreach (var kv in _fieldFilters)
+        {
+            if (kv.Value.Count == 0) continue;
+            var field = Store.Fields.FirstOrDefault(f => f.Id == kv.Key);
+            if (field == null) continue;
+            var filter = kv.Value;
+            query = query.Where(u => MatchFieldFilter(field, filter, u));
+        }
+
+        foreach (var field in DynamicFilterFields)
+        {
+            if (field.Type is FieldType.Liste or FieldType.ChoixMultiple or FieldType.Booleen)
+                continue; // déjà traité ci-dessus via _fieldFilters
+            var f = field;
+            switch (f.Type)
+            {
+                case FieldType.Nombre:
+                {
+                    var hasMin = _fieldNumberMin.TryGetValue(f.Id, out var min) && min.HasValue;
+                    var hasMax = _fieldNumberMax.TryGetValue(f.Id, out var max) && max.HasValue;
+                    if (hasMin || hasMax)
+                        query = query.Where(u => MatchNumberFilter(f, min, max, u));
+                    break;
+                }
+                case FieldType.Date:
+                    if (_fieldDateFilters.TryGetValue(f.Id, out var d) && !string.IsNullOrWhiteSpace(d))
+                    {
+                        var wanted = d.Trim();
+                        query = query.Where(u => MatchDateFilter(f, wanted, u));
+                    }
+                    break;
+                case FieldType.PieceJointe:
+                case FieldType.Image:
+                    if (_fieldFileFilters.TryGetValue(f.Id, out var want) && want.HasValue)
+                    {
+                        var withFile = want.Value;
+                        query = query.Where(u => MatchFileFilter(f, withFile, u));
+                    }
+                    break;
+                default:
+                    if (_fieldTextFilters.TryGetValue(f.Id, out var t) && !string.IsNullOrWhiteSpace(t))
+                    {
+                        var q2 = t.Trim();
+                        query = query.Where(u => MatchTextFilter(f, q2, u));
+                    }
+                    break;
+            }
+        }
+
+        _filtered = query.OrderBy(u => u.Nom).ThenBy(u => u.Prenom).ToList();
+    }
+
+    private static bool MatchFieldFilter(FieldDefinition field, HashSet<string> filter, UserAccount u)
+    {
+        if (!u.Champs.TryGetValue(field.Id, out var val)) return false;
+        switch (field.Type)
+        {
+            case FieldType.Booleen:
+                return filter.Contains(val.Booleen ? "Oui" : "Non");
+            case FieldType.Liste:
+                return filter.Contains(val.Texte ?? "");
+            case FieldType.ChoixMultiple:
+                var parts = (val.Texte ?? "").Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
+                return parts.Any(p => filter.Contains(p));
+            default:
+                return false;
+        }
+    }
+
+    private static bool MatchTextFilter(FieldDefinition field, string query, UserAccount u)
+    {
+        string source;
+        if (field.Id == FieldDefinition.FIELD_IDENTIFIANT)
+            source = u.Identifiant ?? "";
+        else if (!u.Champs.TryGetValue(field.Id, out var val))
+            return false;
+        else
+            source = val.Texte ?? "";
+        return source.Contains(query, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool MatchNumberFilter(FieldDefinition field, double? min, double? max, UserAccount u)
+    {
+        if (!u.Champs.TryGetValue(field.Id, out var val) || !val.Nombre.HasValue) return false;
+        var n = val.Nombre.Value;
+        if (min.HasValue && n < min.Value) return false;
+        if (max.HasValue && n > max.Value) return false;
+        return true;
+    }
+
+    private static bool MatchDateFilter(FieldDefinition field, string wanted, UserAccount u)
+    {
+        if (!u.Champs.TryGetValue(field.Id, out var val)) return false;
+        return (val.Texte ?? "").Contains(wanted, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool MatchFileFilter(FieldDefinition field, bool withFile, UserAccount u)
+    {
+        if (!u.Champs.TryGetValue(field.Id, out var val)) return !withFile;
+        return (val.Fichier != null) == withFile;
+    }
+
+    /// <summary>Tous les champs actifs (personnalisés + identifiant système) : le filtre est dynamique.</summary>
+    private IReadOnlyList<FieldDefinition> DynamicFilterFields =>
+        Store.Fields.Where(f => f.Actif).ToList();
+
+    private IReadOnlyList<FieldDefinition> FilterableFields =>
+        Store.Fields.Where(f => f.Actif && !f.SystemField && FilterableType(f.Type)).ToList();
+
+    private static bool FilterableType(FieldType t) =>
+        t is FieldType.Liste or FieldType.ChoixMultiple or FieldType.Booleen;
+
+    private static string[] FieldOptions(FieldDefinition field) =>
+        field.Type == FieldType.Booleen
+            ? new[] { "Oui", "Non" }
+            : field.Options.Where(o => !string.IsNullOrWhiteSpace(o)).Distinct().ToArray();
+
+    private string[] VisibleOptions(FieldDefinition field)
+    {
+        var q = _fieldOptionSearch.TryGetValue(field.Id, out var s) ? s.Trim() : "";
+        if (q.Length == 0) return FieldOptions(field);
+        return FieldOptions(field).Where(o => o.Contains(q, StringComparison.OrdinalIgnoreCase)).ToArray();
+    }
+
+    private void OnFieldOptionSearch(string fieldId, string value)
+    {
+        _fieldOptionSearch[fieldId] = value;
+    }
+
+    private void OnFieldText(string fieldId, string value)
+    {
+        _fieldTextFilters[fieldId] = value;
+        Recompute();
+    }
+
+    private void OnFieldNumber(string fieldId, bool isMin, string value)
+    {
+        var parsed = TryParseNumber(value);
+        if (isMin) _fieldNumberMin[fieldId] = parsed;
+        else _fieldNumberMax[fieldId] = parsed;
+        Recompute();
+    }
+
+    private static double? TryParseNumber(string value)
+    {
+        var v = (value ?? "").Trim().Replace(',', '.');
+        if (v.Length == 0) return null;
+        if (double.TryParse(v, System.Globalization.NumberStyles.Any,
+                System.Globalization.CultureInfo.InvariantCulture, out var n))
+            return n;
+        return null;
+    }
+
+    private void OnFieldDate(string fieldId, string value)
+    {
+        _fieldDateFilters[fieldId] = value;
+        Recompute();
+    }
+
+    private void SetFieldFile(string fieldId, bool? value)
+    {
+        _fieldFileFilters[fieldId] = value;
+        Recompute();
+        StateHasChanged();
+    }
+
+    private void ToggleFieldOption(string fieldId, string option)
+    {
+        if (!_fieldFilters.TryGetValue(fieldId, out var set))
+        {
+            set = new HashSet<string>();
+            _fieldFilters[fieldId] = set;
+        }
+        if (!set.Add(option)) set.Remove(option);
+        Recompute();
+        StateHasChanged();
+    }
+
+    // Actions
+    private bool _hasActiveFilters => _statusFilter.Count > 0 || _roleFilter.Count > 0
+        || _fieldFilters.Values.Any(s => s.Count > 0)
+        || _fieldTextFilters.Values.Any(v => !string.IsNullOrWhiteSpace(v))
+        || _fieldNumberMin.Values.Any(v => v.HasValue)
+        || _fieldNumberMax.Values.Any(v => v.HasValue)
+        || _fieldDateFilters.Values.Any(v => !string.IsNullOrWhiteSpace(v))
+        || _fieldFileFilters.Values.Any(v => v.HasValue);
+
+    private int _activeFilterCount => _statusFilter.Count + _roleFilter.Count
+        + _fieldFilters.Values.Sum(s => s.Count)
+        + _fieldTextFilters.Values.Count(v => !string.IsNullOrWhiteSpace(v))
+        + _fieldNumberMin.Values.Count(v => v.HasValue)
+        + _fieldNumberMax.Values.Count(v => v.HasValue)
+        + _fieldDateFilters.Values.Count(v => !string.IsNullOrWhiteSpace(v))
+        + _fieldFileFilters.Values.Count(v => v.HasValue);
+
+    private void ToggleStatus(string status) => ToggleSet(_statusFilter, status);
+
+    private void ToggleRole(string role) => ToggleSet(_roleFilter, role);
+
+    private void ToggleSet(HashSet<string> set, string value)
+    {
+        if (!set.Add(value)) set.Remove(value);
+        Recompute();
+        StateHasChanged();
+    }
+
+    private void ResetFilters()
+    {
+        _statusFilter.Clear();
+        _roleFilter.Clear();
+        _fieldFilters.Clear();
+        _fieldOptionSearch.Clear();
+        _fieldTextFilters.Clear();
+        _fieldNumberMin.Clear();
+        _fieldNumberMax.Clear();
+        _fieldDateFilters.Clear();
+        _fieldFileFilters.Clear();
+        Recompute();
+    }
+
+    private bool _formFromDetail;
+
+    private void OpenAdd()
+    {
+        _formFromDetail = false;
+        _formUserId = null;
+        _viewMode = ViewMode.Form;
+    }
+
+    private void OpenEdit(string id)
+    {
+        _formFromDetail = _viewMode == ViewMode.Detail;
+        _formUserId = id;
+        _viewMode = ViewMode.Form;
+    }
+
+    private void CloseForm()
+    {
+        if (_formFromDetail && _formUserId != null)
+        {
+            _detailUserId = _formUserId;
+            _viewMode = ViewMode.Detail;
+        }
+        else
+        {
+            _viewMode = ViewMode.List;
+        }
+        _formUserId = null;
+        StateHasChanged();
+    }
+
+    private async Task ExportAsync()
+    {
+        var bytes = Store.ExportUsersExcel(_filtered);
+        var path = await Saver.SaveAsync(
+            "utilisateurs-" + DateTime.Now.ToString("dd-MM-yyyy_HH-mm-ss") + ".xlsx",
+            bytes, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+        if (path == null)
+        {
+            State.NotifyError("L'export a échoué. Réessayez.");
+            return;
+        }
+        Store.LogActivity(ActivityTypes.Export, "Export Excel des utilisateurs filtrés (" + _filtered.Count + ")");
+        State.NotifySuccess("Export réussi : " + path);
+    }
+
+    private void OpenDetail(string id)
+    {
+        _detailUserId = id;
+        _viewMode = ViewMode.Detail;
+    }
+
+    private void OpenPhoto(UserAccount u) => _viewer = u;
+
+    private void AskToggle(string id, bool activate)
+    {
+        var u = Store.FindUser(id);
+        if (u == null) return;
+        _confirm = new ConfirmState(true, activate ? "Activer l'utilisateur" : "Désactiver l'utilisateur",
+            $"Voulez-vous vraiment {(activate ? "activer" : "désactiver")} « {u.NomComplet} » ?",
+            activate ? "Activer" : "Désactiver", !activate, () => ExecuteToggle(id, activate));
+    }
+
+    private void ExecuteToggle(string id, bool activate)
+    {
+        var res = Store.SetUserActive(id, activate);
+        State.Notify(res.Success ? (activate ? "Utilisateur activé." : "Utilisateur désactivé.") : "Erreur : " + res.Error,
+            res.Success ? "success" : "error");
+    }
+
+    private void AskReset(string id)
+    {
+        var u = Store.FindUser(id);
+        if (u == null) return;
+        _confirm = new ConfirmState(true, "Réinitialiser le mot de passe",
+            $"Voulez-vous réinitialiser le mot de passe de « {u.NomComplet} » ?\nLe nouveau mot de passe sera : « {DataStore.DEFAULT_PASSWORD} ».",
+            "Réinitialiser", false, () => ExecuteReset(id));
+    }
+
+    private void ExecuteReset(string id)
+    {
+        var res = Store.ResetPassword(id);
+        State.Notify(res.Success ? $"Mot de passe réinitialisé : « {DataStore.DEFAULT_PASSWORD} »." : "Erreur : " + res.Error,
+            res.Success ? "success" : "error");
+    }
+
+    public void Dispose()
+    {
+        Store.DataChanged -= OnChanged;
+        _searchTimer?.Dispose();
+    }
+}

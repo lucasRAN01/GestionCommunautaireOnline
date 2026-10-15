@@ -1,0 +1,109 @@
+@inject DataStore Store
+
+<div class="mpicker">
+    <div class="search-box cal-search cal-opt-search" style="margin-bottom:0">
+        <span class="search-icon" aria-hidden="true">⌕</span>
+        <input type="search" placeholder="@Placeholder" aria-label="Chercher un membre"
+               value="@_search" @oninput="OnSearch" @onfocus="() => _open = true" />
+        @if (!string.IsNullOrWhiteSpace(Value) || _open)
+        {
+            <button type="button" class="mpicker-clear" aria-label="Effacer" @onclick="ClearAll">✕</button>
+        }
+    </div>
+    @if (_open)
+    {
+        <div class="mpicker-list" role="listbox">
+            @if (AllowEmpty)
+            {
+                <button type="button" class="mpicker-item" @onclick='() => Select("")'>
+                    <span class="mpicker-name">— Aucun —</span>
+                </button>
+            }
+            @foreach (var u in Visible)
+            {
+                var user = u;
+                <button type="button" class="mpicker-item @(user.Identifiant.Equals(Value, StringComparison.OrdinalIgnoreCase) ? "selected" : "")" @onclick="() => Select(user.Identifiant)">
+                    <Avatar UserName="@user.NomComplet" Seed="@user.Identifiant" Size="sm" Photo="@user.Photo" />
+                    <span class="mpicker-main">
+                        <span class="mpicker-name">@user.NomComplet</span>
+                        <span class="mpicker-sub">@@@user.Identifiant@(string.IsNullOrWhiteSpace(user.Matricule) ? "" : " · " + user.Matricule)</span>
+                    </span>
+                    @if (user.Identifiant.Equals(Value, StringComparison.OrdinalIgnoreCase))
+                    {
+                        <span class="cal-person-check" aria-hidden="true">✓</span>
+                    }
+                </button>
+            }
+            @if (Visible.Count == 0)
+            {
+                <div class="cal-no-events">Aucun membre trouvé pour « @_search ».</div>
+            }
+            else if (TotalCount > Visible.Count)
+            {
+                <div class="mpicker-more">@TotalCount membre(s) — affinez la recherche (@Visible.Count affichés).</div>
+            }
+        </div>
+    }
+    else if (!string.IsNullOrWhiteSpace(Value))
+    {
+        <div class="mpicker-current">
+            <Avatar UserName="@CurrentName" Seed="@Value" Size="sm" Photo="@CurrentPhoto" />
+            <span class="mpicker-name">@CurrentName</span>
+            <span class="mpicker-sub">@@@Value</span>
+        </div>
+    }
+</div>
+
+@code {
+    /// <summary>Identifiant du membre sélectionné ("" = aucun).</summary>
+    [Parameter] public string Value { get; set; } = "";
+    [Parameter] public EventCallback<string> ValueChanged { get; set; }
+    [Parameter] public bool AllowEmpty { get; set; }
+    [Parameter] public bool ActiveOnly { get; set; } = true;
+    [Parameter] public string Placeholder { get; set; } = "Écrire pour chercher un membre…";
+
+    private string _search = "";
+    private bool _open;
+
+    private string CurrentName => Store.FindUserByIdentifier(Value)?.NomComplet ?? Value;
+    private string? CurrentPhoto => Store.FindUserByIdentifier(Value)?.Photo;
+
+    private IReadOnlyList<UserAccount> Base =>
+        (ActiveOnly ? Store.Users.Where(u => u.Actif) : Store.Users).OrderBy(u => u.NomComplet).ToList();
+
+    private int TotalCount;
+
+    private List<UserAccount> Visible
+    {
+        get
+        {
+            var q = _search.Trim();
+            var matches = q.Length == 0
+                ? Base
+                : Base.Where(u => (u.NomComplet + " " + u.Identifiant + " " + (u.Matricule ?? ""))
+                    .Contains(q, StringComparison.OrdinalIgnoreCase)).ToList();
+            TotalCount = matches.Count;
+            return matches.Take(30).ToList();
+        }
+    }
+
+    private void OnSearch(ChangeEventArgs e)
+    {
+        _search = e.Value?.ToString() ?? "";
+        _open = true;
+    }
+
+    private async Task Select(string identifiant)
+    {
+        _open = false;
+        _search = "";
+        await ValueChanged.InvokeAsync(identifiant);
+    }
+
+    private async Task ClearAll()
+    {
+        _open = false;
+        _search = "";
+        await ValueChanged.InvokeAsync(AllowEmpty ? "" : Value);
+    }
+}

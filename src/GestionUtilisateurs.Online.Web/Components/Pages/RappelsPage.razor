@@ -1,0 +1,112 @@
+@implements IDisposable
+@inject DataStore Store
+@inject AppState State
+
+@if (!Store.Can(Permissions.RappelsUse))
+{
+    <EmptyState Icon="🔒" Title="Accès réservé" Message="Les rappels ne sont pas autorisés pour votre rôle." />
+}
+else
+{
+    <div class="page-head">
+        <p>Calculés automatiquement : tâches, anniversaires, événements, cotisations. Touchez un rappel pour ouvrir la page concernée.</p>
+    </div>
+
+    <div class="search-box cal-search">
+        <span class="search-icon" aria-hidden="true">⌕</span>
+        <input type="search" placeholder="Rechercher un rappel (titre, détail, catégorie)…" aria-label="Rechercher un rappel"
+               value="@_search" @oninput="OnSearch" />
+    </div>
+    @if (!string.IsNullOrWhiteSpace(_search))
+    {
+        <div class="search-summary">@_rappels.Count rappel(s) trouvé(s) pour « @_search.Trim() »</div>
+    }
+
+    @if (_rappels.Count == 0)
+    {
+        <EmptyState Icon="⏰" Title="Rien à signaler" Message="Aucun rappel pour le moment. Tout est à jour." />
+    }
+    else if (!FilteredRappels.Any())
+    {
+        <EmptyState Icon="⏰" Title="Aucun résultat" Message="Aucun rappel ne correspond à cette recherche." />
+    }
+    else
+    {
+        @foreach (var group in FilteredRappels)
+        {
+            <div class="cal-list-day" style="margin-bottom:14px">
+                <div class="cal-list-header">
+                    <span class="cal-list-date">@group.Key</span>
+                    <span class="cal-list-count">@group.Count() rappel(s)</span>
+                </div>
+                <div class="cal-events">
+                    @foreach (var r in group)
+                    {
+                        var rappel = r;
+                        <div class="cal-card" style="--evt-color:@RappelColor(rappel.Priorite)" role="button" tabindex="0" @onclick="() => State.Navigate(rappel.PageCible)" @onkeydown="(k) => OnKey(k, rappel.PageCible)">
+                            <div class="cal-card-time">@RappelIcon(rappel.Priorite)</div>
+                            <div class="cal-card-main">
+                                <div class="cal-card-title">@rappel.Titre</div>
+                                <div class="cal-card-meta">@rappel.Detail</div>
+                            </div>
+                            <div class="cal-card-menu" aria-hidden="true">
+                                <svg viewBox="0 0 24 24" width="18" height="18"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M9 6l6 6-6 6"/></svg>
+                            </div>
+                        </div>
+                    }
+                </div>
+            </div>
+        }
+    }
+}
+
+@code {
+    private List<Rappel> _rappels = new();
+    private string _search = "";
+
+    protected override void OnInitialized()
+    {
+        Store.DataChanged += Refresh;
+        RefreshList();
+    }
+
+    protected override void OnParametersSet() => RefreshList();
+
+    private void Refresh() => _ = InvokeAsync(() => { RefreshList(); StateHasChanged(); });
+
+    private void RefreshList() => _rappels = Store.GetRappels().ToList();
+
+    private void OnSearch(ChangeEventArgs e) => _search = e.Value?.ToString() ?? string.Empty;
+
+    private bool MatchSearch(Rappel r)
+    {
+        var q = _search.Trim();
+        if (q.Length == 0) return true;
+        return (r.Titre + " " + r.Detail + " " + r.Categorie)
+            .Contains(q, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private IEnumerable<IGrouping<string, Rappel>> FilteredRappels
+        => _rappels.Where(MatchSearch).GroupBy(r => r.Categorie);
+
+    private void OnKey(KeyboardEventArgs k, string page)
+    {
+        if (k.Key is "Enter" or " ") State.Navigate(page);
+    }
+
+    private static string RappelColor(string priorite) => priorite switch
+    {
+        CalendarEventTypes.PrioriteUrgente => "#dc2626",
+        CalendarEventTypes.PrioriteImportante => "#d97706",
+        _ => "#0891b2"
+    };
+
+    private static string RappelIcon(string priorite) => priorite switch
+    {
+        CalendarEventTypes.PrioriteUrgente => "⚠",
+        CalendarEventTypes.PrioriteImportante => "⏰",
+        _ => "🔔"
+    };
+
+    public void Dispose() => Store.DataChanged -= Refresh;
+}

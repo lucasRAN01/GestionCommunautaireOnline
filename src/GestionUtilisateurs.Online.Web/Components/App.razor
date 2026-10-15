@@ -1,0 +1,162 @@
+@implements IDisposable
+@using Microsoft.AspNetCore.Components.Routing
+@using Microsoft.JSInterop
+@inject DataStore Store
+
+@if (Store.IsAuthenticated)
+{
+    <MainLayout>
+        @switch (State.CurrentPage)
+        {
+            case "users":
+                if (Store.IsManager) { <UsersPage /> }
+                else { <ProfilePage /> }
+                break;
+            case "profile":
+                var self = Store.GetCurrentUser();
+                if (self != null) { <ProfilePage /> }
+                else { <DashboardPage /> }
+                break;
+            case "activity": if (CanSee("activity")) { <ActivityPage /> } else { <DashboardPage /> } break;
+            case "calendar": if (CanSee("calendar")) { <CalendarPage /> } else { <DashboardPage /> } break;
+            case "documents": if (CanSee("documents")) { <DocumentsPage /> } else { <DashboardPage /> } break;
+            case "fields": if (CanSee("fields")) { <FieldsPage /> } else { <DashboardPage /> } break;
+            case "archive": if (CanSee("archive")) { <ArchivesPage /> } else { <DashboardPage /> } break;
+            case "data": if (CanSee("data")) { <DataManagementPage /> } else { <DashboardPage /> } break;
+            case "community": if (CanSee("community")) { <CommunityPage /> } else { <DashboardPage /> } break;
+            case "comptes": if (CanSee("comptes")) { <AccountsPage /> } else { <DashboardPage /> } break;
+            case "capacite": if (CanSee("capacite")) { <CapacityPage /> } else { <DashboardPage /> } break;
+            case "roles": if (CanSee("roles")) { <RolesPage /> } else { <DashboardPage /> } break;
+            case "messagerie": if (CanSee("messagerie")) { <MessageriePage /> } else { <DashboardPage /> } break;
+            case "taches": if (CanSee("taches")) { <TachesPage /> } else { <DashboardPage /> } break;
+            case "finances": if (CanSee("finances")) { <FinancesPage /> } else { <DashboardPage /> } break;
+            case "materiel": if (CanSee("materiel")) { <MaterielPage /> } else { <DashboardPage /> } break;
+            case "reunions": if (CanSee("reunions")) { <ReunionsPage /> } else { <DashboardPage /> } break;
+            case "rappels": if (CanSee("rappels")) { <RappelsPage /> } else { <DashboardPage /> } break;
+            case "situations": if (CanSee("situations")) { <SituationsPage /> } else { <DashboardPage /> } break;
+            case "carte": if (CanSee("carte")) { <CarteMembrePage /> } else { <DashboardPage /> } break;
+            case "votes": if (CanSee("votes")) { <VotesPage /> } else { <DashboardPage /> } break;
+            case "journal": if (CanSee("journal")) { <JournalMediaPage /> } else { <DashboardPage /> } break;
+            case "settings": if (CanSee("settings")) { <SettingsPage /> } else { <DataManagementPage /> } break;
+            default: if (Store.IsBaseAdmin) { <DataManagementPage /> } else { <DashboardPage /> } break;
+        }
+    </MainLayout>
+}
+
+@code {
+    [Inject] private AppState State { get; set; } = default!;
+    [Inject] private JavascriptBridge Js { get; set; } = default!;
+    [Inject] private GestionUtilisateurs.Online.Web.Services.AutoExportService AutoExport { get; set; } = default!;
+
+    private System.Threading.Timer? _sessionTimer;
+    private DotNetObjectReference<App>? _activityRef;
+    private bool _activityStarted;
+    private bool _autoExportChecked;
+
+    protected override void OnInitialized()
+    {
+        Store.EnsureInitialized();
+        Store.SessionChanged += OnSessionChanged;
+        State.PageChanged += OnPageChanged;
+        // Vérifie périodiquement l'expiration de la session (inactivité uniquement).
+        // La mise en pause / reprise de l'app (autre application) ne déconnecte jamais.
+        _sessionTimer = new System.Threading.Timer(_ =>
+        {
+            var expired = !Store.IsAuthenticated;
+            if (expired) { _ = InvokeAsync(StateHasChanged); }
+        }, null, TimeSpan.FromSeconds(30), TimeSpan.FromSeconds(30));
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && !_activityStarted)
+        {
+            _activityStarted = true;
+            try
+            {
+                _activityRef = DotNetObjectReference.Create(this);
+                await Js.EnableActivityTrackingAsync(_activityRef);
+            }
+            catch { }
+            await CheckAutoExportAsync();
+        }
+    }
+
+    private async Task CheckAutoExportAsync()
+    {
+        if (_autoExportChecked) return;
+        _autoExportChecked = true;
+        // Laisse l'interface se stabiliser avant l'export mensuel (écriture locale).
+        await Task.Delay(2500);
+        try
+        {
+            if (Store.IsAuthenticated)
+                await AutoExport.ExportIfDueAsync();
+        }
+        catch { }
+    }
+
+    private void OnPageChanged() => _ = InvokeAsync(async () =>
+    {
+        StateHasChanged();
+        // Vérifie l'export mensuel à chaque navigation (uniquement si connecté).
+        try
+        {
+            if (Store.IsAuthenticated)
+                await AutoExport.ExportIfDueAsync();
+        }
+        catch { }
+    });
+
+    /// <summary>Prolonge la session à chaque interaction (déconnexion sur inactivité uniquement).</summary>
+    [JSInvokable]
+    public void OnUserActivity()
+    {
+        try { Store.TouchSession(); } catch { }
+    }
+
+    private bool CanSee(string page) => page switch
+    {
+        "fields" => Store.IsAdmin,
+        "activity" => Store.IsManager,
+        "calendar" => true,
+        "documents" => true,
+        "archive" => Store.IsAdmin,
+        "data" => Store.IsBaseAdmin,
+        "community" => true,
+        "sync" => false,
+        "comptes" => Store.Can(Permissions.UsersManage),
+        "capacite" => Store.IsAdmin,
+        "roles" => Store.Can(Permissions.RolesManage),
+        "messagerie" => Store.Can(Permissions.MessagerieUse),
+        "taches" => Store.Can(Permissions.TachesUse),
+        "finances" => Store.Can(Permissions.FinancesManage),
+        "materiel" => Store.Can(Permissions.MaterielManage),
+        "reunions" => Store.Can(Permissions.PresenceManage),
+        "rappels" => Store.Can(Permissions.RappelsUse),
+        "situations" => Store.Can(Permissions.SituationsManage),
+        "carte" => Store.Can(Permissions.CarteMembreView),
+        "votes" => true,
+        "journal" => Store.Can(Permissions.JournalMediaUse),
+        "settings" => !Store.IsBaseAdmin,
+        _ => true
+    };
+
+    private void OnSessionChanged()
+    {
+        if (!CanSee(State.CurrentPage)) State.Navigate(Store.IsBaseAdmin ? "data" : "dashboard");
+        InvokeAsync(StateHasChanged);
+    }
+
+    public void Dispose()
+    {
+        _sessionTimer?.Dispose();
+        Store.SessionChanged -= OnSessionChanged;
+        State.PageChanged -= OnPageChanged;
+        if (_activityStarted)
+        {
+            try { _ = Js.DisableActivityTrackingAsync(); } catch { }
+            _activityRef?.Dispose();
+        }
+    }
+}

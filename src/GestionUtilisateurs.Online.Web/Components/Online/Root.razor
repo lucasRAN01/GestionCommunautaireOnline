@@ -1,0 +1,43 @@
+@implements IDisposable
+@inject OnlineSession Session
+
+@switch (Session.State)
+{
+    case OnlineSessionState.Starting:
+    case OnlineSessionState.Loading:
+        <div class="splash-loading" role="status" aria-live="polite">
+            <div class="splash-rings">
+                <div class="splash-ring splash-ring-outer"></div>
+                <div class="splash-ring splash-ring-inner"></div>
+                <div class="splash-brand">GU</div>
+            </div>
+            @if (Session.State == OnlineSessionState.Loading)
+            {
+                <p class="online-splash-text">Chargement des données de la communauté…</p>
+            }
+        </div>
+        break;
+    case OnlineSessionState.SignedOut:
+        <AuthPage />
+        break;
+    case OnlineSessionState.Ready:
+        <App />
+        break;
+    default:
+        <AccountStatusPage />
+        break;
+}
+
+<Toaster />
+
+@code {
+    protected override async Task OnInitializedAsync()
+    {
+        Session.Changed += OnChanged;
+        await Session.InitializeAsync();
+    }
+
+    private void OnChanged() => _ = InvokeAsync(StateHasChanged);
+
+    public void Dispose() => Session.Changed -= OnChanged;
+}

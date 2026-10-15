@@ -1,0 +1,397 @@
+@implements IDisposable
+@inject DataStore Store
+@inject AppState State
+
+@if (!Store.Can(Permissions.FinancesManage))
+{
+    <EmptyState Icon="🔒" Title="Accès réservé" Message="Les finances ne sont pas autorisées pour votre rôle." />
+}
+else
+{
+    <div class="page-head">
+        <p>Cotisations des membres et trésorerie, montants en Ariary.</p>
+    </div>
+
+    <div class="stats-grid" style="grid-template-columns:repeat(3, 1fr)">
+        <StatCard Icon="💰" Value="@FormatSolde(Store.SoldeTresorerie())" Label="Solde" />
+        <StatCard Icon="🧾" Value="@FormatSolde(Store.TotalCotisations(_periode))" Label="@("Cotisations " + _periode)" Kind="active" />
+        <StatCard Icon="⏳" Value="@Store.ImpayesCotisations(_periode).Count.ToString()" Label="Impayés" Kind="inactive" />
+    </div>
+
+    <div class="search-box cal-search">
+        <span class="search-icon" aria-hidden="true">⌕</span>
+        <input type="search" placeholder="Rechercher (membre, motif, montant)…" aria-label="Rechercher dans les finances"
+               value="@_search" @oninput="OnSearch" />
+    </div>
+    @if (!string.IsNullOrWhiteSpace(_search))
+    {
+        <div class="search-summary">@SearchResultCount résultat(s) pour « @_search.Trim() »</div>
+    }
+
+    <div class="cal-view-tabs">
+        <button class="cal-tab @(_tab == "cotisations" ? "active" : "")" @onclick='() => _tab = "cotisations"'>Cotisations</button>
+        <button class="cal-tab @(_tab == "tresorerie" ? "active" : "")" @onclick='() => _tab = "tresorerie"'>Trésorerie</button>
+    </div>
+
+    @if (_tab == "cotisations")
+    {
+        <div class="inline-actions" style="justify-content:space-between;margin-bottom:10px">
+            <select class="cal-year-select" aria-label="Période" value="@_periode" @onchange="e => _periode = e.Value?.ToString() ?? CurrentYear">
+                @foreach (var y in Periodes)
+                {
+                    <option value="@y">@y</option>
+                }
+            </select>
+            <button class="btn btn-secondary btn-sm" @onclick="StartAddCotisation">＋ Cotisation</button>
+        </div>
+        @if (FilteredCotisations.Count == 0)
+        {
+            <EmptyState Icon="🧾" Title="Aucune cotisation" Message="Enregistrez la première cotisation de la période." />
+        }
+        else
+        {
+            <div class="user-list">
+                @foreach (var c in FilteredCotisations)
+                {
+                    var cot = c;
+                    <div class="user-card">
+                        <span class="field-type-icon" aria-hidden="true">🧾</span>
+                        <div class="user-card-main">
+                            <div class="user-card-name">@DataStore.FormatMontant(cot.Montant) — @MemberName(cot.MembreIdentifiant)</div>
+                            <div class="user-card-sub">@cot.Motif · @DataStore.FormatDateCourte(cot.Date)</div>
+                            <div class="user-card-meta">
+                                <Badge Text="@CotisationStatuts.Label(cot.Statut)" Kind="@(cot.Statut == CotisationStatuts.Payee ? "active" : "recent")" />
+                            </div>
+                        </div>
+                        <div class="user-card-actions" @onclick:stopPropagation="true">
+                            <button class="btn-icon danger" aria-label="Supprimer" @onclick="() => AskDeleteCotisation(cot)">🗑</button>
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+        @if (Impayes.Count > 0)
+        {
+            <div class="card" style="margin-top:12px">
+                <h3>⏳ Impayés (@_periode) — @Impayes.Count</h3>
+                <div class="search-box cal-search cal-opt-search">
+                    <span class="search-icon" aria-hidden="true">⌕</span>
+                    <input type="search" placeholder="Écrire pour chercher un membre…" aria-label="Chercher un membre"
+                           value="@_impayeSearch" @oninput="e => _impayeSearch = e.Value?.ToString() ?? string.Empty" />
+                </div>
+                @foreach (var u in FilteredImpayes)
+                {
+                    var user = u;
+                    <div class="kv-row">
+                        <span class="kv-label">@user.NomComplet</span>
+                        <span class="kv-value"><button class="btn btn-secondary btn-sm" @onclick="() => PrefillCotisation(user.Identifiant)">＋ Encaisser</button></span>
+                    </div>
+                }
+                @if (FilteredImpayes.Count == 0)
+                {
+                    <div class="cal-no-events">Aucun membre trouvé pour « @_impayeSearch ».</div>
+                }
+            </div>
+        }
+    }
+    else
+    {
+        <div class="inline-actions" style="justify-content:flex-end;margin-bottom:10px">
+            <button class="btn btn-secondary btn-sm" @onclick="StartAddTransaction">＋ Mouvement</button>
+        </div>
+        @if (Store.Tresorerie.Count == 0)
+        {
+            <EmptyState Icon="💰" Title="Aucun mouvement" Message="Enregistrez la première entrée ou sortie." />
+        }
+        else
+        {
+            <div class="user-list">
+                @foreach (var t in FilteredTresorerie)
+                {
+                    var tr = t;
+                    <div class="user-card">
+                        <span class="field-type-icon" aria-hidden="true">@TresorerieTypes.Icon(tr.Type)</span>
+                        <div class="user-card-main">
+                            <div class="user-card-name">@((tr.Type == TresorerieTypes.Sortie ? "−" : "+") + DataStore.FormatMontant(tr.Montant)) — @tr.Motif</div>
+                            <div class="user-card-sub">@DataStore.FormatDateCourte(tr.Date) · par @tr.CreatedBy</div>
+                        </div>
+                        <div class="user-card-actions" @onclick:stopPropagation="true">
+                            <button class="btn-icon danger" aria-label="Supprimer" @onclick="() => AskDeleteTransaction(tr)">🗑</button>
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+    }
+
+    <Modal Title="Nouvelle cotisation" Show="_showCotisation" OnClose="() => _showCotisation = false">
+        <ChildContent>
+            <div class="form-group">
+                <label>Membre *</label>
+                <MemberPicker Value="@_cMembre" ValueChanged="@((string v) => _cMembre = v)" Placeholder="Écrire pour chercher un membre…" />
+            </div>
+            <div class="form-group">
+                <label for="fi-montant">Montant (Ar) *</label>
+                <input id="fi-montant" type="text" inputmode="decimal" placeholder="Ex : 5000" value="@_cMontant" @oninput="e => _cMontant = e.Value?.ToString() ?? string.Empty" />
+            </div>
+            <div class="form-group">
+                <label for="fi-motif">Motif</label>
+                <input id="fi-motif" type="text" placeholder="Ex : Cotisation annuelle" value="@_cMotif" @oninput="e => _cMotif = e.Value?.ToString() ?? string.Empty" />
+            </div>
+            <div class="form-group">
+                <label for="fi-periode">Période</label>
+                <input id="fi-periode" type="text" value="@_cPeriode" @oninput="e => _cPeriode = e.Value?.ToString() ?? string.Empty" />
+            </div>
+            <div class="form-group">
+                <label for="fi-date">Date (JJ/MM/AAAA)</label>
+                <input id="fi-date" type="date" value="@_cDateIso" @onchange="e => _cDateIso = e.Value?.ToString() ?? string.Empty" />
+            </div>
+            <div class="form-group">
+                <label for="fi-statut">Statut</label>
+                <select id="fi-statut" value="@_cStatut" @onchange="e => _cStatut = e.Value?.ToString() ?? CotisationStatuts.Payee">
+                    <option value="@CotisationStatuts.Payee">Payée</option>
+                    <option value="@CotisationStatuts.EnAttente">En attente</option>
+                </select>
+            </div>
+            <span class="form-error">@_cError</span>
+        </ChildContent>
+        <FooterContent>
+            <button class="btn btn-secondary" @onclick="() => _showCotisation = false">Annuler</button>
+            <button class="btn btn-primary" @onclick="SaveCotisation">Enregistrer</button>
+        </FooterContent>
+    </Modal>
+
+    <Modal Title="Nouveau mouvement" Show="_showTransaction" OnClose="() => _showTransaction = false">
+        <ChildContent>
+            <div class="form-group">
+                <label>Type</label>
+                <div class="radio-row">
+                    <label class="radio-option">
+                        <input type="radio" name="tr-type" checked="@(_tType == TresorerieTypes.Entree)" @onchange="() => _tType = TresorerieTypes.Entree" />
+                        ↙ Entrée
+                    </label>
+                    <label class="radio-option">
+                        <input type="radio" name="tr-type" checked="@(_tType == TresorerieTypes.Sortie)" @onchange="() => _tType = TresorerieTypes.Sortie" />
+                        ↗ Sortie
+                    </label>
+                </div>
+            </div>
+            <div class="form-group">
+                <label for="tr-montant">Montant (Ar) *</label>
+                <input id="tr-montant" type="text" inputmode="decimal" placeholder="Ex : 20000" value="@_tMontant" @oninput="e => _tMontant = e.Value?.ToString() ?? string.Empty" />
+            </div>
+            <div class="form-group">
+                <label for="tr-motif">Motif *</label>
+                <input id="tr-motif" type="text" value="@_tMotif" @oninput="e => _tMotif = e.Value?.ToString() ?? string.Empty" />
+            </div>
+            <div class="form-group">
+                <label for="tr-date">Date (JJ/MM/AAAA)</label>
+                <input id="tr-date" type="date" value="@_tDateIso" @onchange="e => _tDateIso = e.Value?.ToString() ?? string.Empty" />
+            </div>
+            <span class="form-error">@_tError</span>
+        </ChildContent>
+        <FooterContent>
+            <button class="btn btn-secondary" @onclick="() => _showTransaction = false">Annuler</button>
+            <button class="btn btn-primary" @onclick="SaveTransaction">Enregistrer</button>
+        </FooterContent>
+    </Modal>
+
+    <ConfirmDialog Show="_deleteCotisation != null" Title="Supprimer la cotisation"
+                   Message="Supprimer définitivement cette cotisation ?"
+                   ConfirmLabel="Supprimer" Danger="true" OnConfirm="ConfirmDeleteCotisation" OnCancel="() => _deleteCotisation = null" />
+    <ConfirmDialog Show="_deleteTransaction != null" Title="Supprimer le mouvement"
+                   Message="Supprimer définitivement ce mouvement ?"
+                   ConfirmLabel="Supprimer" Danger="true" OnConfirm="ConfirmDeleteTransaction" OnCancel="() => _deleteTransaction = null" />
+}
+
+@code {
+    private string _tab = "cotisations";
+    private string CurrentYear => DateTime.Today.Year.ToString();
+    private string _periode = "";
+    private string _search = "";
+    private List<Cotisation> FilteredCotisations =>
+        Store.Cotisations.Where(c => c.Periode == _periode).Where(MatchCotisation).OrderByDescending(c => c.Date).ToList();
+
+    private List<TransactionTresorerie> FilteredTresorerie
+        => Store.Tresorerie.Where(MatchTransaction).OrderByDescending(t => t.Date).ToList();
+
+    private bool MatchCotisation(Cotisation c)
+    {
+        var q = _search.Trim();
+        if (q.Length == 0) return true;
+        return (MemberName(c.MembreIdentifiant) + " " + c.Motif + " " + DataStore.FormatMontant(c.Montant))
+            .Contains(q, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private bool MatchTransaction(TransactionTresorerie t)
+    {
+        var q = _search.Trim();
+        if (q.Length == 0) return true;
+        return (t.Motif + " " + t.CreatedBy + " " + DataStore.FormatMontant(t.Montant) + " " + TresorerieTypes.Label(t.Type))
+            .Contains(q, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private int SearchResultCount
+    {
+        get
+        {
+            if (string.IsNullOrWhiteSpace(_search)) return 0;
+            return _tab == "cotisations" ? FilteredCotisations.Count : FilteredTresorerie.Count;
+        }
+    }
+
+    private void OnSearch(ChangeEventArgs e) => _search = e.Value?.ToString() ?? string.Empty;
+
+    private IReadOnlyList<UserAccount> Impayes => Store.ImpayesCotisations(_periode);
+    private string _impayeSearch = "";
+
+    private List<UserAccount> FilteredImpayes
+    {
+        get
+        {
+            var q = _impayeSearch.Trim();
+            if (q.Length == 0) return Impayes.ToList();
+            return Impayes.Where(u => (u.NomComplet + " " + u.Identifiant + " " + (u.Matricule ?? ""))
+                .Contains(q, StringComparison.OrdinalIgnoreCase)).ToList();
+        }
+    }
+    private IReadOnlyList<UserAccount> ActiveUsers =>
+        Store.Users.Where(u => u.Actif).OrderBy(u => u.NomComplet).ToList();
+
+    private List<string> Periodes
+    {
+        get
+        {
+            var set = new HashSet<string>(Store.Cotisations.Select(c => c.Periode).Where(p => !string.IsNullOrWhiteSpace(p)));
+            set.Add(CurrentYear);
+            return set.OrderByDescending(p => p).ToList();
+        }
+    }
+
+    private bool _showCotisation;
+    private string _cMembre = "";
+    private string _cMontant = "";
+    private string _cMotif = "";
+    private string _cPeriode = "";
+    private string _cDateIso = "";
+    private string _cStatut = CotisationStatuts.Payee;
+    private string _cError = "";
+    private Cotisation? _deleteCotisation;
+
+    private bool _showTransaction;
+    private string _tType = TresorerieTypes.Entree;
+    private string _tMontant = "";
+    private string _tMotif = "";
+    private string _tDateIso = "";
+    private string _tError = "";
+    private TransactionTresorerie? _deleteTransaction;
+
+    protected override void OnInitialized()
+    {
+        Store.DataChanged += Refresh;
+        _periode = CurrentYear;
+    }
+
+    private void Refresh() => _ = InvokeAsync(StateHasChanged);
+
+    private string MemberName(string identifiant)
+        => Store.FindUserByIdentifier(identifiant)?.NomComplet ?? identifiant;
+
+    private static string FormatSolde(double montant)
+        => (montant < 0 ? "−" : "") + DataStore.FormatMontant(Math.Abs(montant));
+
+    private static double? ParseMontant(string raw)
+    {
+        var v = (raw ?? "").Trim().Replace(" ", "").Replace(',', '.');
+        if (v.Length == 0) return null;
+        if (double.TryParse(v, System.Globalization.NumberStyles.Any,
+                System.Globalization.CultureInfo.InvariantCulture, out var n))
+            return n;
+        return null;
+    }
+
+    private void StartAddCotisation()
+    {
+        _cMembre = ""; _cMontant = ""; _cMotif = "";
+        _cPeriode = _periode; _cDateIso = ""; _cStatut = CotisationStatuts.Payee;
+        _cError = "";
+        _showCotisation = true;
+    }
+
+    private void PrefillCotisation(string identifiant)
+    {
+        StartAddCotisation();
+        _cMembre = identifiant;
+    }
+
+    private void SaveCotisation()
+    {
+        _cError = "";
+        var montant = ParseMontant(_cMontant);
+        if (string.IsNullOrWhiteSpace(_cMembre)) { _cError = "Choisissez un membre."; return; }
+        if (montant == null) { _cError = "Montant invalide."; return; }
+        var res = Store.AddCotisation(new Cotisation
+        {
+            MembreIdentifiant = _cMembre,
+            Montant = montant.Value,
+            Motif = _cMotif,
+            Periode = _cPeriode,
+            Date = DataStore.ToYmd(_cDateIso),
+            Statut = _cStatut
+        });
+        if (!res.Success) { _cError = res.Error; return; }
+        State.NotifySuccess("Cotisation enregistrée.");
+        _showCotisation = false;
+    }
+
+    private void AskDeleteCotisation(Cotisation c) => _deleteCotisation = c;
+
+    private void ConfirmDeleteCotisation()
+    {
+        var t = _deleteCotisation;
+        _deleteCotisation = null;
+        if (t == null) return;
+        var res = Store.DeleteCotisation(t.Id);
+        if (res.Success) State.NotifySuccess("Cotisation supprimée.");
+        else State.NotifyError(res.Error);
+    }
+
+    private void StartAddTransaction()
+    {
+        _tType = TresorerieTypes.Entree;
+        _tMontant = ""; _tMotif = ""; _tDateIso = "";
+        _tError = "";
+        _showTransaction = true;
+    }
+
+    private void SaveTransaction()
+    {
+        _tError = "";
+        var montant = ParseMontant(_tMontant);
+        if (montant == null) { _tError = "Montant invalide."; return; }
+        var res = Store.AddTransaction(new TransactionTresorerie
+        {
+            Type = _tType,
+            Montant = montant.Value,
+            Motif = _tMotif,
+            Date = DataStore.ToYmd(_tDateIso)
+        });
+        if (!res.Success) { _tError = res.Error; return; }
+        State.NotifySuccess("Mouvement enregistré.");
+        _showTransaction = false;
+    }
+
+    private void AskDeleteTransaction(TransactionTresorerie t) => _deleteTransaction = t;
+
+    private void ConfirmDeleteTransaction()
+    {
+        var t = _deleteTransaction;
+        _deleteTransaction = null;
+        if (t == null) return;
+        var res = Store.DeleteTransaction(t.Id);
+        if (res.Success) State.NotifySuccess("Mouvement supprimé.");
+        else State.NotifyError(res.Error);
+    }
+
+    public void Dispose() => Store.DataChanged -= Refresh;
+}

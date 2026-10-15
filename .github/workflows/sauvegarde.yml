@@ -1,0 +1,64 @@
+# Sauvegarde automatique (l'offre gratuite Supabase n'en fait pas) :
+#  - chaque semaine, copie complète de la base (comptes + données) ;
+#  - les fichiers (photos, documents) du stockage Supabase.
+# Les sauvegardes sont téléchargeables dans l'onglet Actions > Sauvegarde.
+name: Sauvegarde
+
+on:
+  schedule:
+    - cron: "41 2 * * 0"
+  workflow_dispatch:
+
+jobs:
+  base:
+    runs-on: ubuntu-latest
+    if: ${{ vars.SUPABASE_URL != '' }}
+    steps:
+      - name: Exporter la base
+        env:
+          DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: |
+          set -euo pipefail
+          stamp=$(date -u +%Y-%m-%d)
+          docker run --rm -e DB_URL postgres:17 \
+            sh -c 'pg_dump "$DB_URL" --schema=public --schema=auth --no-owner --no-privileges' \
+            | gzip -9 > "base-$stamp.sql.gz"
+          ls -lh base-*.sql.gz
+      - uses: actions/upload-artifact@v4
+        with:
+          name: sauvegarde-base
+          path: base-*.sql.gz
+          retention-days: 90
+
+  fichiers:
+    runs-on: ubuntu-latest
+    if: ${{ vars.SUPABASE_URL != '' }}
+    steps:
+      - name: Télécharger les fichiers
+        env:
+          SUPABASE_URL: ${{ vars.SUPABASE_URL }}
+          SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: |
+          set -euo pipefail
+          mkdir -p fichiers/f
+          offset=0
+          while :; do
+            page=$(curl -sS --fail-with-body -X POST "$SUPABASE_URL/storage/v1/object/list/fichiers" \
+              -H "apikey: $SERVICE_KEY" -H "Authorization: Bearer $SERVICE_KEY" -H "Content-Type: application/json" \
+              -d "{\"prefix\":\"f\",\"limit\":1000,\"offset\":$offset}")
+            count=$(echo "$page" | jq 'length')
+            [ "$count" -eq 0 ] && break
+            for name in $(echo "$page" | jq -r '.[].name'); do
+              curl -sS --fail -o "fichiers/f/$name" "$SUPABASE_URL/storage/v1/object/fichiers/f/$name" \
+                -H "apikey: $SERVICE_KEY" -H "Authorization: Bearer $SERVICE_KEY"
+            done
+            offset=$((offset + count))
+          done
+          echo "$(ls fichiers/f | wc -l) fichier(s)"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: sauvegarde-fichiers
+          path: fichiers
+          # Seule la dernière copie des fichiers est gardée longtemps utile :
+          # une durée courte limite l'espace occupé sur GitHub.
+          retention-days: 14
