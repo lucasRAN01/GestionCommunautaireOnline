@@ -394,6 +394,8 @@ else
                     }
                 </div>
             </div>
+            @if (!Store.OnlineMode)
+            {
             <div class="form-group">
                 <label class="form-check" for="dm-autoexport">
                     <input id="dm-autoexport" type="checkbox" checked="@_autoExport" @onchange="e => _autoExport = e.Value is bool b ? b : !_autoExport" />
@@ -401,6 +403,7 @@ else
                 </label>
                 <span class="field-hint">Sauvegarde complète (JSON) + utilisateurs (Excel) dans Téléchargements. Dernier export : @(string.IsNullOrWhiteSpace(Store.Settings.DernierExportAuto) ? "jamais" : Store.Settings.DernierExportAuto).</span>
             </div>
+            }
             <div class="form-actions">
                 <button class="btn btn-primary" @onclick="SaveSettingsAsync" disabled="@_saving">@(_saving ? "Enregistrement…" : "Enregistrer")</button>
             </div>

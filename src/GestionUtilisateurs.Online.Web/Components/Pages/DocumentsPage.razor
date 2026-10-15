@@ -28,7 +28,7 @@ else
                 <span class="quota-banner-icon" aria-hidden="true">⚠</span>
                 <div class="quota-banner-main">
                     <strong>Stockage presque plein (@_quotaPercent.ToString("0") %)</strong>
-                    <span>@FormatSize(_usedBytes) utilisés sur l'appareil. Pensez à vider la corbeille.</span>
+                    <span>@FormatSize(_usedBytes) utilisés. Pensez à vider la corbeille.</span>
                 </div>
                 @if (_trashCount > 0)
                 {
@@ -369,7 +369,7 @@ else
 
     <Modal Show="_fabOpen" Title="Ajouter" OnClose="() => _fabOpen = false">
         <div class="import-format" style="margin-bottom:10px">
-            <div class="import-format-title">📋 Formats acceptés : PDF, JPG, PNG, GIF, WEBP, TXT, DOC, DOCX, XLS, XLSX, ZIP, MP3, MP4 — max 10 Mo, 100 % hors ligne.</div>
+            <div class="import-format-title">📋 Formats acceptés : PDF, JPG, PNG, GIF, WEBP, TXT, DOC, DOCX, XLS, XLSX, ZIP, MP3, MP4 — max 10 Mo.</div>
         </div>
         @if (_currentFolderId != null)
         {
@@ -393,7 +393,7 @@ else
             </button>
             <button class="sheet-option" @onclick="OpenScan">
                 <span class="sheet-icon" style="background:#dc262624;color:#dc2626">📷</span>
-                <span class="sheet-main"><strong>Scanner un document</strong><span>Photos JPEG → PDF, hors ligne</span></span>
+                <span class="sheet-main"><strong>Scanner un document</strong><span>Photos JPEG → PDF</span></span>
                 <span aria-hidden="true">›</span>
             </button>
         </div>
@@ -520,7 +520,7 @@ else
                 <input id="doc-scan-titre" type="text" placeholder="Ex : Contrat signé" value="@_scanTitre" @oninput="e => _scanTitre = e.Value?.ToString() ?? string.Empty" />
             </div>
             <span class="form-error">@_scanError</span>
-            <span class="field-hint">Seules les photos JPEG (caméra) peuvent être converties en PDF, hors ligne.</span>
+            <span class="field-hint">Seules les photos JPEG (caméra) peuvent être converties en PDF.</span>
         </ChildContent>
         <FooterContent>
             <button type="button" class="btn btn-secondary" @onclick="CloseScan">Annuler</button>
