@@ -51,8 +51,19 @@ public static class L
     /// <summary>Traduit un texte français (le texte lui-même si aucune traduction n'existe).</summary>
     public static string T(string? fr)
     {
-        if (string.IsNullOrEmpty(fr) || Langue == Fr) return fr ?? "";
+        if (string.IsNullOrEmpty(fr) || Langue == Fr || _enFrancais) return fr ?? "";
         return Dicos.TryGetValue(Langue, out var d) && d.TryGetValue(fr, out var t) && !string.IsNullOrEmpty(t) ? t : fr;
+    }
+
+    [ThreadStatic] private static bool _enFrancais;
+
+    /// <summary>Calcule un texte en français quelle que soit la langue (historique enregistré).</summary>
+    public static string EnFrancais(Func<string> texte)
+    {
+        var avant = _enFrancais;
+        _enFrancais = true;
+        try { return texte(); }
+        finally { _enFrancais = avant; }
     }
 
     /// <summary>Traduit un modèle avec des valeurs : <c>L.F("{0} membre(s)", n)</c>.</summary>

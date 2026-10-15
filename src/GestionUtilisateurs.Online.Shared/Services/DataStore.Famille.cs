@@ -82,7 +82,7 @@ public partial class DataStore
         autre.Famille.RemoveAll(l => l.Identifiant.Equals(moi.Identifiant, StringComparison.OrdinalIgnoreCase));
         autre.Famille.Add(new LienFamille { Identifiant = moi.Identifiant, Type = LiensFamille.Inverse(type) });
         SaveUsers();
-        LogActivity(ActivityTypes.Update, "Lien de famille : " + autre.Identifiant + " (" + LiensFamille.Libelle(type).ToLowerInvariant() + ") de " + moi.Identifiant);
+        LogActivity(ActivityTypes.Update, "Lien de famille : " + autre.Identifiant + " (" + L.EnFrancais(() => LiensFamille.Libelle(type)).ToLowerInvariant() + ") de " + moi.Identifiant);
         DataChanged?.Invoke();
         return OperationResult.Ok();
     }

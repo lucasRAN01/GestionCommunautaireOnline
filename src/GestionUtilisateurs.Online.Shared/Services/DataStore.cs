@@ -1170,7 +1170,7 @@ public OperationResult SetUserActive(string userId, bool active)
         _events.Add(draft);
         _events.Sort((a, b) => SortKey(a).CompareTo(SortKey(b)));
         SaveEvents();
-        LogActivity(ActivityTypes.CalendarCreate, "Ajout de l'événement « " + draft.Titre + " » (" + CalendarEventTypes.Label(draft.Type) + ")");
+        LogActivity(ActivityTypes.CalendarCreate, "Ajout de l'événement « " + draft.Titre + " » (" + L.EnFrancais(() => CalendarEventTypes.Label(draft.Type)) + ")");
         DataChanged?.Invoke();
         return OperationResult.Ok();
     }
@@ -1485,7 +1485,7 @@ public OperationResult SetUserActive(string userId, bool active)
         field.Ordre = (_fields.Count == 0) ? 0 : _fields.Max(f => f.Ordre) + 1;
         _fields.Add(field);
         SaveFields();
-        LogActivity(ActivityTypes.FieldsChange, "Ajout du champ « " + field.Label + " » (" + FieldTypeInfo.Label(field.Type) + ")");
+        LogActivity(ActivityTypes.FieldsChange, "Ajout du champ « " + field.Label + " » (" + L.EnFrancais(() => FieldTypeInfo.Label(field.Type)) + ")");
         DataChanged?.Invoke();
         return OperationResult.Ok();
     }
