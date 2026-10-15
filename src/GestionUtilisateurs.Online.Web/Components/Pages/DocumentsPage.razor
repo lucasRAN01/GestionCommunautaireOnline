@@ -15,8 +15,8 @@
 
 @if (!string.IsNullOrEmpty(_error))
 {
-    <EmptyState Icon="⚠" Title="Impossible d'afficher les documents" Message="@_error">
-        <button class="btn btn-primary" @onclick="RetryLoad">Réessayer</button>
+    <EmptyState Icon="⚠" Title="@L.T("Impossible d'afficher les documents")" Message="@_error">
+        <button class="btn btn-primary" @onclick="RetryLoad">@L.T("Réessayer")</button>
     </EmptyState>
 }
 else
@@ -27,47 +27,47 @@ else
             <div class="quota-banner">
                 <span class="quota-banner-icon" aria-hidden="true">⚠</span>
                 <div class="quota-banner-main">
-                    <strong>Stockage presque plein (@_quotaPercent.ToString("0") %)</strong>
-                    <span>@FormatSize(_usedBytes) utilisés. Pensez à vider la corbeille.</span>
+                    <strong>@L.F("Stockage presque plein ({0:0} %)", _quotaPercent)</strong>
+                    <span>@L.F("{0} utilisés. Pensez à vider la corbeille.", FormatSize(_usedBytes))</span>
                 </div>
                 @if (_trashCount > 0)
                 {
-                    <button type="button" class="btn btn-secondary btn-sm" @onclick="AskEmptyTrash">Vider la corbeille</button>
+                    <button type="button" class="btn btn-secondary btn-sm" @onclick="AskEmptyTrash">@L.T("Vider la corbeille")</button>
                 }
             </div>
         }
 
         <div class="docs-layout">
-            <aside class="docs-side" aria-label="Bibliothèque et dossiers">
-                <button type="button" class="btn btn-primary btn-block docs-side-add" @onclick="() => _fabOpen = true">+ Ajouter</button>
+            <aside class="docs-side" aria-label="@L.T("Bibliothèque et dossiers")">
+                <button type="button" class="btn btn-primary btn-block docs-side-add" @onclick="() => _fabOpen = true">@L.T("+ Ajouter")</button>
 
-                <nav class="docs-side-nav" aria-label="Bibliothèque">
+                <nav class="docs-side-nav" aria-label="@L.T("Bibliothèque")">
                     <button type="button" class="docs-side-item @(_view == "docs" && !_query.FavoritesOnly ? "active" : "")" @onclick="ShowAllDocuments">
                         <span class="docs-side-icon" aria-hidden="true">📄</span>
-                        <span class="docs-side-label">Documents</span>
+                        <span class="docs-side-label">@L.T("Documents")</span>
                         <span class="docs-side-count">@_docCount</span>
                     </button>
                     <button type="button" class="docs-side-item @(_view == "docs" && _query.FavoritesOnly ? "active" : "")" @onclick="ShowFavorites">
                         <span class="docs-side-icon docs-star" aria-hidden="true">★</span>
-                        <span class="docs-side-label">Favoris</span>
+                        <span class="docs-side-label">@L.T("Favoris")</span>
                         <span class="docs-side-count">@_favCount</span>
                     </button>
                     <button type="button" class="docs-side-item @(_view == "corbeille" ? "active" : "")" @onclick='() => SetView("corbeille")'>
                         <span class="docs-side-icon" aria-hidden="true">🗑</span>
-                        <span class="docs-side-label">Corbeille</span>
+                        <span class="docs-side-label">@L.T("Corbeille")</span>
                         <span class="docs-side-count">@_trashCount</span>
                     </button>
                 </nav>
 
                 <div class="docs-side-title">
-                    <span>Dossiers</span>
-                    <button type="button" class="btn-icon" aria-label="Nouveau dossier" title="Nouveau dossier" @onclick="StartNewFolder">+</button>
+                    <span>@L.T("Dossiers")</span>
+                    <button type="button" class="btn-icon" aria-label="@L.T("Nouveau dossier")" title="@L.T("Nouveau dossier")" @onclick="StartNewFolder">+</button>
                 </div>
                 <div class="docs-tree">
                     <button type="button" class="docs-tree-item @(IsTreeActive(null) ? "active" : "")" style="--depth:0"
                             aria-current="@(IsTreeActive(null) ? "page" : null)" @onclick="() => OpenFolder(null)">
                         <span class="docs-tree-icon" aria-hidden="true">🏠</span>
-                        <span class="docs-side-label">Racine</span>
+                        <span class="docs-side-label">@L.T("Racine")</span>
                     </button>
                     @foreach (var (folder, depth) in _tree)
                     {
@@ -87,15 +87,15 @@ else
                 <div class="docs-toolbar">
                     <div class="search-box docs-search">
                         <span class="search-icon" aria-hidden="true">&#128269;</span>
-                        <input type="search" placeholder="@(_view == "corbeille" ? "Rechercher dans la corbeille…" : "Rechercher un document…")" aria-label="Rechercher" value="@_query.Search"
+                        <input type="search" placeholder="@(_view == "corbeille" ? L.T("Rechercher dans la corbeille…") : L.T("Rechercher un document…"))" aria-label="@L.T("Rechercher")" value="@_query.Search"
                                @oninput="e => OnSearch(e.Value?.ToString() ?? string.Empty)" />
                         @if (_query.IsSearching)
                         {
-                            <button type="button" class="docs-search-clear" aria-label="Effacer la recherche" @onclick='() => OnSearch("")'>×</button>
+                            <button type="button" class="docs-search-clear" aria-label="@L.T("Effacer la recherche")" @onclick='() => OnSearch("")'>×</button>
                         }
                         @if (_view == "docs")
                         {
-                            <button type="button" class="docs-filter-btn @(_query.HasActiveFilters ? "active" : "")" aria-label="Filtres" title="Filtres" @onclick="() => _filtersOpen = true">
+                            <button type="button" class="docs-filter-btn @(_query.HasActiveFilters ? "active" : "")" aria-label="@L.T("Filtres")" title="@L.T("Filtres")" @onclick="() => _filtersOpen = true">
                                 <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M3 5h18l-7 8.5V19l-4 2v-7.5z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" /></svg>
                                 @if (_query.HasActiveFilters)
                                 {
@@ -107,75 +107,75 @@ else
                     <div class="docs-toolbar-actions">
                         @if (_view == "docs")
                         {
-                            <label class="docs-sort" title="Trier">
+                            <label class="docs-sort" title="@L.T("Trier")">
                                 <span aria-hidden="true">⇅</span>
-                                <select aria-label="Trier les documents" value="@_query.Sort" @onchange="OnSort">
+                                <select aria-label="@L.T("Trier les documents")" value="@_query.Sort" @onchange="OnSort">
                                     @foreach (var (key, label) in DocumentBrowser.SortChoices)
                                     {
-                                        <option value="@key">@label</option>
+                                        <option value="@key">@L.T(label)</option>
                                     }
                                 </select>
                             </label>
                         }
                         <button type="button" class="btn btn-secondary btn-sm docs-select-btn @(_selectionMode ? "active" : "")"
                                 aria-pressed="@_selectionMode" @onclick="ToggleSelectMode" disabled="@(!_selectionMode && CurrentList.Count == 0)">
-                            @(_selectionMode ? "✕ Annuler" : "☑ Sélectionner")
+                            @(_selectionMode ? L.T("✕ Annuler") : L.T("☑ Sélectionner"))
                         </button>
                     </div>
                 </div>
 
                 <div class="cal-view-tabs docs-tabs">
-                    <button class="cal-tab @(_view == "docs" ? "active" : "")" @onclick='() => SetView("docs")'>Documents</button>
-                    <button class="cal-tab @(_view == "corbeille" ? "active" : "")" @onclick='() => SetView("corbeille")'>Corbeille (@_trashCount)</button>
+                    <button class="cal-tab @(_view == "docs" ? "active" : "")" @onclick='() => SetView("docs")'>@L.T("Documents")</button>
+                    <button class="cal-tab @(_view == "corbeille" ? "active" : "")" @onclick='() => SetView("corbeille")'>@L.F("Corbeille ({0})", _trashCount)</button>
                 </div>
 
                 @if (_view == "docs")
                 {
-                    <div class="chips-row docs-chips" role="group" aria-label="Filtres rapides">
-                        <button type="button" class="chip @(_query.Kind == DocumentBrowser.KindAll && !_query.FavoritesOnly ? "active" : "")" @onclick="ClearQuickFilters">Tous</button>
-                        <button type="button" class="chip @(_query.FavoritesOnly ? "active" : "")" aria-pressed="@_query.FavoritesOnly" @onclick="ToggleFavOnly">★ Favoris</button>
+                    <div class="chips-row docs-chips" role="group" aria-label="@L.T("Filtres rapides")">
+                        <button type="button" class="chip @(_query.Kind == DocumentBrowser.KindAll && !_query.FavoritesOnly ? "active" : "")" @onclick="ClearQuickFilters">@L.T("Tous")</button>
+                        <button type="button" class="chip @(_query.FavoritesOnly ? "active" : "")" aria-pressed="@_query.FavoritesOnly" @onclick="ToggleFavOnly">@L.T("★ Favoris")</button>
                         @foreach (var (key, label) in DocumentBrowser.KindChoices.Skip(1))
                         {
                             var k = key;
-                            <button type="button" class="chip @(_query.Kind == k ? "active" : "")" aria-pressed="@(_query.Kind == k)" @onclick="() => SetKind(_query.Kind == k ? DocumentBrowser.KindAll : k)">@label</button>
+                            <button type="button" class="chip @(_query.Kind == k ? "active" : "")" aria-pressed="@(_query.Kind == k)" @onclick="() => SetKind(_query.Kind == k ? DocumentBrowser.KindAll : k)">@L.T(label)</button>
                         }
                     </div>
 
                     @if (_query.Categories.Count > 0 || _query.UserId != null)
                     {
-                        <div class="docs-active-filters" aria-label="Filtres actifs">
+                        <div class="docs-active-filters" aria-label="@L.T("Filtres actifs")">
                             @foreach (var c in _query.Categories)
                             {
                                 var cat = c;
-                                <button type="button" class="docs-filter-tag" aria-label="Retirer le filtre @DocumentCategories.Label(cat)" @onclick="() => ToggleCat(cat)">
-                                    @DocumentCategories.Icon(cat) @DocumentCategories.Label(cat) <span aria-hidden="true">×</span>
+                                <button type="button" class="docs-filter-tag" aria-label="@L.F("Retirer le filtre {0}", L.T(DocumentCategories.Label(cat)))" @onclick="() => ToggleCat(cat)">
+                                    @DocumentCategories.Icon(cat) @L.T(DocumentCategories.Label(cat)) <span aria-hidden="true">×</span>
                                 </button>
                             }
                             @if (_query.UserId != null)
                             {
-                                <button type="button" class="docs-filter-tag" aria-label="Retirer le filtre utilisateur" @onclick="() => SetUser(null)">
+                                <button type="button" class="docs-filter-tag" aria-label="@L.T("Retirer le filtre utilisateur")" @onclick="() => SetUser(null)">
                                     👤 @UserName(_query.UserId) <span aria-hidden="true">×</span>
                                 </button>
                             }
-                            <button type="button" class="docs-link-btn" @onclick="ResetFilters">Tout effacer</button>
+                            <button type="button" class="docs-link-btn" @onclick="ResetFilters">@L.T("Tout effacer")</button>
                         </div>
                     }
 
-                    <nav class="doc-crumbs" aria-label="Fil d'Ariane">
+                    <nav class="doc-crumbs" aria-label="@L.T("Fil d'Ariane")">
                         @if (_query.IsGlobalScope)
                         {
                             <span class="doc-crumb-info">
-                                @(_query.IsSearching ? "🔍 Résultats dans tous les dossiers" : "★ Favoris de tous les dossiers")
+                                @(_query.IsSearching ? L.T("🔍 Résultats dans tous les dossiers") : L.T("★ Favoris de tous les dossiers"))
                             </span>
                         }
                         else
                         {
                             @if (_currentFolderId != null)
                             {
-                                <button type="button" class="doc-crumb-back" aria-label="Dossier parent" @onclick="GoUp">‹</button>
+                                <button type="button" class="doc-crumb-back" aria-label="@L.T("Dossier parent")" @onclick="GoUp">‹</button>
                             }
                             <button type="button" class="doc-crumb doc-crumb-root @(_currentFolderId == null ? "active" : "")"
-                                    aria-current="@(_currentFolderId == null ? "page" : null)" @onclick="() => OpenFolder(null)">🏠 Racine</button>
+                                    aria-current="@(_currentFolderId == null ? "page" : null)" @onclick="() => OpenFolder(null)">@L.T("🏠 Racine")</button>
                             @for (var i = 0; i < _breadcrumb.Count; i++)
                             {
                                 var folder = _breadcrumb[i];
@@ -196,31 +196,31 @@ else
                     <p class="user-count docs-summary">
                         @if (_visibleFolders.Count > 0)
                         {
-                            @(DocumentBrowser.CountLabel(_visibleFolders.Count, "dossier") + " · ")
+                            @(DocumentBrowser.CountLabel(_visibleFolders.Count, L.T("dossier"), L.T("dossiers")) + " · ")
                         }
-                        @DocumentBrowser.CountLabel(_filtered.Count, "document") · tri : @DocumentBrowser.SortLabel(_query.Sort)
+                        @L.F("{0} · tri : {1}", DocumentBrowser.CountLabel(_filtered.Count, L.T("document"), L.T("documents")), DocumentBrowser.SortLabel(_query.Sort))
                     </p>
                 }
 
                 @if (_selectionMode)
                 {
-                    <div class="sel-bar" role="toolbar" aria-label="Actions groupées">
+                    <div class="sel-bar" role="toolbar" aria-label="@L.T("Actions groupées")">
                         <label class="sel-all">
                             <input type="checkbox" checked="@AllSelected" @onchange="ToggleSelectAll" />
-                            <span class="sel-count">@(_selected.Count == 0 ? "Aucun sélectionné" : _selected.Count + " sélectionné(s)")</span>
+                            <span class="sel-count">@(_selected.Count == 0 ? L.T("Aucun sélectionné") : L.F("{0} sélectionné(s)", _selected.Count))</span>
                         </label>
                         <div class="sel-actions">
                             @if (_view == "docs")
                             {
-                                <button class="btn btn-secondary btn-sm" disabled="@(_selected.Count == 0)" @onclick="BatchFav" aria-label="Ajouter aux favoris" title="Ajouter aux favoris">★</button>
-                                <button class="btn btn-secondary btn-sm" disabled="@(_selected.Count == 0)" @onclick="() => OpenMove(_selected.ToList())">⤵ Déplacer</button>
-                                <button class="btn btn-secondary btn-sm" disabled="@(_selected.Count == 0)" @onclick="BatchShare">↗ Partager</button>
-                                <button class="btn btn-danger-outline btn-sm" disabled="@(_selected.Count == 0)" @onclick="AskTrashSelected">🗑 Corbeille</button>
+                                <button class="btn btn-secondary btn-sm" disabled="@(_selected.Count == 0)" @onclick="BatchFav" aria-label="@L.T("Ajouter aux favoris")" title="@L.T("Ajouter aux favoris")">★</button>
+                                <button class="btn btn-secondary btn-sm" disabled="@(_selected.Count == 0)" @onclick="() => OpenMove(_selected.ToList())">@L.T("⤵ Déplacer")</button>
+                                <button class="btn btn-secondary btn-sm" disabled="@(_selected.Count == 0)" @onclick="BatchShare">@L.T("↗ Partager")</button>
+                                <button class="btn btn-danger-outline btn-sm" disabled="@(_selected.Count == 0)" @onclick="AskTrashSelected">@L.T("🗑 Corbeille")</button>
                             }
                             else
                             {
-                                <button class="btn btn-secondary btn-sm" disabled="@(_selected.Count == 0)" @onclick="BatchRestore">♻ Restaurer</button>
-                                <button class="btn btn-danger-outline btn-sm" disabled="@(_selected.Count == 0)" @onclick="AskPurgeSelected">🗑 Supprimer</button>
+                                <button class="btn btn-secondary btn-sm" disabled="@(_selected.Count == 0)" @onclick="BatchRestore">@L.T("♻ Restaurer")</button>
+                                <button class="btn btn-danger-outline btn-sm" disabled="@(_selected.Count == 0)" @onclick="AskPurgeSelected">@L.T("🗑 Supprimer")</button>
                             }
                         </div>
                     </div>
@@ -234,14 +234,14 @@ else
                             @foreach (var folder in _visibleFolders)
                             {
                                 var f = folder;
-                                <div class="folder-card" @onclick="() => OpenFolder(f.Id)" role="button" tabindex="0" aria-label="Ouvrir le dossier @f.Nom" @onkeydown="(k) => OnFolderKey(k, f.Id)">
+                                <div class="folder-card" @onclick="() => OpenFolder(f.Id)" role="button" tabindex="0" aria-label="@L.F("Ouvrir le dossier {0}", f.Nom)" @onkeydown="(k) => OnFolderKey(k, f.Id)">
                                     <span class="folder-icon" style="background:@SoftColor(f.Couleur);color:@f.Couleur" aria-hidden="true">📁</span>
                                     <div class="folder-main">
                                         <div class="folder-name">@f.Nom</div>
                                         <div class="folder-sub">@FolderCountLabel(f.Id)</div>
                                     </div>
                                     <div class="folder-actions" @onclick:stopPropagation="true">
-                                        <button class="btn-icon" aria-label="Options du dossier @f.Nom" @onclick="() => OpenFolderMenu(f)">⋮</button>
+                                        <button class="btn-icon" aria-label="@L.F("Options du dossier {0}", f.Nom)" @onclick="() => OpenFolderMenu(f)">⋮</button>
                                     </div>
                                 </div>
                             }
@@ -259,11 +259,11 @@ else
                             {
                                 <span class="doc-col-check"></span>
                             }
-                            <button type="button" tabindex="-1" class="doc-col-name @SortHeadCls(DocumentBrowser.SortName)" @onclick="() => SetSort(DocumentBrowser.SortName)">Nom</button>
-                            <span class="doc-col doc-col-cat">Catégorie</span>
-                            <button type="button" tabindex="-1" class="doc-col doc-col-size @SortHeadCls(DocumentBrowser.SortSize)" @onclick="() => SetSort(DocumentBrowser.SortSize)">Taille</button>
+                            <button type="button" tabindex="-1" class="doc-col-name @SortHeadCls(DocumentBrowser.SortName)" @onclick="() => SetSort(DocumentBrowser.SortName)">@L.T("Nom")</button>
+                            <span class="doc-col doc-col-cat">@L.T("Catégorie")</span>
+                            <button type="button" tabindex="-1" class="doc-col doc-col-size @SortHeadCls(DocumentBrowser.SortSize)" @onclick="() => SetSort(DocumentBrowser.SortSize)">@L.T("Taille")</button>
                             <button type="button" tabindex="-1" class="doc-col doc-col-date @SortHeadCls(DocumentBrowser.SortRecent, DocumentBrowser.SortOldest)" @onclick="ToggleDateSort">
-                                Modifié @(_query.Sort == DocumentBrowser.SortOldest ? "↑" : _query.Sort == DocumentBrowser.SortRecent ? "↓" : "")
+                                @L.T("Modifié") @(_query.Sort == DocumentBrowser.SortOldest ? "↑" : _query.Sort == DocumentBrowser.SortRecent ? "↓" : "")
                             </button>
                             <span class="doc-col-fav"></span>
                         </div>
@@ -289,7 +289,7 @@ else
                                         <div class="doc-title" title="@doc.Titre">@doc.Titre</div>
                                         <div class="doc-sub">@FormatSize(doc.Taille) · @ShortDate(doc.DateModification)</div>
                                         <div class="doc-meta">
-                                            <span class="badge doc-meta-cat" style="color:@DocumentCategories.Color(doc.Categorie);background:@SoftColor(DocumentCategories.Color(doc.Categorie))">@DocumentCategories.Label(doc.Categorie)</span>
+                                            <span class="badge doc-meta-cat" style="color:@DocumentCategories.Color(doc.Categorie);background:@SoftColor(DocumentCategories.Color(doc.Categorie))">@L.T(DocumentCategories.Label(doc.Categorie))</span>
                                             @if (_query.IsGlobalScope && !string.IsNullOrWhiteSpace(doc.FolderId))
                                             {
                                                 <span class="badge">📁 @FolderName(doc.FolderId)</span>
@@ -301,12 +301,12 @@ else
                                         </div>
                                     </div>
                                     <span class="doc-col doc-col-cat">
-                                        <span class="badge" style="color:@DocumentCategories.Color(doc.Categorie);background:@SoftColor(DocumentCategories.Color(doc.Categorie))">@DocumentCategories.Label(doc.Categorie)</span>
+                                        <span class="badge" style="color:@DocumentCategories.Color(doc.Categorie);background:@SoftColor(DocumentCategories.Color(doc.Categorie))">@L.T(DocumentCategories.Label(doc.Categorie))</span>
                                     </span>
                                     <span class="doc-col doc-col-size">@FormatSize(doc.Taille)</span>
                                     <span class="doc-col doc-col-date">@ShortDate(doc.DateModification)</span>
                                     <button type="button" class="doc-fav @(doc.Favori ? "on" : "")" aria-pressed="@doc.Favori"
-                                            aria-label="@(doc.Favori ? "Retirer des favoris" : "Ajouter aux favoris")"
+                                            aria-label="@(doc.Favori ? L.T("Retirer des favoris") : L.T("Ajouter aux favoris"))"
                                             @onclick:stopPropagation="true" @onclick="() => ToggleFav(doc)">★</button>
                                 </div>
                             }
@@ -317,19 +317,19 @@ else
                 {
                     @if (_trashCount == 0)
                     {
-                        <EmptyState Icon="🗑" Title="Corbeille vide" Message="Les documents supprimés apparaîtront ici et pourront être restaurés." />
+                        <EmptyState Icon="🗑" Title="@L.T("Corbeille vide")" Message="@L.T("Les documents supprimés apparaîtront ici et pourront être restaurés.")" />
                     }
                     else if (_trash.Count == 0)
                     {
-                        <EmptyState Icon="🔍" Title="Aucun résultat" Message="@("Aucun document de la corbeille ne correspond à « " + _query.Search.Trim() + " ».")">
-                            <button class="btn btn-secondary" @onclick='() => OnSearch("")'>Effacer la recherche</button>
+                        <EmptyState Icon="🔍" Title="@L.T("Aucun résultat")" Message="@L.F("Aucun document de la corbeille ne correspond à « {0} ».", _query.Search.Trim())">
+                            <button class="btn btn-secondary" @onclick='() => OnSearch("")'>@L.T("Effacer la recherche")</button>
                         </EmptyState>
                     }
                     else
                     {
                         <div class="docs-trash-head">
-                            <p class="user-count">@DocumentBrowser.CountLabel(_trash.Count, "document") dans la corbeille</p>
-                            <button class="btn btn-danger-outline btn-sm" @onclick="AskEmptyTrash">Vider la corbeille</button>
+                            <p class="user-count">@L.F("{0} dans la corbeille", DocumentBrowser.CountLabel(_trash.Count, L.T("document"), L.T("documents")))</p>
+                            <button class="btn btn-danger-outline btn-sm" @onclick="AskEmptyTrash">@L.T("Vider la corbeille")</button>
                         </div>
                         <div class="doc-list doc-list-trash">
                             @foreach (var d in _trash)
@@ -344,13 +344,13 @@ else
                                     <span class="doc-thumb doc-thumb-icon" style="background:var(--surface-2);color:var(--text-muted)" aria-hidden="true">@DocIcon(doc)</span>
                                     <div class="doc-main">
                                         <div class="doc-title" title="@doc.Titre">@doc.Titre</div>
-                                        <div class="doc-sub">Supprimé le @ShortDateTime(doc.DateSuppression) · @FormatSize(doc.Taille)</div>
+                                        <div class="doc-sub">@L.F("Supprimé le {0} · {1}", ShortDateTime(doc.DateSuppression), FormatSize(doc.Taille))</div>
                                     </div>
                                     @if (!_selectionMode)
                                     {
                                         <div class="doc-trash-actions" @onclick:stopPropagation="true">
-                                            <button class="btn btn-secondary btn-sm" @onclick="() => DoRestore(doc.Id)">♻ Restaurer</button>
-                                            <button class="btn-icon danger" aria-label="Supprimer définitivement @doc.Titre" @onclick="() => AskPurge(doc)">🗑</button>
+                                            <button class="btn btn-secondary btn-sm" @onclick="() => DoRestore(doc.Id)">@L.T("♻ Restaurer")</button>
+                                            <button class="btn-icon danger" aria-label="@L.F("Supprimer définitivement {0}", doc.Titre)" @onclick="() => AskPurge(doc)">🗑</button>
                                         </div>
                                     }
                                 </div>
@@ -363,61 +363,61 @@ else
 
         @if (!_selectionMode && _view == "docs")
         {
-            <button class="fab" aria-label="Ajouter un document ou un dossier" @onclick="() => _fabOpen = true">+</button>
+            <button class="fab" aria-label="@L.T("Ajouter un document ou un dossier")" @onclick="() => _fabOpen = true">+</button>
         }
     </div>
 
-    <Modal Show="_fabOpen" Title="Ajouter" OnClose="() => _fabOpen = false">
+    <Modal Show="_fabOpen" Title="@L.T("Ajouter")" OnClose="() => _fabOpen = false">
         <div class="import-format" style="margin-bottom:10px">
-            <div class="import-format-title">📋 Formats acceptés : PDF, JPG, PNG, GIF, WEBP, TXT, DOC, DOCX, XLS, XLSX, ZIP, MP3, MP4 — max 10 Mo.</div>
+            <div class="import-format-title">@L.T("📋 Formats acceptés : PDF, JPG, PNG, GIF, WEBP, TXT, DOC, DOCX, XLS, XLSX, ZIP, MP3, MP4 — max 10 Mo.")</div>
         </div>
         @if (_currentFolderId != null)
         {
-            <p class="field-hint" style="margin:0 0 10px">Destination : 📁 @FolderPath(_currentFolderId)</p>
+            <p class="field-hint" style="margin:0 0 10px">@L.F("Destination : 📁 {0}", FolderPath(_currentFolderId))</p>
         }
         <div class="sheet-options">
             <button class="sheet-option" @onclick="StartNewFolder">
                 <span class="sheet-icon" style="background:#4f46e524;color:#4f46e5">📁</span>
-                <span class="sheet-main"><strong>@(_currentFolderId == null ? "Nouveau dossier" : "Nouveau sous-dossier")</strong><span>Créer un dossier de classement</span></span>
+                <span class="sheet-main"><strong>@(_currentFolderId == null ? L.T("Nouveau dossier") : L.T("Nouveau sous-dossier"))</strong><span>@L.T("Créer un dossier de classement")</span></span>
                 <span aria-hidden="true">›</span>
             </button>
             <button class="sheet-option" @onclick="ImportFile">
                 <span class="sheet-icon" style="background:#0891b224;color:#0891b2">📄</span>
-                <span class="sheet-main"><strong>Importer un fichier</strong><span>PDF, image, DOCX, XLSX, TXT, ZIP… (max 10 Mo)</span></span>
+                <span class="sheet-main"><strong>@L.T("Importer un fichier")</strong><span>@L.T("PDF, image, DOCX, XLSX, TXT, ZIP… (max 10 Mo)")</span></span>
                 <span aria-hidden="true">›</span>
             </button>
             <button class="sheet-option" @onclick="ImportImage">
                 <span class="sheet-icon" style="background:#05966924;color:#059669">🖼</span>
-                <span class="sheet-main"><strong>Choisir une image</strong><span>JPG, PNG, GIF, WEBP depuis la galerie (max 10 Mo)</span></span>
+                <span class="sheet-main"><strong>@L.T("Choisir une image")</strong><span>@L.T("JPG, PNG, GIF, WEBP depuis la galerie (max 10 Mo)")</span></span>
                 <span aria-hidden="true">›</span>
             </button>
             <button class="sheet-option" @onclick="OpenScan">
                 <span class="sheet-icon" style="background:#dc262624;color:#dc2626">📷</span>
-                <span class="sheet-main"><strong>Scanner un document</strong><span>Photos JPEG → PDF</span></span>
+                <span class="sheet-main"><strong>@L.T("Scanner un document")</strong><span>@L.T("Photos JPEG → PDF")</span></span>
                 <span aria-hidden="true">›</span>
             </button>
         </div>
     </Modal>
 
-    <Modal Show="_folderModal" Title="@(_editingFolder == null ? "Nouveau dossier" : "Renommer le dossier")" OnClose="CloseFolderModal">
+    <Modal Show="_folderModal" Title="@(_editingFolder == null ? L.T("Nouveau dossier") : L.T("Renommer le dossier"))" OnClose="CloseFolderModal">
         <div class="form-group">
-            <label for="doc-folder-name">Nom du dossier *</label>
-            <input id="doc-folder-name" type="text" placeholder="Ex : Factures 2026" value="@_folderName" @oninput="e => _folderName = e.Value?.ToString() ?? string.Empty" />
+            <label for="doc-folder-name">@L.T("Nom du dossier *")</label>
+            <input id="doc-folder-name" type="text" placeholder="@L.T("Ex : Factures 2026")" value="@_folderName" @oninput="e => _folderName = e.Value?.ToString() ?? string.Empty" />
         </div>
         <div class="form-group">
-            <label>Couleur</label>
+            <label>@L.T("Couleur")</label>
             <div class="color-swatches">
                 @foreach (var c in FolderColors)
                 {
                     <button type="button" class="color-swatch @(c == _folderColor ? "selected" : "")"
-                            style="background:@c" title="@c" aria-label="Couleur @c" @onclick="() => _folderColor = c"></button>
+                            style="background:@c" title="@c" aria-label="@L.F("Couleur {0}", c)" @onclick="() => _folderColor = c"></button>
                 }
             </div>
         </div>
         <span class="form-error">@_folderError</span>
         <div class="form-actions filter-actions">
-            <button type="button" class="btn btn-secondary" @onclick="CloseFolderModal">Annuler</button>
-            <button type="button" class="btn btn-primary" @onclick="SaveFolder">Enregistrer</button>
+            <button type="button" class="btn btn-secondary" @onclick="CloseFolderModal">@L.T("Annuler")</button>
+            <button type="button" class="btn btn-primary" @onclick="SaveFolder">@L.T("Enregistrer")</button>
         </div>
     </Modal>
 
@@ -425,56 +425,56 @@ else
         <div class="sheet-options">
             <button class="sheet-option" @onclick="() => StartRenameFolder(_folderMenu!)">
                 <span class="sheet-icon" style="background:#4f46e524;color:#4f46e5">✏️</span>
-                <span class="sheet-main"><strong>Renommer</strong></span>
+                <span class="sheet-main"><strong>@L.T("Renommer")</strong></span>
                 <span aria-hidden="true">›</span>
             </button>
             <button class="sheet-option" @onclick="() => AskDeleteFolder(_folderMenu!)">
                 <span class="sheet-icon" style="background:#dc262624;color:#dc2626">🗑</span>
-                <span class="sheet-main"><strong>Supprimer le dossier</strong><span>Le contenu sera conservé (remonté au dossier parent)</span></span>
+                <span class="sheet-main"><strong>@L.T("Supprimer le dossier")</strong><span>@L.T("Le contenu sera conservé (remonté au dossier parent)")</span></span>
                 <span aria-hidden="true">›</span>
             </button>
         </div>
     </Modal>
 
-    <Modal Show="_staged != null" Title="Importer un document" OnClose="CancelImport">
+    <Modal Show="_staged != null" Title="@L.T("Importer un document")" OnClose="CancelImport">
         <ChildContent>
             @if (_staged != null)
             {
                 <p class="muted" style="margin-top:0">📎 @_staged.FileName · @_staged.Mime · @FormatSize(_staged.Size)</p>
                 <div class="import-format" style="margin-bottom:10px">
-                    <div class="import-format-title">Contenu : @KindName(_staged.Mime) — formats : PDF, images (JPG/PNG/GIF/WEBP), TXT, DOC(X), XLS(X), ZIP, MP3, MP4. Taille max 10 Mo.</div>
+                    <div class="import-format-title">@L.F("Contenu : {0} — formats : PDF, images (JPG/PNG/GIF/WEBP), TXT, DOC(X), XLS(X), ZIP, MP3, MP4. Taille max 10 Mo.", KindName(_staged.Mime))</div>
                 </div>
                 <div class="form-group">
-                    <label for="doc-import-titre">Titre *</label>
+                    <label for="doc-import-titre">@L.T("Titre *")</label>
                     <input id="doc-import-titre" type="text" value="@_iTitre" @oninput="e => _iTitre = e.Value?.ToString() ?? string.Empty" />
                 </div>
                 <div class="form-group">
-                    <label for="doc-import-desc">Description</label>
+                    <label for="doc-import-desc">@L.T("Description")</label>
                     <textarea id="doc-import-desc" rows="2" value="@_iDesc" @oninput="e => _iDesc = e.Value?.ToString() ?? string.Empty"></textarea>
                 </div>
                 <div class="form-group">
-                    <label for="doc-import-cat">Catégorie</label>
+                    <label for="doc-import-cat">@L.T("Catégorie")</label>
                     <select id="doc-import-cat" value="@_iCat" @onchange="e => _iCat = e.Value?.ToString() ?? DocumentCategories.Autre">
                         @foreach (var c in DocumentCategories.Toutes)
                         {
-                            <option value="@c">@DocumentCategories.Icon(c) @DocumentCategories.Label(c)</option>
+                            <option value="@c">@DocumentCategories.Icon(c) @L.T(DocumentCategories.Label(c))</option>
                         }
                     </select>
                 </div>
                 <div class="form-group">
-                    <label for="doc-import-tags">Tags (séparés par des virgules)</label>
-                    <input id="doc-import-tags" type="text" placeholder="Ex : urgent, maison" value="@_iTags" @oninput="e => _iTags = e.Value?.ToString() ?? string.Empty" />
+                    <label for="doc-import-tags">@L.T("Tags (séparés par des virgules)")</label>
+                    <input id="doc-import-tags" type="text" placeholder="@L.T("Ex : urgent, maison")" value="@_iTags" @oninput="e => _iTags = e.Value?.ToString() ?? string.Empty" />
                 </div>
                 <div class="form-group">
-                    <label for="doc-import-folder">Dossier</label>
+                    <label for="doc-import-folder">@L.T("Dossier")</label>
                     <select id="doc-import-folder" value="@_iFolder" @onchange="e => _iFolder = e.Value?.ToString() ?? string.Empty">
                         @RenderFolderOptions()
                     </select>
                 </div>
                 <div class="form-group">
-                    <label for="doc-import-user">Utilisateur associé</label>
+                    <label for="doc-import-user">@L.T("Utilisateur associé")</label>
                     <select id="doc-import-user" value="@_iUser" @onchange="e => _iUser = e.Value?.ToString() ?? string.Empty">
-                        <option value="">— Aucun —</option>
+                        <option value="">@L.T("— Aucun —")</option>
                         @foreach (var u in _activeUsers)
                         {
                             <option value="@u.Identifiant">@u.NomComplet</option>
@@ -485,16 +485,16 @@ else
             }
         </ChildContent>
         <FooterContent>
-            <button type="button" class="btn btn-secondary" @onclick="CancelImport">Annuler</button>
-            <button type="button" class="btn btn-primary" @onclick="SaveImport" disabled="@(_saving || _staged == null)">Enregistrer</button>
+            <button type="button" class="btn btn-secondary" @onclick="CancelImport">@L.T("Annuler")</button>
+            <button type="button" class="btn btn-primary" @onclick="SaveImport" disabled="@(_saving || _staged == null)">@L.T("Enregistrer")</button>
         </FooterContent>
     </Modal>
 
-    <Modal Show="_scanOpen" Title="Scanner un document" OnClose="CloseScan">
+    <Modal Show="_scanOpen" Title="@L.T("Scanner un document")" OnClose="CloseScan">
         <ChildContent>
             @if (_scanPages.Count == 0)
             {
-                <EmptyState Icon="📷" Title="Aucune page" Message="Photographiez chaque page du document, puis convertissez l'ensemble en PDF." />
+                <EmptyState Icon="📷" Title="@L.T("Aucune page")" Message="@L.T("Photographiez chaque page du document, puis convertissez l'ensemble en PDF.")" />
             }
             else
             {
@@ -504,27 +504,27 @@ else
                         var idx = i;
                         var page = _scanPages[idx];
                         <div class="scan-thumb">
-                            <img src="@ScanPreviewUrl(page)" alt="Page @(idx + 1)" />
+                            <img src="@ScanPreviewUrl(page)" alt="@L.F("Page {0}", idx + 1)" />
                             <span class="scan-num">@(idx + 1)</span>
-                            <button type="button" class="scan-remove" aria-label="Retirer la page @(idx + 1)" @onclick="() => RemoveScanPage(idx)">×</button>
+                            <button type="button" class="scan-remove" aria-label="@L.F("Retirer la page {0}", idx + 1)" @onclick="() => RemoveScanPage(idx)">×</button>
                         </div>
                     }
                 </div>
             }
             <div class="inline-actions" style="margin:10px 0">
-                <button type="button" class="btn btn-secondary btn-sm" @onclick="ScanCapture">📷 Capturer une page</button>
-                <button type="button" class="btn btn-secondary btn-sm" @onclick="ScanGallery">🖼 Depuis la galerie</button>
+                <button type="button" class="btn btn-secondary btn-sm" @onclick="ScanCapture">@L.T("📷 Capturer une page")</button>
+                <button type="button" class="btn btn-secondary btn-sm" @onclick="ScanGallery">@L.T("🖼 Depuis la galerie")</button>
             </div>
             <div class="form-group">
-                <label for="doc-scan-titre">Titre du PDF *</label>
-                <input id="doc-scan-titre" type="text" placeholder="Ex : Contrat signé" value="@_scanTitre" @oninput="e => _scanTitre = e.Value?.ToString() ?? string.Empty" />
+                <label for="doc-scan-titre">@L.T("Titre du PDF *")</label>
+                <input id="doc-scan-titre" type="text" placeholder="@L.T("Ex : Contrat signé")" value="@_scanTitre" @oninput="e => _scanTitre = e.Value?.ToString() ?? string.Empty" />
             </div>
             <span class="form-error">@_scanError</span>
-            <span class="field-hint">Seules les photos JPEG (caméra) peuvent être converties en PDF.</span>
+            <span class="field-hint">@L.T("Seules les photos JPEG (caméra) peuvent être converties en PDF.")</span>
         </ChildContent>
         <FooterContent>
-            <button type="button" class="btn btn-secondary" @onclick="CloseScan">Annuler</button>
-            <button type="button" class="btn btn-primary" @onclick="ConvertScan" disabled="@(_saving || _scanPages.Count == 0)">Convertir en PDF (@_scanPages.Count p.)</button>
+            <button type="button" class="btn btn-secondary" @onclick="CloseScan">@L.T("Annuler")</button>
+            <button type="button" class="btn btn-primary" @onclick="ConvertScan" disabled="@(_saving || _scanPages.Count == 0)">@L.F("Convertir en PDF ({0} p.)", _scanPages.Count)</button>
         </FooterContent>
     </Modal>
 
@@ -545,8 +545,8 @@ else
                         <span class="doc-preview-icon" aria-hidden="true">@DocIcon(doc)</span>
                         <div><strong>@doc.FileName</strong><span>@KindName(doc.Mime) · @FormatSize(doc.Taille)</span></div>
                         <div class="file-actions">
-                            <button type="button" class="btn btn-secondary btn-sm" @onclick="() => OpenDoc(doc)">⇱ Ouvrir</button>
-                            <button type="button" class="btn btn-secondary btn-sm" @onclick="() => SaveDoc(doc)">⇩ Enregistrer</button>
+                            <button type="button" class="btn btn-secondary btn-sm" @onclick="() => OpenDoc(doc)">@L.T("⇱ Ouvrir")</button>
+                            <button type="button" class="btn btn-secondary btn-sm" @onclick="() => SaveDoc(doc)">@L.T("⇩ Enregistrer")</button>
                         </div>
                     </div>
                     @if (IsTextPreviewable(doc))
@@ -556,24 +556,24 @@ else
                     else if (DocumentKinds.IsPdf(doc.Mime) && !string.IsNullOrWhiteSpace(doc.Data))
                     {
                         <div class="doc-pdf-preview">
-                            <iframe src="@doc.Data" title="Aperçu @doc.Titre" class="doc-pdf-frame"></iframe>
-                            <span class="field-hint">Si l'aperçu ne s'affiche pas, utilisez « Ouvrir » ou « Enregistrer ».</span>
+                            <iframe src="@doc.Data" title="@L.F("Aperçu {0}", doc.Titre)" class="doc-pdf-frame"></iframe>
+                            <span class="field-hint">@L.T("Si l'aperçu ne s'affiche pas, utilisez « Ouvrir » ou « Enregistrer ».")</span>
                         </div>
                     }
                 }
                 <div class="doc-detail-lines">
-                    <div class="storage-line"><span>Catégorie</span><strong>@DocumentCategories.Icon(doc.Categorie) @DocumentCategories.Label(doc.Categorie)</strong></div>
-                    <div class="storage-line"><span>Dossier</span><strong>@(string.IsNullOrWhiteSpace(doc.FolderId) ? "🏠 Racine" : "📁 " + FolderPath(doc.FolderId))</strong></div>
-                    <div class="storage-line"><span>Ajouté le</span><strong>@ShortDateTime(doc.DateCreation)</strong></div>
-                    <div class="storage-line"><span>Ajouté par</span><strong>👤 @UserName(doc.CreatedBy)</strong></div>
-                    <div class="storage-line"><span>Modifié le</span><strong>@ShortDateTime(doc.DateModification)</strong></div>
+                    <div class="storage-line"><span>@L.T("Catégorie")</span><strong>@DocumentCategories.Icon(doc.Categorie) @L.T(DocumentCategories.Label(doc.Categorie))</strong></div>
+                    <div class="storage-line"><span>@L.T("Dossier")</span><strong>@(string.IsNullOrWhiteSpace(doc.FolderId) ? L.T("🏠 Racine") : "📁 " + FolderPath(doc.FolderId))</strong></div>
+                    <div class="storage-line"><span>@L.T("Ajouté le")</span><strong>@ShortDateTime(doc.DateCreation)</strong></div>
+                    <div class="storage-line"><span>@L.T("Ajouté par")</span><strong>👤 @UserName(doc.CreatedBy)</strong></div>
+                    <div class="storage-line"><span>@L.T("Modifié le")</span><strong>@ShortDateTime(doc.DateModification)</strong></div>
                     @if (!string.IsNullOrWhiteSpace(doc.ModifiePar))
                     {
-                        <div class="storage-line"><span>Modifié par</span><strong>👤 @UserName(doc.ModifiePar)</strong></div>
+                        <div class="storage-line"><span>@L.T("Modifié par")</span><strong>👤 @UserName(doc.ModifiePar)</strong></div>
                     }
                     @if (!string.IsNullOrWhiteSpace(doc.UtilisateurId))
                     {
-                        <div class="storage-line"><span>Associé à</span><strong>👤 @UserName(doc.UtilisateurId)</strong></div>
+                        <div class="storage-line"><span>@L.T("Associé à")</span><strong>👤 @UserName(doc.UtilisateurId)</strong></div>
                     }
                     @if (doc.Tags.Count > 0)
                     {
@@ -592,52 +592,52 @@ else
         <FooterContent>
             @if (_detail != null && !_detail.Supprime)
             {
-                <button type="button" class="btn btn-secondary" @onclick="() => _detail = null">Réduire</button>
-                <button type="button" class="btn btn-secondary" @onclick="() => ShareDocs(new[] { _detail! })">↗ Partager</button>
-                <button type="button" class="btn btn-secondary" @onclick="() => StartEdit(_detail!)">✏️ Modifier</button>
-                <button type="button" class="btn btn-danger-outline" @onclick="() => AskTrash(new[] { _detail!.Id })">🗑 Supprimer</button>
+                <button type="button" class="btn btn-secondary" @onclick="() => _detail = null">@L.T("Réduire")</button>
+                <button type="button" class="btn btn-secondary" @onclick="() => ShareDocs(new[] { _detail! })">@L.T("↗ Partager")</button>
+                <button type="button" class="btn btn-secondary" @onclick="() => StartEdit(_detail!)">@L.T("✏️ Modifier")</button>
+                <button type="button" class="btn btn-danger-outline" @onclick="() => AskTrash(new[] { _detail!.Id })">@L.T("🗑 Supprimer")</button>
             }
             else
             {
-                <button type="button" class="btn btn-secondary" @onclick="() => _detail = null">Réduire</button>
-                <button type="button" class="btn btn-primary" @onclick="() => DoRestore((_detail!).Id)">♻ Restaurer</button>
+                <button type="button" class="btn btn-secondary" @onclick="() => _detail = null">@L.T("Réduire")</button>
+                <button type="button" class="btn btn-primary" @onclick="() => DoRestore((_detail!).Id)">@L.T("♻ Restaurer")</button>
             }
         </FooterContent>
     </Modal>
 
-    <Modal Show="_editing != null" Title="Modifier le document" OnClose="() => _editing = null">
+    <Modal Show="_editing != null" Title="@L.T("Modifier le document")" OnClose="() => _editing = null">
         <ChildContent>
             <div class="form-group">
-                <label for="doc-edit-titre">Titre *</label>
+                <label for="doc-edit-titre">@L.T("Titre *")</label>
                 <input id="doc-edit-titre" type="text" value="@_eTitre" @oninput="e => _eTitre = e.Value?.ToString() ?? string.Empty" />
             </div>
             <div class="form-group">
-                <label for="doc-edit-desc">Description</label>
+                <label for="doc-edit-desc">@L.T("Description")</label>
                 <textarea id="doc-edit-desc" rows="2" value="@_eDesc" @oninput="e => _eDesc = e.Value?.ToString() ?? string.Empty"></textarea>
             </div>
             <div class="form-group">
-                <label for="doc-edit-cat">Catégorie</label>
+                <label for="doc-edit-cat">@L.T("Catégorie")</label>
                 <select id="doc-edit-cat" value="@_eCat" @onchange="e => _eCat = e.Value?.ToString() ?? DocumentCategories.Autre">
                     @foreach (var c in DocumentCategories.Toutes)
                     {
-                        <option value="@c">@DocumentCategories.Icon(c) @DocumentCategories.Label(c)</option>
+                        <option value="@c">@DocumentCategories.Icon(c) @L.T(DocumentCategories.Label(c))</option>
                     }
                 </select>
             </div>
             <div class="form-group">
-                <label for="doc-edit-tags">Tags (séparés par des virgules)</label>
+                <label for="doc-edit-tags">@L.T("Tags (séparés par des virgules)")</label>
                 <input id="doc-edit-tags" type="text" value="@_eTags" @oninput="e => _eTags = e.Value?.ToString() ?? string.Empty" />
             </div>
             <div class="form-group">
-                <label for="doc-edit-folder">Dossier</label>
+                <label for="doc-edit-folder">@L.T("Dossier")</label>
                 <select id="doc-edit-folder" value="@_eFolder" @onchange="e => _eFolder = e.Value?.ToString() ?? string.Empty">
                     @RenderFolderOptions()
                 </select>
             </div>
             <div class="form-group">
-                <label for="doc-edit-user">Utilisateur associé</label>
+                <label for="doc-edit-user">@L.T("Utilisateur associé")</label>
                 <select id="doc-edit-user" value="@_eUser" @onchange="e => _eUser = e.Value?.ToString() ?? string.Empty">
-                    <option value="">— Aucun —</option>
+                    <option value="">@L.T("— Aucun —")</option>
                     @foreach (var u in _activeUsers)
                     {
                         <option value="@u.Identifiant">@u.NomComplet</option>
@@ -647,16 +647,16 @@ else
             <span class="form-error">@_editError</span>
         </ChildContent>
         <FooterContent>
-            <button type="button" class="btn btn-secondary" @onclick="() => _editing = null">Annuler</button>
-            <button type="button" class="btn btn-primary" @onclick="SaveEdit">Enregistrer</button>
+            <button type="button" class="btn btn-secondary" @onclick="() => _editing = null">@L.T("Annuler")</button>
+            <button type="button" class="btn btn-primary" @onclick="SaveEdit">@L.T("Enregistrer")</button>
         </FooterContent>
     </Modal>
 
-    <Modal Show="_moveOpen" Title="Déplacer vers…" OnClose="() => _moveOpen = false">
+    <Modal Show="_moveOpen" Title="@L.T("Déplacer vers…")" OnClose="() => _moveOpen = false">
         <div class="move-list">
             <label class="form-check">
                 <input type="radio" name="doc-move" checked="@(_moveTarget == "")" @onchange='() => _moveTarget = ""' />
-                🏠 Racine
+                @L.T("🏠 Racine")
             </label>
             @foreach (var (id, path) in _folderOptions)
             {
@@ -668,47 +668,47 @@ else
             }
         </div>
         <div class="form-actions filter-actions">
-            <button type="button" class="btn btn-secondary" @onclick="() => _moveOpen = false">Annuler</button>
-            <button type="button" class="btn btn-primary" @onclick="DoMove">Déplacer (@_moveIds.Count)</button>
+            <button type="button" class="btn btn-secondary" @onclick="() => _moveOpen = false">@L.T("Annuler")</button>
+            <button type="button" class="btn btn-primary" @onclick="DoMove">@L.F("Déplacer ({0})", _moveIds.Count)</button>
         </div>
     </Modal>
 
-    <Modal Show="_filtersOpen" Title="Filtrer et trier" OnClose="() => _filtersOpen = false">
+    <Modal Show="_filtersOpen" Title="@L.T("Filtrer et trier")" OnClose="() => _filtersOpen = false">
         <div class="cal-filter-section">
-            <div class="divider-section">Catégories</div>
+            <div class="divider-section">@L.T("Catégories")</div>
             <div class="check-group">
                 @foreach (var c in DocumentCategories.Toutes)
                 {
                     var cat = c;
                     <label class="form-check">
                         <input type="checkbox" checked="@_query.Categories.Contains(cat)" @onchange="() => ToggleCat(cat)" />
-                        <span style="color:@DocumentCategories.Color(cat)">@DocumentCategories.Icon(cat)</span> @DocumentCategories.Label(cat)
+                        <span style="color:@DocumentCategories.Color(cat)">@DocumentCategories.Icon(cat)</span> @L.T(DocumentCategories.Label(cat))
                     </label>
                 }
             </div>
-            <div class="divider-section">Type de fichier</div>
+            <div class="divider-section">@L.T("Type de fichier")</div>
             <div class="radio-row">
                 @foreach (var (key, label) in DocumentBrowser.KindChoices)
                 {
                     var k = key;
                     <label class="radio-option">
                         <input type="radio" name="doc-kind" checked="@(_query.Kind == k)" @onchange="() => SetKind(k)" />
-                        @label
+                        @L.T(label)
                     </label>
                 }
             </div>
-            <div class="divider-section">Options</div>
+            <div class="divider-section">@L.T("Options")</div>
             <div class="check-group">
                 <label class="form-check">
                     <input type="checkbox" checked="@_query.FavoritesOnly" @onchange="ToggleFavOnly" />
-                    ⭐ Favoris uniquement (tous les dossiers)
+                    @L.T("⭐ Favoris uniquement (tous les dossiers)")
                 </label>
             </div>
-            <div class="divider-section">Utilisateur associé</div>
+            <div class="divider-section">@L.T("Utilisateur associé")</div>
             <div class="radio-row">
                 <label class="radio-option">
                     <input type="radio" name="doc-user" checked="@(_query.UserId == null)" @onchange="() => SetUser(null)" />
-                    Tous
+                    @L.T("Tous")
                 </label>
                 @foreach (var u in _activeUsers)
                 {
@@ -719,39 +719,39 @@ else
                     </label>
                 }
             </div>
-            <div class="divider-section">Tri</div>
+            <div class="divider-section">@L.T("Tri")</div>
             <div class="radio-row">
                 @foreach (var (key, label) in DocumentBrowser.SortChoices)
                 {
                     var k = key;
                     <label class="radio-option">
                         <input type="radio" name="doc-sort" checked="@(_query.Sort == k)" @onchange="() => SetSort(k)" />
-                        @label
+                        @L.T(label)
                     </label>
                 }
             </div>
         </div>
         <div class="form-actions filter-actions">
-            <button type="button" class="btn btn-secondary" @onclick="ResetFilters">Réinitialiser</button>
-            <button type="button" class="btn btn-primary" @onclick="() => _filtersOpen = false">Voir @DocumentBrowser.CountLabel(_filtered.Count, "document")</button>
+            <button type="button" class="btn btn-secondary" @onclick="ResetFilters">@L.T("Réinitialiser")</button>
+            <button type="button" class="btn btn-primary" @onclick="() => _filtersOpen = false">@L.F("Voir {0}", DocumentBrowser.CountLabel(_filtered.Count, L.T("document"), L.T("documents")))</button>
         </div>
     </Modal>
 
-    <ConfirmDialog Show="_confirmTrash" Title="Placer dans la corbeille"
-                   Message="@("Placer " + _pendingIds.Count + " document(s) dans la corbeille ? Vous pourrez les restaurer.")"
-                   ConfirmLabel="Mettre à la corbeille" Danger="true" OnConfirm="DoTrash" OnCancel="() => _confirmTrash = false" />
+    <ConfirmDialog Show="_confirmTrash" Title="@L.T("Placer dans la corbeille")"
+                   Message="@L.F("Placer {0} document(s) dans la corbeille ? Vous pourrez les restaurer.", _pendingIds.Count)"
+                   ConfirmLabel="@L.T("Mettre à la corbeille")" Danger="true" OnConfirm="DoTrash" OnCancel="() => _confirmTrash = false" />
 
-    <ConfirmDialog Show="_confirmPurge" Title="Supprimer définitivement"
+    <ConfirmDialog Show="_confirmPurge" Title="@L.T("Supprimer définitivement")"
                    Message="@PurgeMessage"
-                   ConfirmLabel="Supprimer" Danger="true" OnConfirm="DoPurge" OnCancel="CancelPurge" />
+                   ConfirmLabel="@L.T("Supprimer")" Danger="true" OnConfirm="DoPurge" OnCancel="CancelPurge" />
 
-    <ConfirmDialog Show="_confirmEmptyTrash" Title="Vider la corbeille"
-                   Message="Supprimer définitivement tous les documents de la corbeille ? Action irréversible."
-                   ConfirmLabel="Tout supprimer" Danger="true" OnConfirm="DoEmptyTrash" OnCancel="() => _confirmEmptyTrash = false" />
+    <ConfirmDialog Show="_confirmEmptyTrash" Title="@L.T("Vider la corbeille")"
+                   Message="@L.T("Supprimer définitivement tous les documents de la corbeille ? Action irréversible.")"
+                   ConfirmLabel="@L.T("Tout supprimer")" Danger="true" OnConfirm="DoEmptyTrash" OnCancel="() => _confirmEmptyTrash = false" />
 
-    <ConfirmDialog Show="_confirmDeleteFolder" Title="Supprimer le dossier"
-                   Message="@(_folderMenu == null ? "" : "Supprimer le dossier « " + _folderMenu.Nom + " » ? Son contenu sera conservé et remonté au dossier parent.")"
-                   ConfirmLabel="Supprimer" Danger="true" OnConfirm="DoDeleteFolder" OnCancel="CancelDeleteFolder" />
+    <ConfirmDialog Show="_confirmDeleteFolder" Title="@L.T("Supprimer le dossier")"
+                   Message="@(_folderMenu == null ? "" : L.F("Supprimer le dossier « {0} » ? Son contenu sera conservé et remonté au dossier parent.", _folderMenu.Nom))"
+                   ConfirmLabel="@L.T("Supprimer")" Danger="true" OnConfirm="DoDeleteFolder" OnCancel="CancelDeleteFolder" />
 }
 
 @code {
@@ -1055,14 +1055,14 @@ else
 
     private RenderFragment RenderCheck(DocumentItem doc) => __builder =>
     {
-        <span class="doc-check" @onclick:stopPropagation="true" @onclick="() => ToggleSelected(doc.Id)" role="checkbox" aria-checked="@(_selected.Contains(doc.Id) ? "true" : "false")" aria-label="Sélectionner @doc.Titre" tabindex="0" @onkeydown="(k) => OnCheckKey(k, doc.Id)">
+        <span class="doc-check" @onclick:stopPropagation="true" @onclick="() => ToggleSelected(doc.Id)" role="checkbox" aria-checked="@(_selected.Contains(doc.Id) ? "true" : "false")" aria-label="@L.F("Sélectionner {0}", doc.Titre)" tabindex="0" @onkeydown="(k) => OnCheckKey(k, doc.Id)">
             <input type="checkbox" checked="@_selected.Contains(doc.Id)" tabindex="-1" aria-hidden="true" />
         </span>
     };
 
     private RenderFragment RenderFolderOptions() => __builder =>
     {
-        <option value="">🏠 Racine</option>
+        <option value="">@L.T("🏠 Racine")</option>
         @foreach (var (id, path) in _folderOptions)
         {
             <option value="@id">📁 @path</option>
@@ -1075,35 +1075,37 @@ else
         var onlyFavorites = _query.FavoritesOnly && !_query.IsSearching && _query.ActiveFilterCount == 1;
         if (_docCount == 0 && _folderById.Count == 0)
         {
-            <EmptyState Icon="📁" Title="Aucun document" Message="Importez un fichier, scannez un document ou créez un dossier pour classer vos fichiers.">
-                <button class="btn btn-primary" @onclick="() => _fabOpen = true">+ Ajouter un document</button>
-                <button class="btn btn-secondary" @onclick="StartNewFolder">Nouveau dossier</button>
+            <EmptyState Icon="📁" Title="@L.T("Aucun document")" Message="@L.T("Importez un fichier, scannez un document ou créez un dossier pour classer vos fichiers.")">
+                <button class="btn btn-primary" @onclick="() => _fabOpen = true">@L.T("+ Ajouter un document")</button>
+                <button class="btn btn-secondary" @onclick="StartNewFolder">@L.T("Nouveau dossier")</button>
             </EmptyState>
         }
         else if (onlyFavorites)
         {
-            <EmptyState Icon="★" Title="Aucun favori" Message="Touchez l'étoile d'un document pour le retrouver ici, quel que soit son dossier.">
-                <button class="btn btn-secondary" @onclick="ShowAllDocuments">Voir tous les documents</button>
+            <EmptyState Icon="★" Title="@L.T("Aucun favori")" Message="@L.T("Touchez l'étoile d'un document pour le retrouver ici, quel que soit son dossier.")">
+                <button class="btn btn-secondary" @onclick="ShowAllDocuments">@L.T("Voir tous les documents")</button>
             </EmptyState>
         }
         else if (_query.IsSearching || _query.HasActiveFilters)
         {
             var message = _query.IsSearching
-                ? "Aucun document ne correspond à « " + _query.Search.Trim() + " »" + (_query.HasActiveFilters ? " avec les filtres actifs." : ".")
-                : "Aucun document de ce dossier ne correspond aux filtres actifs.";
-            <EmptyState Icon="🔍" Title="Aucun résultat" Message="@message">
-                <button class="btn btn-secondary" @onclick="ClearSearchAndFilters">Effacer la recherche et les filtres</button>
+                ? (_query.HasActiveFilters
+                    ? L.F("Aucun document ne correspond à « {0} » avec les filtres actifs.", _query.Search.Trim())
+                    : L.F("Aucun document ne correspond à « {0} ».", _query.Search.Trim()))
+                : L.T("Aucun document de ce dossier ne correspond aux filtres actifs.");
+            <EmptyState Icon="🔍" Title="@L.T("Aucun résultat")" Message="@message">
+                <button class="btn btn-secondary" @onclick="ClearSearchAndFilters">@L.T("Effacer la recherche et les filtres")</button>
             </EmptyState>
         }
         else if (_visibleFolders.Count > 0)
         {
-            <p class="docs-hint">Aucun document directement dans @(_currentFolderId == null ? "la racine" : "ce dossier") : ouvrez un dossier ci-dessus.</p>
+            <p class="docs-hint">@(_currentFolderId == null ? L.T("Aucun document directement dans la racine : ouvrez un dossier ci-dessus.") : L.T("Aucun document directement dans ce dossier : ouvrez un dossier ci-dessus."))</p>
         }
         else
         {
-            <EmptyState Icon="📂" Title="@(_currentFolderId == null ? "Racine vide" : "Ce dossier est vide")" Message="Ajoutez un document ici ou créez un sous-dossier pour classer vos fichiers.">
-                <button class="btn btn-primary" @onclick="() => _fabOpen = true">+ Ajouter un document</button>
-                <button class="btn btn-secondary" @onclick="StartNewFolder">Nouveau dossier</button>
+            <EmptyState Icon="📂" Title="@(_currentFolderId == null ? L.T("Racine vide") : L.T("Ce dossier est vide"))" Message="@L.T("Ajoutez un document ici ou créez un sous-dossier pour classer vos fichiers.")">
+                <button class="btn btn-primary" @onclick="() => _fabOpen = true">@L.T("+ Ajouter un document")</button>
+                <button class="btn btn-secondary" @onclick="StartNewFolder">@L.T("Nouveau dossier")</button>
             </EmptyState>
         }
     };
@@ -1154,7 +1156,7 @@ else
         else
             res = Store.RenameFolder(_editingFolder.Id, _folderName, _folderColor);
         if (!res.Success) { _folderError = res.Error; return; }
-        State.NotifySuccess(_editingFolder == null ? "Dossier créé." : "Dossier renommé.");
+        State.NotifySuccess(_editingFolder == null ? L.T("Dossier créé.") : L.T("Dossier renommé."));
         CloseFolderModal();
     }
 
@@ -1180,17 +1182,17 @@ else
         if (folder == null) return;
         if (_currentFolderId == folder.Id) _currentFolderId = folder.ParentId;
         var res = Store.DeleteFolder(folder.Id);
-        if (res.Success) State.NotifySuccess("Dossier supprimé, contenu conservé.");
+        if (res.Success) State.NotifySuccess(L.T("Dossier supprimé, contenu conservé."));
         else State.NotifyError(res.Error);
     }
 
     private string FolderName(string? folderId) =>
-        !string.IsNullOrWhiteSpace(folderId) && _folderById.TryGetValue(folderId, out var f) ? f.Nom : "Racine";
+        !string.IsNullOrWhiteSpace(folderId) && _folderById.TryGetValue(folderId, out var f) ? f.Nom : L.T("Racine");
 
     private string FolderPath(string? folderId) => DocumentBrowser.FolderPath(_folderById, folderId);
 
     private string FolderCountLabel(string folderId) =>
-        DocumentBrowser.CountLabel(_itemCounts.GetValueOrDefault(folderId), "élément");
+        DocumentBrowser.CountLabel(_itemCounts.GetValueOrDefault(folderId), L.T("élément"), L.T("éléments"));
 
     // ---------- Import ----------
 
@@ -1261,7 +1263,7 @@ else
                 UtilisateurId = string.IsNullOrWhiteSpace(_iUser) ? null : _iUser
             });
             if (!res.Success) { _importError = res.Error; return; }
-            State.NotifySuccess("✓ Document « " + _iTitre.Trim() + " » ajouté.");
+            State.NotifySuccess(L.F("✓ Document « {0} » ajouté.", _iTitre.Trim()));
             _staged = null;
         }
         finally { _saving = false; }
@@ -1337,10 +1339,10 @@ else
     private void ConvertScan()
     {
         _scanError = "";
-        if (string.IsNullOrWhiteSpace(_scanTitre)) { _scanError = "Le titre du PDF est obligatoire."; return; }
-        if (_scanPages.Count == 0) { _scanError = "Capturez au moins une page."; return; }
+        if (string.IsNullOrWhiteSpace(_scanTitre)) { _scanError = L.T("Le titre du PDF est obligatoire."); return; }
+        if (_scanPages.Count == 0) { _scanError = L.T("Capturez au moins une page."); return; }
         var nonJpeg = _scanPages.FirstOrDefault(p => !PdfWriter.IsJpeg(p.Bytes));
-        if (nonJpeg != null) { _scanError = "La page « " + nonJpeg.FileName + " » n'est pas au format JPEG : reprenez-la avec la caméra."; return; }
+        if (nonJpeg != null) { _scanError = L.F("La page « {0} » n'est pas au format JPEG : reprenez-la avec la caméra.", nonJpeg.FileName); return; }
         _saving = true;
         StateHasChanged();
         try
@@ -1360,7 +1362,7 @@ else
                 Data = "data:application/pdf;base64," + Convert.ToBase64String(pdf)
             });
             if (!res.Success) { _scanError = res.Error; return; }
-            State.NotifySuccess("✓ PDF « " + title + " » créé (" + _scanPages.Count + " page(s)).");
+            State.NotifySuccess(L.F("✓ PDF « {0} » créé ({1} page(s)).", title, _scanPages.Count));
             CloseScan();
         }
         catch (Exception ex) { _scanError = ex.Message; }
@@ -1396,7 +1398,7 @@ else
             UtilisateurId = string.IsNullOrWhiteSpace(_eUser) ? null : _eUser
         });
         if (!res.Success) { _editError = res.Error; return; }
-        State.NotifyInfo("Document modifié.");
+        State.NotifyInfo(L.T("Document modifié."));
         _editing = null;
     }
 
@@ -1412,7 +1414,7 @@ else
         var res = Store.MoveDocuments(_moveIds, string.IsNullOrWhiteSpace(_moveTarget) ? null : _moveTarget);
         _moveOpen = false;
         if (!res.Success) { State.NotifyError(res.Error); return; }
-        State.NotifySuccess("Document(s) déplacé(s).");
+        State.NotifySuccess(L.T("Document(s) déplacé(s)."));
         _selected.Clear();
         _selectionMode = false;
     }
@@ -1420,18 +1422,18 @@ else
     private async Task OpenDoc(DocumentItem doc)
     {
         var bytes = DocBytes(doc);
-        if (bytes == null) { State.NotifyError("Contenu du fichier illisible."); return; }
+        if (bytes == null) { State.NotifyError(L.T("Contenu du fichier illisible.")); return; }
         var ok = await Docs.OpenAsync(doc.FileName, bytes, doc.Mime, Saver);
-        if (!ok) State.NotifyError((Docs.LastError ?? "Ouverture impossible.") + " Essayez « Enregistrer » puis ouvrez le fichier depuis Téléchargements.");
+        if (!ok) State.NotifyError(L.F("{0} Essayez « Enregistrer » puis ouvrez le fichier depuis Téléchargements.", Docs.LastError ?? L.T("Ouverture impossible.")));
     }
 
     private async Task SaveDoc(DocumentItem doc)
     {
         var bytes = DocBytes(doc);
-        if (bytes == null) { State.NotifyError("Contenu du fichier illisible."); return; }
+        if (bytes == null) { State.NotifyError(L.T("Contenu du fichier illisible.")); return; }
         var path = await Saver.SaveAsync(doc.FileName, bytes, doc.Mime);
-        if (path == null) State.NotifyError("Échec de l'enregistrement. Réessayez.");
-        else State.NotifySuccess("Fichier enregistré : " + path);
+        if (path == null) State.NotifyError(L.T("Échec de l'enregistrement. Réessayez."));
+        else State.NotifySuccess(L.F("Fichier enregistré : {0}", path));
     }
 
     private static bool IsTextPreviewable(DocumentItem doc)
@@ -1489,14 +1491,14 @@ else
             if (bytes == null) continue;
             files.Add(new DocImport(doc.FileName, doc.Mime, doc.Taille, bytes));
         }
-        if (files.Count == 0) { State.NotifyError("Aucun fichier à partager."); return; }
-        var ok = await Docs.ShareAsync(files, files.Count == 1 ? files[0].FileName : files.Count + " documents", Saver);
+        if (files.Count == 0) { State.NotifyError(L.T("Aucun fichier à partager.")); return; }
+        var ok = await Docs.ShareAsync(files, files.Count == 1 ? files[0].FileName : L.F("{0} documents", files.Count), Saver);
         if (ok)
         {
             Store.LogActivity(ActivityTypes.DocumentShare, "Partage de " + files.Count + " document(s)");
-            State.NotifySuccess("Partage ouvert.");
+            State.NotifySuccess(L.T("Partage ouvert."));
         }
-        else State.NotifyError(Docs.LastError ?? "Le partage a échoué.");
+        else State.NotifyError(Docs.LastError ?? L.T("Le partage a échoué."));
         _selected.Clear();
         _selectionMode = false;
     }
@@ -1519,7 +1521,7 @@ else
         _pendingIds.Clear();
         _selected.Clear();
         _selectionMode = false;
-        if (res.Success) State.NotifySuccess("Document(s) placé(s) dans la corbeille.");
+        if (res.Success) State.NotifySuccess(L.T("Document(s) placé(s) dans la corbeille."));
         else State.NotifyError(res.Error);
     }
 
@@ -1527,7 +1529,7 @@ else
     {
         _detail = null;
         var res = Store.RestoreDocuments(new[] { id });
-        if (res.Success) State.NotifySuccess("Document restauré.");
+        if (res.Success) State.NotifySuccess(L.T("Document restauré."));
         else State.NotifyError(res.Error);
     }
 
@@ -1536,7 +1538,7 @@ else
         var res = Store.RestoreDocuments(_selected.ToList());
         _selected.Clear();
         _selectionMode = false;
-        if (res.Success) State.NotifySuccess("Document(s) restauré(s).");
+        if (res.Success) State.NotifySuccess(L.T("Document(s) restauré(s)."));
         else State.NotifyError(res.Error);
     }
 
@@ -1549,7 +1551,7 @@ else
             if (doc == null || doc.Favori) continue;
             if (Store.SetDocumentFavorite(id, true).Success) count++;
         }
-        State.NotifySuccess(count + " document(s) ajouté(s) aux favoris.");
+        State.NotifySuccess(L.F("{0} document(s) ajouté(s) aux favoris.", count));
         _selected.Clear();
         _selectionMode = false;
     }
@@ -1559,8 +1561,8 @@ else
     private string PurgeMessage => _purgeTargets.Count switch
     {
         0 => "",
-        1 => "Supprimer définitivement « " + _purgeTargets[0].Titre + " » ? Action irréversible.",
-        var n => "Supprimer définitivement " + n + " documents ? Action irréversible."
+        1 => L.F("Supprimer définitivement « {0} » ? Action irréversible.", _purgeTargets[0].Titre),
+        var n => L.F("Supprimer définitivement {0} documents ? Action irréversible.", n)
     };
 
     private void AskPurge(DocumentItem doc)
@@ -1598,7 +1600,7 @@ else
         _selected.Clear();
         _selectionMode = false;
         if (error != null) State.NotifyError(error);
-        else State.NotifySuccess(done == 1 ? "Document définitivement supprimé." : done + " documents définitivement supprimés.");
+        else State.NotifySuccess(done == 1 ? L.T("Document définitivement supprimé.") : L.F("{0} documents définitivement supprimés.", done));
     }
 
     private void AskEmptyTrash() => _confirmEmptyTrash = true;
@@ -1609,7 +1611,7 @@ else
         var res = Store.EmptyTrash();
         _selected.Clear();
         _selectionMode = false;
-        if (res.Success) State.NotifySuccess("Corbeille vidée.");
+        if (res.Success) State.NotifySuccess(L.T("Corbeille vidée."));
         else State.NotifyError(res.Error);
     }
 
@@ -1669,19 +1671,19 @@ else
 
     private static string KindName(string? mime) => DocumentKinds.KindOf(mime) switch
     {
-        "pdf" => "Document PDF",
-        "image" => "Image",
-        _ => string.IsNullOrWhiteSpace(mime) ? "Fichier" : mime
+        "pdf" => L.T("Document PDF"),
+        "image" => L.T("Image"),
+        _ => string.IsNullOrWhiteSpace(mime) ? L.T("Fichier") : mime
     };
 
     private static string SoftColor(string hex) => hex.Length == 7 ? hex + "24" : hex;
 
     private static string FormatSize(long bytes)
     {
-        if (bytes < 1024) return bytes + " o";
-        if (bytes < 1024 * 1024) return (bytes / 1024.0).ToString("0.0") + " Ko";
-        if (bytes < 1024L * 1024L * 1024L) return (bytes / (1024.0 * 1024)).ToString("0.0") + " Mo";
-        return (bytes / (1024.0 * 1024 * 1024)).ToString("0.0") + " Go";
+        if (bytes < 1024) return L.F("{0} o", bytes);
+        if (bytes < 1024 * 1024) return L.F("{0} Ko", (bytes / 1024.0).ToString("0.0"));
+        if (bytes < 1024L * 1024L * 1024L) return L.F("{0} Mo", (bytes / (1024.0 * 1024)).ToString("0.0"));
+        return L.F("{0} Go", (bytes / (1024.0 * 1024 * 1024)).ToString("0.0"));
     }
 
     private static string ShortDate(string? iso) => DataStore.FormatDateCourte(iso);
