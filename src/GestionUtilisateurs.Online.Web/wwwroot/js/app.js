@@ -491,6 +491,10 @@ window.guTour = {
 
 /* ---------- Mini-guide illustré : focus carte ---------- */
 window.guOnboarding = {
+    // Même seuil que la mise en page ordinateur (css/online.css).
+    isDesktop: function () {
+        try { return window.matchMedia('(min-width: 1024px)').matches; } catch (_) { return false; }
+    },
     focus: function (id) {
         try {
             var el = document.getElementById(id);
@@ -519,9 +523,14 @@ window.guCoach = {
             try { el.scrollIntoView({ block: 'nearest', inline: 'nearest' }); } catch (_) { }
         }
         try { el.classList.add('ob-spot'); } catch (_) { }
+        var barRight = 0;
         try {
-            var bar = el.closest ? el.closest('.app-topbar, .bottom-nav') : null;
-            if (bar) bar.classList.add('ob-spot-root');
+            var bar = el.closest ? el.closest('.app-topbar, .bottom-nav, .web-sidebar') : null;
+            if (bar) {
+                bar.classList.add('ob-spot-root');
+                // Menu latéral : la bulle se place à droite de tout le menu, pas sur lui.
+                if (bar.classList.contains('web-sidebar')) barRight = bar.getBoundingClientRect().right;
+            }
         } catch (_) { }
         var r = el.getBoundingClientRect();
         var vw = window.innerWidth || document.documentElement.clientWidth || 0;
@@ -531,7 +540,7 @@ window.guCoach = {
         if (!r || r.width <= 0 || r.height <= 0) { try { this.unspot(); } catch (_) { } return null; }
         if (vw <= 0 || vh <= 0) { try { this.unspot(); } catch (_) { } return null; }
         if (r.bottom < 0 || r.top > vh || r.right < 0 || r.left > vw) { try { this.unspot(); } catch (_) { } return null; }
-        return { x: r.left, y: r.top, w: r.width, h: r.height, vw: vw, vh: vh };
+        return { x: r.left, y: r.top, w: r.width, h: r.height, vw: vw, vh: vh, br: barRight };
     },
     unspot: function () {
         try {

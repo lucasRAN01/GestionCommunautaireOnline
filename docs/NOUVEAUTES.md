@@ -4,6 +4,16 @@ Les nouveautés de la version en ligne, de la plus récente à la plus ancienne.
 Après chaque mise à jour, le site affiche un bandeau « Nouvelle version
 disponible » : un clic sur **Mettre à jour** suffit.
 
+## 15 octobre 2026 (suite)
+
+**Mini-guide de démarrage**
+- Sur ordinateur, le bouton d'aide ⓘ est de nouveau affiché en haut à
+  droite, à côté de l'avatar.
+- Sur ordinateur, le guide présente le menu de gauche au lieu de la barre
+  du bas et du menu « ⋮ », qui n'existent que sur téléphone.
+- « Passer » est toujours en haut à droite, et « Suivant » toujours à
+  droite des boutons.
+
 ## 15 octobre 2026
 
 **Mise à jour du site sans fermer les onglets**
