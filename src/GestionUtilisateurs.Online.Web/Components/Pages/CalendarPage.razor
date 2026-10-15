@@ -1,0 +1,1316 @@
+@implements IDisposable
+@inject DataStore Store
+@inject AppState State
+
+<div class="page-head">
+    <p class="cal-subtitle">
+        Vos événements et rappels, directement sur votre appareil
+        <svg class="cal-offline-icon" viewBox="0 0 24 24" width="13" height="13" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M12 3v1M4.2 6.9l.7.7M1 12h1M4.2 17.1l-.7.7M12 20v1M19.8 17.1l.7.7M23 12h-1"/><circle cx="12" cy="15" r="4" fill="none" stroke="currentColor" stroke-width="2"/><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" d="M12 9V6M9.5 12h.5M12 12h.5M14.5 12h.5"/></svg>
+    </p>
+</div>
+
+<div class="cal-toolbar">
+    <div class="search-box cal-search">
+        <span class="search-icon" aria-hidden="true">⌕</span>
+        <input type="text" placeholder="Rechercher un événement…" value="@_search" @oninput="OnSearch" />
+    </div>
+    <button class="btn btn-secondary btn-sm cal-filter-btn @(_HasActiveFilters ? "active" : "")" @onclick="OpenFilters">
+        <span aria-hidden="true">⚲</span> Filtres
+        @if (_HasActiveFilters)
+        {
+            <Badge Text="@_activeFilterCount.ToString()" Kind="role" />
+        }
+    </button>
+</div>
+
+<div class="cal-view-tabs">
+    <button class="cal-tab @(ViewCls("mois"))" @onclick="SetViewMois">Mois</button>
+    <button class="cal-tab @(ViewCls("liste"))" @onclick="SetViewListe">Liste</button>
+</div>
+
+@if (_view == "mois")
+{
+    <div class="cal-month-nav">
+        <button class="cal-month-nav-btn" aria-label="Mois précédent" @onclick="PrevMonth">‹</button>
+        <button class="cal-month-label" @onclick="GoToday">@MonthLabel</button>
+        <button class="cal-month-nav-btn" aria-label="Mois suivant" @onclick="NextMonth">›</button>
+        <button class="btn btn-secondary btn-sm cal-today-btn" @onclick="GoToday">Aujourd'hui</button>
+        <select class="cal-year-select" aria-label="Choisir l'année" value="@_month.Year" @onchange="OnYear">
+            @foreach (var y in AvailableYears)
+            {
+                <option value="@y">@y</option>
+            }
+        </select>
+    </div>
+
+    <div class="card cal-month-card">
+        <div class="cal-weekdays">
+            @foreach (var wd in WeekDays)
+            {
+                <div class="cal-weekday">@wd</div>
+            }
+        </div>
+        <div class="cal-grid">
+            @foreach (var cell in _cells)
+            {
+                <button class="cal-day @(cell.ThisMonth ? "" : "other") @(cell.Date == DateTime.Today ? "today" : "") @(cell.Selected ? "selected" : "")"
+                        @onclick="() => SelectDay(cell.Date)" tabindex="0">
+                    <span class="cal-day-num">@cell.Date.Day</span>
+                    @if (cell.Holiday != null)
+                    {
+                        <span class="cal-holiday-tag" title="@cell.Holiday">🎌</span>
+                    }
+                    @if (cell.EventCount > 0)
+                    {
+                        <span class="cal-dots">
+                            @foreach (var c in cell.DotColors)
+                            {
+                                <span class="cal-dot" style="background:@c"></span>
+                            }
+                        </span>
+                    }
+                </button>
+            }
+        </div>
+    </div>
+
+    <div class="cal-add-below">
+        <button class="btn btn-primary btn-block cal-add-btn" @onclick="() => OpenTypeSheet(DefaultAddDate)">
+            <span aria-hidden="true">＋</span> Ajouter un évènement
+        </button>
+        <p class="cal-add-hint">Pour le @FrDate(DefaultAddDate) — choisissez le type puis complétez la fiche.</p>
+    </div>
+}
+else
+{
+    <div class="cal-list">
+        @if (FilteredEvents.Count == 0)
+        {
+            <EmptyState Icon="📅" Title="Aucun événement" Message="Votre calendrier est vide pour le moment. Ajoutez un anniversaire, une réunion ou un rappel." />
+        }
+        else
+        {
+            @foreach (var group in GroupedByDay ?? Enumerable.Empty<IGrouping<DateTime, CalendarEvent>>())
+            {
+                <div class="cal-list-day">
+                    <div class="cal-list-header">
+                        <span class="cal-list-date">@WeekdayLabel(group.Key) — @FrDate(group.Key)</span>
+                        <span class="cal-list-count">@group.Count() événement(s)</span>
+                    </div>
+                    @if (Holidays.GetFixedHoliday(group.Key) is string holidayLabel)
+                    {
+                        <div class="cal-holiday-card">🎌 @holidayLabel</div>
+                    }
+                    @foreach (var evt in group)
+                    {
+                        @RenderEventCard(evt)
+                    }
+                </div>
+            }
+        }
+    </div>
+}
+
+@if (_view == "mois")
+{
+    <div class="cal-day-section">
+        <div class="cal-day-title">
+            <span>@SelectedDayTitle</span>
+            @if (SelectedDayHoliday != null)
+            {
+                <span class="cal-holiday-label">🎌 @SelectedDayHoliday</span>
+            }
+        </div>
+        @if (FilteredEvents.Count == 0)
+        {
+            <EmptyState Icon="📅" Title="Aucun événement" Message="Votre calendrier est vide pour le moment. Ajoutez un anniversaire, une réunion ou un rappel." />
+        }
+        else if (DayEvents(_selectedDay ?? DateTime.Today).Count == 0)
+        {
+            <div class="cal-no-events">Aucun événement ce jour.</div>
+        }
+        else
+        {
+            <div class="cal-events">
+                @foreach (var evt in DayEvents(_selectedDay ?? DateTime.Today))
+                {
+                    @RenderEventCard(evt)
+                }
+            </div>
+        }
+    </div>
+}
+
+<Modal Show="_typeSheet" Title="Ajouter un événement" OnClose="() => _typeSheet = false">
+    <div class="type-grid">
+        @foreach (var t in AllTypes)
+        {
+            <button class="type-option" @onclick="() => StartNew(t.Item1)">
+                <span class="type-icon" style="background:@Soft(t.Item2);color:@t.Item2">@CalendarEventTypes.Icon(t.Item1)</span>
+                <span class="type-label">@CalendarEventTypes.Label(t.Item1)</span>
+            </button>
+        }
+    </div>
+</Modal>
+
+<Modal Show="_showForm" Title="@(_editing == null ? "Nouvel événement" : "Modifier l'événement")" OnClose="CancelForm">
+    <div class="form-group">
+        <label for="ev-titre">Titre *</label>
+        <input id="ev-titre" type="text" placeholder="@TitrePlaceholder" value="@_draft.Titre" @oninput="OnTitre" />
+    </div>
+    <div class="form-group">
+        <label>Type d'événement</label>
+        <div class="type-chips">
+            @foreach (var (key, label) in AllTypes)
+            {
+                <button type="button" class="type-chip @(_draft.Type == key ? "active" : "")" @onclick="() => SetType(key)">
+                    <span style="color:@CalendarEventTypes.Color(key)">@CalendarEventTypes.Icon(key)</span> @label
+                </button>
+            }
+        </div>
+    </div>
+    <div class="form-group">
+        <label for="ev-date">Date * <span class="field-hint" style="display:inline">— format JJ/MM/AAAA</span></label>
+        <button type="button" class="cal-field-btn" @onclick="OpenDatePicker">
+            <span class="cal-field-icon" aria-hidden="true"><CalendarTodayIcon Size="sm" /></span>
+            <span class="cal-field-value">@DraftDateLabel</span>
+            <span class="cal-field-go" aria-hidden="true">›</span>
+        </button>
+    </div>
+    <div class="form-check">
+        <input id="ev-fullday" type="checkbox" checked="@_draft.TouteLaJournee" @onchange="OnFullDay" />
+        <label for="ev-fullday">Toute la journée</label>
+    </div>
+    @if (!_draft.TouteLaJournee)
+    {
+        <div class="cal-time-row">
+            <div class="form-group cal-time-col">
+                <label for="ev-heure">Début</label>
+                <button type="button" class="cal-field-btn" @onclick="OpenDebutTime">
+                    <span class="cal-field-icon" aria-hidden="true">🕐</span>
+                    <span class="cal-field-value">@DraftTimeLabel("debut")</span>
+                    <span class="cal-field-go" aria-hidden="true">›</span>
+                </button>
+            </div>
+            <div class="form-group cal-time-col">
+                <label for="ev-fin">Fin</label>
+                <button type="button" class="cal-field-btn" @onclick="OpenFinTime">
+                    <span class="cal-field-icon" aria-hidden="true">🕐</span>
+                    <span class="cal-field-value">@DraftTimeLabel("fin")</span>
+                    <span class="cal-field-go" aria-hidden="true">›</span>
+                </button>
+            </div>
+        </div>
+    }
+    @if (ShowLieu)
+    {
+        <div class="form-group">
+            <label for="ev-lieu">Lieu</label>
+            <input id="ev-lieu" type="text" placeholder="Ex : Salle de réunion" value="@_draft.Lieu" @oninput="OnLieu" />
+        </div>
+    }
+    @if (ShowPersonne)
+    {
+        <div class="form-group">
+            <label>Personne(s) concernée(s) (@_draft.PersonnesConcernees.Count sélectionnée(s))</label>
+            @if (_draft.PersonnesConcernees.Count > 0)
+            {
+                <div class="person-chips">
+                    @foreach (var pid in _draft.PersonnesConcernees.ToList())
+                    {
+                        var person = ActiveUsers.FirstOrDefault(x => x.Identifiant == pid);
+                        <span class="person-chip">
+                            <Avatar UserName="@UserName(pid)" Seed="@pid" Size="sm" Photo="@person?.Photo" />
+                            <span>@UserName(pid)</span>
+                            <button type="button" class="person-chip-remove" aria-label="Retirer @UserName(pid)" @onclick="() => RemovePerson(pid)">×</button>
+                        </span>
+                    }
+                </div>
+            }
+            <div class="search-box cal-search cal-opt-search">
+                <span class="search-icon" aria-hidden="true">⌕</span>
+                <input type="search" placeholder="Rechercher une personne puis l'ajouter…" aria-label="Rechercher une personne"
+                       value="@_personSearch" @oninput="OnPersonSearch" />
+            </div>
+            <div class="cal-persons-tools">
+                <button type="button" class="btn btn-secondary btn-sm" @onclick="SelectAllPersons">Toutes</button>
+                <button type="button" class="btn btn-secondary btn-sm" @onclick="ClearPersons">Aucune</button>
+            </div>
+            <div class="cal-persons">
+                @foreach (var u in SearchedPersons)
+                {
+                    var sel = _draft.PersonnesConcernees.Contains(u.Identifiant);
+                    <button type="button" class="cal-person-row @(sel ? "selected" : "")" @onclick="() => TogglePerson(u.Identifiant)">
+                        <Avatar UserName="@u.NomComplet" Seed="@u.Identifiant" Size="sm" Photo="@u.Photo" />
+                        <span class="cal-person-name">@u.NomComplet <span class="text-muted" style="font-size:11.5px">@@@u.Identifiant</span></span>
+                        <span class="cal-person-check" aria-hidden="true">@(sel ? "✓" : "")</span>
+                    </button>
+                }
+                @if (SearchedPersons.Count == 0)
+                {
+                    <div class="cal-no-events">Aucune personne trouvée pour « @_personSearch ».</div>
+                }
+            </div>
+        </div>
+    }
+    <div class="form-group">
+        <label>Répétition</label>
+        <div class="choice-chips">
+            @foreach (var (key, label) in RepetitionChoices)
+            {
+                <button type="button" class="chip @(_draft.Repetition == key ? "active" : "")" @onclick="() => SetRepetition(key)">@label</button>
+            }
+        </div>
+    </div>
+    @if (ShowPriorite)
+    {
+        <div class="form-group">
+            <label>Priorité</label>
+            <div class="choice-chips">
+                @foreach (var (key, label) in PriorityChoices)
+                {
+                    <button type="button" class="chip @(_draft.Priorite == key ? "active" : "")" @onclick="() => SetPriorite(key)">@label</button>
+                }
+            </div>
+        </div>
+    }
+    @if (ShowRappel)
+    {
+        <div class="form-group">
+            <label>Rappel</label>
+            <div class="choice-chips">
+                @foreach (var (minutes, label) in ReminderChoices)
+                {
+                    <button type="button" class="chip @(_draft.RappelAvant == minutes ? "active" : "")" @onclick="() => SetRappel(minutes)">@label</button>
+                }
+            </div>
+        </div>
+    }
+    @if (ShowStatut)
+    {
+        <div class="form-group">
+            <label>Statut</label>
+            <div class="choice-chips">
+                @foreach (var (key, label) in StatutChoices)
+                {
+                    <button type="button" class="chip @(_draft.Statut == key ? "active" : "")" @onclick="() => SetStatut(key)">@label</button>
+                }
+            </div>
+        </div>
+    }
+    @if (ShowDescription)
+    {
+        <div class="form-group">
+            <label for="ev-notes">Notes</label>
+            <textarea id="ev-notes" placeholder="Ajouter une note..." value="@_draft.Notes" @oninput="OnNotes"></textarea>
+        </div>
+    }
+    <div class="form-actions">
+        <button type="button" class="btn btn-secondary" @onclick="CancelForm">Annuler</button>
+        <button type="button" class="btn btn-primary" @onclick="SaveEvent" disabled="@(_saving || string.IsNullOrWhiteSpace(_draft.Titre))">Enregistrer</button>
+    </div>
+</Modal>
+
+<Modal Show="_datePickerOpen" Title="Choisir la date" OnClose="() => _datePickerOpen = false">
+    <div class="cal-picker-head">
+        <button type="button" class="cal-month-nav-btn" aria-label="Mois précédent" @onclick="DatePickerPrevMonth">‹</button>
+        <span class="cal-picker-month">@DatePickerMonthLabel</span>
+        <button type="button" class="cal-month-nav-btn" aria-label="Mois suivant" @onclick="DatePickerNextMonth">›</button>
+    </div>
+    <div class="cal-weekdays">
+        @foreach (var wd in WeekDays)
+        {
+            <div class="cal-weekday">@wd</div>
+        }
+    </div>
+    <div class="cal-grid">
+        @foreach (var d in DatePickerCells)
+        {
+            var isSel = d == _datePickerSelected;
+            var isToday = d == DateTime.Today;
+            <button type="button" class="cal-day @(d.Month == _datePickerMonth.Month ? "" : "other") @(isToday ? "today" : "") @(isSel ? "selected" : "")"
+                    @onclick="() => PickDate(d)">
+                <span class="cal-day-num">@d.Day</span>
+            </button>
+        }
+    </div>
+    <div class="form-actions" style="margin-top:14px">
+        <button type="button" class="btn btn-secondary" @onclick="() => _datePickerOpen = false">Annuler</button>
+        <button type="button" class="btn btn-primary" @onclick="ConfirmDate">OK</button>
+    </div>
+</Modal>
+
+<Modal Show="_timePickerOpen" Title="Choisir l'heure" OnClose="() => _timePickerOpen = false">
+    <div class="time-tabs">
+        <button type="button" class="time-tab @(_timePickerTarget == "debut" ? "active" : "")" @onclick="SwitchToDebut">🕐 Début</button>
+        <button type="button" class="time-tab @(_timePickerTarget == "fin" ? "active" : "")" @onclick="SwitchToFin">🕐 Fin</button>
+    </div>
+    <div class="time-display">@TimePickerLabel</div>
+    <div class="time-steppers">
+        <div class="time-stepper">
+            <button type="button" class="time-stepper-btn" aria-label="Heure précédente" @onclick="DecHour">−</button>
+            <div class="time-stepper-val">@(_timePickerHours.ToString("00"))</div>
+            <button type="button" class="time-stepper-btn" aria-label="Heure suivante" @onclick="IncHour">+</button>
+            <span class="time-stepper-unit">h</span>
+        </div>
+        <div class="time-stepper">
+            <button type="button" class="time-stepper-btn" aria-label="Minute précédente" @onclick="DecMinute">−</button>
+            <div class="time-stepper-val">@(_timePickerMinutes.ToString("00"))</div>
+            <button type="button" class="time-stepper-btn" aria-label="Minute suivante" @onclick="IncMinute">+</button>
+            <span class="time-stepper-unit">min</span>
+        </div>
+    </div>
+    <div class="time-quick">
+        <span class="time-quick-label">Minutes rapides</span>
+        <div class="time-quick-chips">
+            @foreach (var m in QuickMinutes)
+            {
+                <button type="button" class="chip @(_timePickerMinutes == m ? "active" : "")" @onclick="() => QuickMinute(m)">@m.ToString("00")</button>
+            }
+        </div>
+    </div>
+    @if (_timePickerTarget == "fin" && !string.IsNullOrWhiteSpace(_draft.HeureDebut))
+    {
+        <button type="button" class="btn btn-secondary btn-block" @onclick="SetFinAsDebut">Même heure que le début</button>
+    }
+    <div class="form-actions" style="margin-top:14px">
+        <button type="button" class="btn btn-secondary" @onclick="() => _timePickerOpen = false">Annuler</button>
+        <button type="button" class="btn btn-primary" @onclick="ConfirmTime">OK</button>
+    </div>
+</Modal>
+
+<Modal Show="_filtersOpen" Title="Filtrer le calendrier" OnClose="() => _filtersOpen = false">
+    <div class="cal-filter-section">
+        <div class="divider-section">Types</div>
+        <div class="check-group">
+            @foreach (var (key, label) in AllTypes)
+            {
+                <label class="form-check">
+                    <input type="checkbox" checked="@_typeFilter.Contains(key)" @onchange="() => ToggleType(key)" />
+                    <span style="color:@CalendarEventTypes.Color(key)">@CalendarEventTypes.Icon(key)</span> @label
+                </label>
+            }
+        </div>
+        <div class="divider-section">Utilisateurs</div>
+        <div class="radio-row">
+            <label class="radio-option">
+                <input type="radio" name="ev-user" checked="@(_userFilter == null)" @onchange="() => _userFilter = null" />
+                Tous
+            </label>
+            @foreach (var u in Store.Users.Where(u => u.Actif).OrderBy(u => u.NomComplet))
+            {
+                <label class="radio-option">
+                    <input type="radio" name="ev-user" checked="@(_userFilter == u.Identifiant)" @onchange="() => _userFilter = u.Identifiant" />
+                    @u.NomComplet
+                </label>
+            }
+        </div>
+        <div class="divider-section">Priorité</div>
+        <div class="radio-row">
+            @foreach (var (key, label) in PriorityFilterChoices)
+            {
+                <label class="radio-option">
+                    <input type="radio" name="ev-prio" checked="@(_priorityFilter == key)" @onchange="() => _priorityFilter = key" />
+                    @label
+                </label>
+            }
+        </div>
+    </div>
+    <div class="form-actions filter-actions">
+        <button type="button" class="btn btn-secondary" @onclick="ResetFilters">Réinitialiser</button>
+        <button type="button" class="btn btn-primary" @onclick="() => _filtersOpen = false">Appliquer les filtres</button>
+    </div>
+</Modal>
+
+<Modal Show="_detailEvent != null" Title="@(_detailEvent == null ? "" : _detailEvent.Titre)" OnClose="CloseDetail">
+    <ChildContent>
+        @if (_detailEvent != null)
+        {
+            var d = _detailEvent;
+            var c = CalendarEventTypes.Color(d.Type);
+            <div class="cal-detail">
+                <div class="cal-card-type" style="color:@c;background:@Soft(c)">@CalendarEventTypes.Icon(d.Type) @CalendarEventTypes.Label(d.Type)</div>
+                <div class="cal-detail-row">📅 @WeekdayLabel(ParseDate(d.Date)) — @FrDate(ParseDate(d.Date))</div>
+                @if (d.TouteLaJournee)
+                {
+                    <div class="cal-detail-row">⏳ Toute la journée</div>
+                }
+                else
+                {
+                    <div class="cal-detail-row">🕒 Début @(d.HeureDebut ?? "—")@(d.HeureFin != null ? " · Fin " + d.HeureFin : "")</div>
+                }
+                @if (!string.IsNullOrWhiteSpace(d.Lieu))
+                {
+                    <div class="cal-detail-row">📍 @d.Lieu</div>
+                }
+                @if (EventPersons(d).Count > 0)
+                {
+                    <div class="cal-detail-label">Personne(s) concernée(s)</div>
+                    <div class="cal-detail-persons">
+                        @foreach (var pid in EventPersons(d))
+                        {
+                            var person = Store.Users.FirstOrDefault(x => x.Identifiant == pid);
+                            <button type="button" class="cal-detail-person" @onclick="() => OpenPerson(person?.Id)">
+                                <Avatar UserName="@UserName(pid)" Seed="@pid" Size="sm" Photo="@person?.Photo" />
+                                <span>@UserName(pid)</span>
+                            </button>
+                        }
+                    </div>
+                }
+                @if (d.Repetition != CalendarEventTypes.RepetitionAucune)
+                {
+                    <div class="cal-detail-row">🔁 @RepetitionShort(d.Repetition)</div>
+                }
+                @if (d.RappelAvant > 0)
+                {
+                    <div class="cal-detail-row">⏰ Rappel @ReminderShort(d.RappelAvant)</div>
+                }
+                @if (d.Priorite != CalendarEventTypes.PrioriteNormale)
+                {
+                    <div class="cal-detail-row cal-priority-@(d.Priorite)">⚑ @PriorityLabel(d.Priorite).TrimStart('⚠', ' ')</div>
+                }
+                @if (d.Type == CalendarEventTypes.Tache)
+                {
+                    <div class="cal-detail-row">☑ Statut : @StatutLabel(d.Statut)</div>
+                }
+                @if (!string.IsNullOrWhiteSpace(d.Description))
+                {
+                    <div class="cal-detail-label">Description</div>
+                    <div class="cal-detail-notes">@d.Description</div>
+                }
+                @if (!string.IsNullOrWhiteSpace(d.Notes))
+                {
+                    <div class="cal-detail-label">Notes</div>
+                    <div class="cal-detail-notes">@d.Notes</div>
+                }
+            </div>
+        }
+    </ChildContent>
+    <FooterContent>
+        <button type="button" class="btn btn-secondary" @onclick="CloseDetail">Fermer</button>
+        <button type="button" class="btn btn-danger-outline" @onclick="DetailDelete">🗑 Supprimer</button>
+        <button type="button" class="btn btn-primary" @onclick="DetailEdit">✏️ Modifier</button>
+    </FooterContent>
+</Modal>
+
+<ConfirmDialog Show="_deleteTarget != null" Title="Supprimer l'événement"
+               Message="@(_deleteTarget == null ? "" : "Supprimer « " + _deleteTarget.Titre + " » du calendrier ?")"
+               ConfirmLabel="Supprimer" Danger="true" OnConfirm="ConfirmDelete" OnCancel="() => _deleteTarget = null" />
+
+@code {
+    private static readonly CultureInfo Fr = CultureInfo.GetCultureInfo("fr-FR");
+
+    private string _view = "mois";
+    private DateTime _month = new(DateTime.Today.Year, DateTime.Today.Month, 1);
+    private DateTime? _selectedDay = DateTime.Today;
+    private string _search = "";
+
+    private readonly HashSet<string> _typeFilter = new();
+    private string? _userFilter;
+    private string? _priorityFilter;
+
+    private bool _typeSheet;
+    private bool _showForm;
+    private bool _filtersOpen;
+    private bool _saving;
+    private CalendarEvent? _editing;
+    private CalendarEvent? _deleteTarget;
+    private CalendarEvent? _detailEvent;
+    private EventDraft _draft = new();
+
+    private static readonly (string, string)[] AllTypes = new[]
+    {
+        (CalendarEventTypes.Anniversaire, CalendarEventTypes.Label(CalendarEventTypes.Anniversaire)),
+        (CalendarEventTypes.Reunion, CalendarEventTypes.Label(CalendarEventTypes.Reunion)),
+        (CalendarEventTypes.Rappel, CalendarEventTypes.Label(CalendarEventTypes.Rappel)),
+        (CalendarEventTypes.Tache, CalendarEventTypes.Label(CalendarEventTypes.Tache)),
+        (CalendarEventTypes.Evenement, CalendarEventTypes.Label(CalendarEventTypes.Evenement)),
+        (CalendarEventTypes.Conge, CalendarEventTypes.Label(CalendarEventTypes.Conge)),
+        (CalendarEventTypes.Echeance, CalendarEventTypes.Label(CalendarEventTypes.Echeance)),
+        (CalendarEventTypes.Autre, CalendarEventTypes.Label(CalendarEventTypes.Autre))
+    };
+
+    private static readonly (string, string)[] RepetitionChoices = new[]
+    {
+        (CalendarEventTypes.RepetitionAucune, "Aucune"),
+        (CalendarEventTypes.RepetitionQuotidienne, "Tous les jours"),
+        (CalendarEventTypes.RepetitionHebdomadaire, "Toutes les semaines"),
+        (CalendarEventTypes.RepetitionMensuelle, "Tous les mois"),
+        (CalendarEventTypes.RepetitionAnnuelle, "Tous les ans")
+    };
+
+    private static readonly (string, string)[] PriorityChoices = new[]
+    {
+        (CalendarEventTypes.PrioriteNormale, "Normale"),
+        (CalendarEventTypes.PrioriteImportante, "Importante"),
+        (CalendarEventTypes.PrioriteUrgente, "Urgente")
+    };
+
+    private static readonly (string, string)[] PriorityFilterChoices = new[]
+    {
+        ("", "Toutes"),
+        (CalendarEventTypes.PrioriteNormale, "Normale"),
+        (CalendarEventTypes.PrioriteImportante, "Importante"),
+        (CalendarEventTypes.PrioriteUrgente, "Urgente")
+    };
+
+    private static readonly (int, string)[] ReminderChoices = new[]
+    {
+        (0, "Aucun"),
+        (5, "5 minutes avant"),
+        (10, "10 minutes avant"),
+        (30, "30 minutes avant"),
+        (60, "1 heure avant"),
+        (1440, "1 jour avant")
+    };
+
+    private static readonly (string, string)[] StatutChoices = new[]
+    {
+        (CalendarEventTypes.StatutAFaire, "À faire"),
+        (CalendarEventTypes.StatutEnCours, "En cours"),
+        (CalendarEventTypes.StatutTerminee, "Terminée")
+    };
+
+    private static readonly string[] WeekDays = { "Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim" };
+
+    private sealed class EventDraft
+    {
+        public string Titre = "";
+        public string Type = CalendarEventTypes.Autre;
+        public string Date = "";
+        public string? HeureDebut;
+        public string? HeureFin;
+        public bool TouteLaJournee;
+        public string Lieu = "";
+        public List<string> PersonnesConcernees = new();
+        public string Priorite = CalendarEventTypes.PrioriteNormale;
+        public string Repetition = CalendarEventTypes.RepetitionAucune;
+        public string Statut = CalendarEventTypes.StatutAFaire;
+        public int RappelAvant;
+        public string Notes = "";
+    }
+
+    private sealed record DayCell(DateTime Date, bool ThisMonth, int EventCount, string[] DotColors, bool Selected, string? Holiday);
+
+    private List<DayCell> _cells = new();
+
+    private IReadOnlyList<CalendarEvent> FilteredEvents { get; set; } = new List<CalendarEvent>();
+
+    private IEnumerable<IGrouping<DateTime, CalendarEvent>>? GroupedByDay { get; set; } = null;
+
+    private bool _HasActiveFilters => _typeFilter.Count > 0 || _userFilter != null || _priorityFilter != null;
+
+    private int _activeFilterCount => _typeFilter.Count + (_userFilter != null ? 1 : 0) + (_priorityFilter != null ? 1 : 0);
+
+    private DateTime DefaultAddDate => _selectedDay ?? DateTime.Today;
+
+    private IReadOnlyList<UserAccount> ActiveUsers =>
+        Store.Users.Where(u => u.Actif).OrderBy(u => u.NomComplet).ToList();
+
+    private string _personSearch = "";
+
+    private IReadOnlyList<UserAccount> SearchedPersons
+    {
+        get
+        {
+            var all = ActiveUsers;
+            var q = _personSearch.Trim();
+            if (q.Length == 0) return all;
+            return all.Where(u => (u.NomComplet + " " + u.Identifiant + " " + (u.Email ?? ""))
+                .Contains(q, StringComparison.OrdinalIgnoreCase)).ToList();
+        }
+    }
+
+    private void OnPersonSearch(ChangeEventArgs e) => _personSearch = e.Value?.ToString() ?? "";
+
+    private string MonthLabel
+    {
+        get
+        {
+            var s = _month.ToString("MMMM yyyy", Fr);
+            return s.Length > 0 ? char.ToUpperInvariant(s[0]) + s[1..] : s;
+        }
+    }
+
+    private string SelectedDayTitle
+    {
+        get
+        {
+            var d = _selectedDay ?? DateTime.Today;
+            return d == DateTime.Today ? "Aujourd'hui — " + FrDate(d) : WeekdayLabel(d) + " — " + FrDate(d);
+        }
+    }
+
+    private int[] AvailableYears
+    {
+        get
+        {
+            var current = DateTime.Today.Year;
+            return Enumerable.Range(current - 80, 101).ToArray();
+        }
+    }
+
+    private void OnYear(ChangeEventArgs e)
+    {
+        if (int.TryParse(e.Value?.ToString(), out var y) && y >= 1900 && y <= 2100)
+        {
+            _month = new DateTime(y, _month.Month, 1);
+            Compute();
+        }
+    }
+
+    private string? SelectedDayHoliday => Holidays.GetFixedHoliday(_selectedDay ?? DateTime.Today);
+
+    private string TitrePlaceholder => _draft.Type switch
+    {
+        CalendarEventTypes.Anniversaire => "Ex : Anniversaire de Marie Dupont",
+        CalendarEventTypes.Reunion => "Ex : Réunion équipe",
+        CalendarEventTypes.Rappel => "Ex : Rappel important",
+        CalendarEventTypes.Tache => "Ex : Terminer le rapport",
+        CalendarEventTypes.Evenement => "Ex : Pot de départ",
+        CalendarEventTypes.Conge => "Ex : Congé annuel",
+        CalendarEventTypes.Echeance => "Ex : Rendu du dossier",
+        _ => "Ex : Autre événement"
+    };
+
+    private bool ShowLieu => _draft.Type is CalendarEventTypes.Reunion or CalendarEventTypes.Evenement or CalendarEventTypes.Autre;
+    private bool ShowPersonne => _draft.Type is CalendarEventTypes.Anniversaire or CalendarEventTypes.Reunion or CalendarEventTypes.Evenement or CalendarEventTypes.Conge or CalendarEventTypes.Tache;
+    private bool ShowPriorite => _draft.Type is CalendarEventTypes.Rappel or CalendarEventTypes.Tache or CalendarEventTypes.Echeance;
+    private bool ShowRappel => _draft.Type is CalendarEventTypes.Rappel or CalendarEventTypes.Echeance or CalendarEventTypes.Anniversaire or CalendarEventTypes.Reunion;
+    private bool ShowStatut => _draft.Type == CalendarEventTypes.Tache;
+    private bool ShowDescription => _draft.Type is CalendarEventTypes.Reunion or CalendarEventTypes.Evenement or CalendarEventTypes.Conge or CalendarEventTypes.Rappel or CalendarEventTypes.Echeance or CalendarEventTypes.Autre;
+
+    protected override void OnInitialized()
+    {
+        Store.DataChanged += Refresh;
+        Compute();
+    }
+
+    protected override void OnParametersSet() => Compute();
+
+    private void Refresh() => _ = InvokeAsync(() => { Compute(); StateHasChanged(); });
+
+    private void Compute()
+    {
+        FilteredEvents = Store.Events
+            .Where(MatchFilters)
+            .Where(MatchSearch)
+            .ToList();
+
+        GroupedByDay = FilteredEvents
+            .GroupBy(e => ParseDate(e.Date))
+            .OrderBy(g => g.Key)
+            .ToList();
+
+        BuildMonthGrid();
+    }
+
+    private bool MatchFilters(CalendarEvent e)
+    {
+        if (_typeFilter.Count > 0 && !_typeFilter.Contains(e.Type)) return false;
+        if (_userFilter != null && !(e.PersonnesConcernees ?? new List<string>()).Contains(_userFilter) && e.PersonneConcernee != _userFilter) return false;
+        if (_priorityFilter != null && e.Priorite != _priorityFilter) return false;
+        return true;
+    }
+
+    private bool MatchSearch(CalendarEvent e)
+    {
+        if (string.IsNullOrWhiteSpace(_search)) return true;
+        var q = _search.Trim();
+        return e.Titre.Contains(q, StringComparison.OrdinalIgnoreCase)
+            || e.Lieu.Contains(q, StringComparison.OrdinalIgnoreCase)
+            || e.Notes.Contains(q, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private void BuildMonthGrid()
+    {
+        var firstDay = new DateTime(_month.Year, _month.Month, 1);
+        var offset = ((int)firstDay.DayOfWeek + 6) % 7;
+        var start = firstDay.AddDays(-offset);
+        var today = DateTime.Today;
+        var selected = _selectedDay ?? today;
+
+        var cells = new List<DayCell>();
+        for (var i = 0; i < 42; i++)
+        {
+            var date = start.AddDays(i);
+            var thisMonth = date.Year == _month.Year && date.Month == _month.Month;
+            var events = FilteredEvents.Where(e => TryDate(e.Date, out var d) && d == date).ToList();
+            var dots = events.Select(e => CalendarEventTypes.Color(e.Type))
+                .Distinct()
+                .Take(3)
+                .ToArray();
+            cells.Add(new DayCell(date, thisMonth, events.Count, dots, date == selected, Holidays.GetFixedHoliday(date)));
+        }
+        _cells = cells;
+    }
+
+    private List<CalendarEvent> DayEvents(DateTime day) =>
+        FilteredEvents.Where(e => TryDate(e.Date, out var d) && d == day)
+            .OrderBy(e => e.TouteLaJournee ? 0 : 1)
+            .ThenBy(e => e.HeureDebut ?? "00:00")
+            .ToList();
+
+    private void GoToday()
+    {
+        var today = DateTime.Today;
+        _month = new DateTime(today.Year, today.Month, 1);
+        _selectedDay = today;
+        Compute();
+    }
+
+    private void PrevMonth()
+    {
+        _month = _month.AddMonths(-1);
+        Compute();
+    }
+
+    private void NextMonth()
+    {
+        _month = _month.AddMonths(1);
+        Compute();
+    }
+
+    private void SelectDay(DateTime d)
+    {
+        _selectedDay = d;
+        Compute();
+    }
+
+    private string ViewCls(string v) => _view == v ? "active" : "";
+
+    private void SetView(string v)
+    {
+        _view = v;
+        Compute();
+    }
+
+    private void SetViewMois() => SetView("mois");
+
+    private void SetViewListe() => SetView("liste");
+
+    private void OnSearch(ChangeEventArgs e)
+    {
+        _search = e.Value?.ToString() ?? "";
+        Compute();
+    }
+
+    private void OpenTypeSheet(DateTime date)
+    {
+        _selectedDay = date;
+        _month = new DateTime(date.Year, date.Month, 1);
+        _typeSheet = true;
+    }
+
+    private void StartNew(string type)
+    {
+        _typeSheet = false;
+        _editing = null;
+        _personSearch = "";
+        _draft = new EventDraft
+        {
+            Type = type,
+            Date = (_selectedDay ?? DateTime.Today).ToString("yyyy-MM-dd"),
+            Priorite = type is CalendarEventTypes.Rappel or CalendarEventTypes.Tache or CalendarEventTypes.Echeance
+                ? CalendarEventTypes.PrioriteNormale : CalendarEventTypes.PrioriteNormale,
+            Repetition = type == CalendarEventTypes.Anniversaire ? CalendarEventTypes.RepetitionAnnuelle : CalendarEventTypes.RepetitionAucune
+        };
+        _showForm = true;
+    }
+
+    private void OpenEdit(CalendarEvent e)
+    {
+        _detailEvent = null;
+        _editing = e;
+        _personSearch = "";
+        var persons = new List<string>(e.PersonnesConcernees ?? new List<string>());
+        if (persons.Count == 0 && !string.IsNullOrWhiteSpace(e.PersonneConcernee))
+            persons.Add(e.PersonneConcernee);
+        _draft = new EventDraft
+        {
+            Titre = e.Titre,
+            Type = e.Type,
+            Date = e.Date,
+            HeureDebut = e.HeureDebut,
+            HeureFin = e.HeureFin,
+            TouteLaJournee = e.TouteLaJournee,
+            Lieu = e.Lieu,
+            PersonnesConcernees = persons,
+            Priorite = e.Priorite,
+            Repetition = e.Repetition,
+            Statut = e.Statut,
+            RappelAvant = e.RappelAvant,
+            Notes = e.Notes
+        };
+        _showForm = true;
+    }
+
+    private void CancelForm()
+    {
+        _showForm = false;
+        _editing = null;
+    }
+
+    private void SaveEvent()
+    {
+        if (string.IsNullOrWhiteSpace(_draft.Titre)) return;
+        if (string.IsNullOrWhiteSpace(_draft.Date)) return;
+
+        _saving = true;
+        StateHasChanged();
+        try
+        {
+            if (_editing == null)
+            {
+                var result = Store.AddEvent(new CalendarEvent
+                {
+                    Type = _draft.Type,
+                    Titre = _draft.Titre.Trim(),
+                    Date = _draft.Date,
+                    HeureDebut = _draft.TouteLaJournee ? null : _draft.HeureDebut,
+                    HeureFin = _draft.TouteLaJournee ? null : _draft.HeureFin,
+                    TouteLaJournee = _draft.TouteLaJournee,
+                    Lieu = _draft.Lieu.Trim(),
+                    PersonneConcernee = null,
+                    PersonnesConcernees = _draft.PersonnesConcernees.Where(p => !string.IsNullOrWhiteSpace(p)).Distinct().ToList(),
+                    Priorite = _draft.Priorite,
+                    Repetition = _draft.Repetition,
+                    Statut = _draft.Statut,
+                    RappelAvant = _draft.TouteLaJournee ? 0 : _draft.RappelAvant,
+                    Notes = _draft.Notes.Trim(),
+                    Description = _draft.Notes.Trim()
+                });
+                if (result.Success)
+                {
+                    State.NotifySuccess("✓ " + CalendarEventTypes.Label(_draft.Type) + " ajouté au calendrier.");
+                }
+                else
+                {
+                    State.NotifyError(result.Error);
+                }
+            }
+            else
+            {
+                var result = Store.UpdateEvent(_editing.Id, new CalendarEvent
+                {
+                    Type = _draft.Type,
+                    Titre = _draft.Titre.Trim(),
+                    Date = _draft.Date,
+                    HeureDebut = _draft.TouteLaJournee ? null : _draft.HeureDebut,
+                    HeureFin = _draft.TouteLaJournee ? null : _draft.HeureFin,
+                    TouteLaJournee = _draft.TouteLaJournee,
+                    Lieu = _draft.Lieu.Trim(),
+                    PersonneConcernee = null,
+                    PersonnesConcernees = _draft.PersonnesConcernees.Where(p => !string.IsNullOrWhiteSpace(p)).Distinct().ToList(),
+                    Priorite = _draft.Priorite,
+                    Repetition = _draft.Repetition,
+                    Statut = _draft.Statut,
+                    RappelAvant = _draft.TouteLaJournee ? 0 : _draft.RappelAvant,
+                    Notes = _draft.Notes.Trim(),
+                    Description = _draft.Notes.Trim()
+                });
+                if (result.Success)
+                {
+                    State.NotifyInfo("Événement modifié.");
+                }
+                else
+                {
+                    State.NotifyError(result.Error);
+                }
+            }
+
+            _showForm = false;
+            _editing = null;
+        }
+        finally
+        {
+            _saving = false;
+        }
+    }
+
+    private void ConfirmDelete()
+    {
+        var target = _deleteTarget;
+        _deleteTarget = null;
+        if (target == null) return;
+        var result = Store.DeleteEvent(target.Id);
+        if (result.Success)
+            State.NotifyError("Événement supprimé.");
+        else
+            State.NotifyError(result.Error);
+    }
+
+    private void OpenFilters() => _filtersOpen = true;
+
+    private void ResetFilters()
+    {
+        _typeFilter.Clear();
+        _userFilter = null;
+        _priorityFilter = null;
+        Compute();
+    }
+
+    private void ToggleType(string key)
+    {
+        if (!_typeFilter.Add(key)) _typeFilter.Remove(key);
+    }
+
+    private RenderFragment RenderEventCard(CalendarEvent e) => __builder =>
+    {
+        var c = CalendarEventTypes.Color(e.Type);
+        var (m, _) = TimeLabel(e);
+        var persons = EventPersons(e);
+        <div class="cal-card" style="--evt-color:@c" role="button" tabindex="0" aria-label="Afficher les détails" @onclick="() => OpenDetail(e)" @onkeydown="(k) => OnCardKeyDown(k, e)">
+            <div class="cal-card-time">@m</div>
+            <div class="cal-card-main">
+                <div class="cal-card-title">@e.Titre</div>
+                <div class="cal-card-type" style="color:@c;background:@Soft(c)">@CalendarEventTypes.Icon(e.Type) @CalendarEventTypes.Label(e.Type)</div>
+                @if (!string.IsNullOrWhiteSpace(e.Lieu))
+                {
+                    <div class="cal-card-meta"><span role="img" aria-label="Lieu">📍</span> @e.Lieu</div>
+                }
+                @if (_draft_isAnniversaire(e.Type))
+                {
+                    var age = AgeLabel(e);
+                    if (age != "")
+                    {
+                        <div class="cal-card-meta">@age</div>
+                    }
+                }
+                @if (persons.Count > 0)
+                {
+                    <div class="cal-card-meta cal-card-persons">
+                        @foreach (var pid in persons.Take(4))
+                        {
+                            <Avatar UserName="@UserName(pid)" Seed="@pid" Size="sm" Photo="@Store.Users.FirstOrDefault(u => u.Identifiant == pid)?.Photo" />
+                        }
+                        <span>@PersonsLabel(persons)</span>
+                    </div>
+                }
+                @if (e.RappelAvant > 0)
+                {
+                    <div class="cal-card-meta">⏰ Rappel @ReminderShort(e.RappelAvant)</div>
+                }
+                @if (e.Priorite != CalendarEventTypes.PrioriteNormale)
+                {
+                    <div class="cal-card-meta cal-priority-@(e.Priorite)">@PriorityLabel(e.Priorite)</div>
+                }
+                @if (e.Type == CalendarEventTypes.Tache)
+                {
+                    <div class="cal-card-meta">Statut : @StatutLabel(e.Statut)</div>
+                }
+            </div>
+            <div class="cal-card-menu" aria-hidden="true">
+                <svg viewBox="0 0 24 24" width="18" height="18"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M9 6l6 6-6 6"/></svg>
+            </div>
+        </div>
+    };
+
+    private void OpenDetail(CalendarEvent e) => _detailEvent = e;
+
+    private void CloseDetail() => _detailEvent = null;
+
+    private void DetailEdit()
+    {
+        var e = _detailEvent;
+        if (e != null) OpenEdit(e);
+    }
+
+    private void DetailDelete()
+    {
+        var e = _detailEvent;
+        _detailEvent = null;
+        if (e != null) _deleteTarget = e;
+    }
+
+    private void OpenPerson(string? userId)
+    {
+        if (string.IsNullOrEmpty(userId)) return;
+        if (Store.IsManager)
+        {
+            State.NavigateToUser(userId);
+        }
+        else
+        {
+            var u = Store.Users.FirstOrDefault(x => x.Id == userId);
+            State.NotifyInfo("Votre profil : " + (u?.NomComplet ?? "utilisateur inconnu"));
+        }
+    }
+
+    private void OnCardKeyDown(KeyboardEventArgs k, CalendarEvent e)
+    {
+        if (k.Key is "Enter" or " ") OpenDetail(e);
+    }
+
+    private static string PersonsLabel(List<string> persons) => persons.Count switch
+    {
+        0 => "",
+        1 => persons[0],
+        _ => persons.Count + " personnes"
+    };
+
+    private static List<string> EventPersons(CalendarEvent e)
+    {
+        var persons = e.PersonnesConcernees ?? new List<string>();
+        if (persons.Count > 0) return persons;
+        return string.IsNullOrWhiteSpace(e.PersonneConcernee)
+            ? new List<string>()
+            : new List<string> { e.PersonneConcernee };
+    }
+
+    private static string RepetitionShort(string rep) => rep switch
+    {
+        CalendarEventTypes.RepetitionQuotidienne => "Tous les jours",
+        CalendarEventTypes.RepetitionHebdomadaire => "Une fois par semaine",
+        CalendarEventTypes.RepetitionMensuelle => "Une fois par mois",
+        CalendarEventTypes.RepetitionAnnuelle => "Une fois par an",
+        _ => CalendarEventTypes.RepetitionAucune
+    };
+
+    private static bool _draft_isAnniversaire(string type) => type == CalendarEventTypes.Anniversaire;
+
+    private void OnTitre(ChangeEventArgs e) => _draft.Titre = e.Value?.ToString() ?? "";
+
+    private void SetType(string key)
+    {
+        if (key == _draft.Type) return;
+        _draft.Type = key;
+        if (key == CalendarEventTypes.Anniversaire && _draft.Repetition == CalendarEventTypes.RepetitionAucune)
+            _draft.Repetition = CalendarEventTypes.RepetitionAnnuelle;
+    }
+
+    private void SetRepetition(string key) => _draft.Repetition = key;
+
+    private void SetPriorite(string key) => _draft.Priorite = key;
+
+    private void SetStatut(string key) => _draft.Statut = key;
+
+    private void SetRappel(int minutes) => _draft.RappelAvant = minutes;
+
+    private void OnFullDay(ChangeEventArgs e)
+    {
+        _draft.TouteLaJournee = e.Value is bool b ? b : e.Value?.ToString() == "on";
+    }
+
+    private void OnLieu(ChangeEventArgs e) => _draft.Lieu = e.Value?.ToString() ?? "";
+
+    private void TogglePerson(string ident)
+    {
+        if (!_draft.PersonnesConcernees.Remove(ident))
+            _draft.PersonnesConcernees.Add(ident);
+    }
+
+    private void RemovePerson(string ident) => _draft.PersonnesConcernees.Remove(ident);
+
+    private void SelectAllPersons()
+    {
+        _draft.PersonnesConcernees = ActiveUsers.Select(u => u.Identifiant).Distinct().ToList();
+    }
+
+    private void ClearPersons() => _draft.PersonnesConcernees.Clear();
+
+    private void OnNotes(ChangeEventArgs e) => _draft.Notes = e.Value?.ToString() ?? "";
+
+    // ---------- Sélecteur de date personnalisé (français) ----------
+
+    private bool _datePickerOpen;
+    private DateTime _datePickerMonth;
+    private DateTime? _datePickerSelected;
+
+    private void OpenDatePicker()
+    {
+        if (TryDate(_draft.Date, out var current))
+        {
+            _datePickerMonth = new DateTime(current.Year, current.Month, 1);
+            _datePickerSelected = current;
+        }
+        else
+        {
+            var today = DateTime.Today;
+            _datePickerMonth = new DateTime(today.Year, today.Month, 1);
+            _datePickerSelected = today;
+        }
+        _datePickerOpen = true;
+    }
+
+    private string DraftDateLabel
+    {
+        get
+        {
+            if (TryDate(_draft.Date, out var d))
+                return WeekdayLabel(d) + " " + d.ToString("dd/MM/yyyy");
+            return "Choisir une date (JJ/MM/AAAA)";
+        }
+    }
+
+    private string DatePickerMonthLabel
+    {
+        get
+        {
+            var s = _datePickerMonth.ToString("MMMM yyyy", Fr);
+            return s.Length > 0 ? char.ToUpperInvariant(s[0]) + s[1..] : s;
+        }
+    }
+
+    private List<DateTime> DatePickerCells
+    {
+        get
+        {
+            var first = new DateTime(_datePickerMonth.Year, _datePickerMonth.Month, 1);
+            var offset = ((int)first.DayOfWeek + 6) % 7;
+            var start = first.AddDays(-offset);
+            var cells = new List<DateTime>();
+            for (var i = 0; i < 42; i++) cells.Add(start.AddDays(i));
+            return cells;
+        }
+    }
+
+    private void DatePickerPrevMonth() => _datePickerMonth = _datePickerMonth.AddMonths(-1);
+
+    private void DatePickerNextMonth() => _datePickerMonth = _datePickerMonth.AddMonths(1);
+
+    private void PickDate(DateTime d) => _datePickerSelected = d;
+
+    private void ConfirmDate()
+    {
+        if (_datePickerSelected != null)
+            _draft.Date = _datePickerSelected.Value.ToString("yyyy-MM-dd");
+        _datePickerOpen = false;
+    }
+
+    // ---------- Sélecteur d'heure personnalisé ----------
+
+    private bool _timePickerOpen;
+    private string _timePickerTarget = "debut";
+    private int _timePickerHours;
+    private int _timePickerMinutes;
+
+    private static readonly int[] QuickMinutes = { 0, 5, 10, 15, 30, 45 };
+
+    private void OpenTimePicker(string target)
+    {
+        _timePickerTarget = target;
+        var (h, m) = ParseTime(target == "debut" ? _draft.HeureDebut : _draft.HeureFin);
+        _timePickerHours = h;
+        _timePickerMinutes = m;
+        _timePickerOpen = true;
+    }
+
+    private string DraftTimeLabel(string target)
+    {
+        var t = target == "debut" ? _draft.HeureDebut : _draft.HeureFin;
+        return string.IsNullOrWhiteSpace(t) ? "--:--" : t;
+    }
+
+    private string TimePickerLabel => _timePickerHours.ToString("00") + ":" + _timePickerMinutes.ToString("00");
+
+    private void IncHour() => _timePickerHours = (_timePickerHours + 1) % 24;
+
+    private void DecHour() => _timePickerHours = (_timePickerHours + 23) % 24;
+
+    private void IncMinute() => _timePickerMinutes = (_timePickerMinutes + 5) % 60;
+
+    private void DecMinute() => _timePickerMinutes = (_timePickerMinutes + 55) % 60;
+
+    private void QuickMinute(int m) => _timePickerMinutes = m % 60;
+
+    private void SwitchTimeTarget(string target) => _timePickerTarget = target;
+
+    private void OpenDebutTime() => OpenTimePicker("debut");
+
+    private void OpenFinTime() => OpenTimePicker("fin");
+
+    private void SwitchToDebut() => SwitchTimeTarget("debut");
+
+    private void SwitchToFin() => SwitchTimeTarget("fin");
+
+    private void SetFinAsDebut()
+    {
+        var (h, m) = ParseTime(_draft.HeureDebut);
+        _timePickerHours = h;
+        _timePickerMinutes = m;
+    }
+
+    private void ConfirmTime()
+    {
+        var value = TimePickerLabel;
+        if (_timePickerTarget == "debut") _draft.HeureDebut = value;
+        else _draft.HeureFin = value;
+        _timePickerOpen = false;
+    }
+
+    private static (int, int) ParseTime(string? t)
+    {
+        if (!string.IsNullOrWhiteSpace(t))
+        {
+            var parts = t.Split(':');
+            if (parts.Length >= 2 && int.TryParse(parts[0], out var h) && int.TryParse(parts[1], out var m))
+                return (Math.Clamp(h, 0, 23), Math.Clamp(m, 0, 59));
+        }
+        return (9, 0);
+    }
+
+    public void Dispose() => Store.DataChanged -= Refresh;
+
+    // ---------- Helpers ----------
+
+    private static DateTime ParseDate(string iso) => TryDate(iso, out var d) ? d : DateTime.Today;
+
+    private static bool TryDate(string iso, out DateTime date)
+    {
+        date = DateTime.Today;
+        return DateTime.TryParseExact(iso, "yyyy-MM-dd", Fr, DateTimeStyles.None, out date);
+    }
+
+    private static string FrDate(DateTime d) => d.ToString("dd/MM/yyyy");
+
+    private static string WeekdayLabel(DateTime d) => char.ToUpperInvariant(d.ToString("dddd", Fr)[0]) + d.ToString("dddd", Fr)[1..];
+
+    private static string FrDateCourte(string iso) => DataStore.FormatDateCourte(iso);
+
+    private static (string, string?) TimeLabel(CalendarEvent e)
+    {
+        if (e.TouteLaJournee) return ("Toute la journée", null);
+        var h = e.HeureDebut ?? "—";
+        if (h.Length >= 8 && h.EndsWith(":00", StringComparison.Ordinal)) h = h[..5];
+        return (h, null);
+    }
+
+    private static string Soft(string hex) => hex.Length == 7 ? hex + "24" : hex;
+
+    private static string AgeLabel(CalendarEvent e)
+    {
+        if (!TryDate(e.Date, out var birth)) return "";
+        var today = DateTime.Today;
+        var age = today.Year - birth.Year;
+        if (today < birth.AddYears(age)) age--;
+        return age < 0 ? "" : "🎂 " + age + " ans";
+    }
+
+    private string UserName(string identifiant)
+        => Store.Users.FirstOrDefault(u => u.Identifiant == identifiant)?.NomComplet ?? identifiant;
+
+    private static string ReminderShort(int minutes) => minutes switch
+    {
+        5 => "5 min avant",
+        10 => "10 min avant",
+        30 => "30 min avant",
+        60 => "1 h avant",
+        1440 => "1 jour avant",
+        _ => minutes + " min avant"
+    };
+
+    private static string PriorityLabel(string p) => p switch
+    {
+        CalendarEventTypes.PrioriteImportante => "Importante",
+        CalendarEventTypes.PrioriteUrgente => "⚠ Urgente",
+        _ => ""
+    };
+
+    private static string StatutLabel(string s) => s switch
+    {
+        CalendarEventTypes.StatutEnCours => "En cours",
+        CalendarEventTypes.StatutTerminee => "Terminée",
+        _ => "À faire"
+    };
+}

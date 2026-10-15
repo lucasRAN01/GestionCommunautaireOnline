@@ -1,0 +1,43 @@
+@implements IDisposable
+@using System.Globalization
+@* Mini-calendrier affichant toujours la date du jour (comme l'icône iOS). *@
+<span class="cal-today-ico @(SizeClass)" aria-hidden="true" title="@_full">
+    <span class="cal-today-ico-week">@_week</span>
+    <span class="cal-today-ico-day">@_day</span>
+</span>
+
+@code {
+    [Parameter] public string Size { get; set; } = "md";
+
+    private string SizeClass => Size == "sm" ? "cal-today-ico-sm" : Size == "lg" ? "cal-today-ico-lg" : "";
+    private string _week = "";
+    private string _day = "";
+    private string _full = "";
+    private System.Threading.Timer? _timer;
+    private string _todayKey = "";
+
+    private static readonly CultureInfo Fr = CultureInfo.GetCultureInfo("fr-FR");
+
+    protected override void OnInitialized()
+    {
+        Refresh();
+        // Vérifie chaque minute si le jour a changé (minuit) pour rester sur la date du jour.
+        _timer = new System.Threading.Timer(_ =>
+        {
+            var key = DateTime.Today.ToString("yyyy-MM-dd");
+            if (key != _todayKey) _ = InvokeAsync(() => { Refresh(); StateHasChanged(); });
+        }, null, TimeSpan.FromSeconds(30), TimeSpan.FromSeconds(30));
+    }
+
+    private void Refresh()
+    {
+        var today = DateTime.Today;
+        _todayKey = today.ToString("yyyy-MM-dd");
+        var abbr = today.ToString("ddd", Fr).TrimEnd('.');
+        _week = abbr.Length >= 3 ? char.ToUpperInvariant(abbr[0]) + abbr[1..3] : abbr;
+        _day = today.Day.ToString();
+        _full = today.ToString("dd/MM/yyyy");
+    }
+
+    public void Dispose() => _timer?.Dispose();
+}

@@ -1,0 +1,233 @@
+@implements IDisposable
+@inject DataStore Store
+@inject AppState State
+
+@if (!Store.Can(Permissions.SituationsManage))
+{
+    <EmptyState Icon="🔒" Title="Accès réservé" Message="Le suivi des situations n'est pas autorisé pour votre rôle." />
+}
+else
+{
+    <div class="page-head">
+        <p>Membres à visiter, accompagnements, événements importants : ouvrez un suivi, faites-le avancer, clôturez-le.</p>
+    </div>
+
+    <div class="search-box cal-search">
+        <span class="search-icon" aria-hidden="true">⌕</span>
+        <input type="search" placeholder="Rechercher un suivi (titre, description, membre, type)…" aria-label="Rechercher un suivi"
+               value="@_search" @oninput="OnSearch" />
+    </div>
+    @if (!string.IsNullOrWhiteSpace(_search))
+    {
+        <div class="search-summary">@Filtered.Count suivi(s) trouvé(s) pour « @_search.Trim() »</div>
+    }
+
+    <div class="chips-row" role="tablist" aria-label="Filtrer les suivis">
+        @foreach (var (key, label) in StatutChoices)
+        {
+            <button type="button" class="chip @(_statut == key ? "active" : "")" @onclick="() => _statut = key">@label</button>
+        }
+    </div>
+
+    <div class="inline-actions" style="justify-content:flex-end;margin-bottom:10px">
+        <button class="btn btn-secondary btn-sm" @onclick="StartAdd">＋ Suivi</button>
+    </div>
+
+    @if (Filtered.Count == 0)
+    {
+        <EmptyState Icon="🤝" Title="Aucun suivi" Message="Ouvrez le premier suivi avec le bouton ci-dessus." />
+    }
+    else
+    {
+        <div class="user-list">
+            @foreach (var s in Filtered)
+            {
+                var sit = s;
+                <div class="user-card">
+                    <span class="field-type-icon" aria-hidden="true">@SituationTypes.Icon(sit.Type)</span>
+                    <div class="user-card-main">
+                        <div class="user-card-name">@sit.Titre</div>
+                        <div class="user-card-sub">👤 @MemberName(sit.MembreIdentifiant) · @SituationTypes.Label(sit.Type)</div>
+                        <div class="user-card-meta">
+                            <Badge Text="@(SituationStatuts.Icon(sit.Statut) + " " + SituationStatuts.Label(sit.Statut))" Kind="@(sit.Statut == SituationStatuts.Resolu ? "active" : "role")" />
+                            @if (sit.Priorite != CalendarEventTypes.PrioriteNormale)
+                            {
+                                <Badge Text="@PriorityLabel(sit.Priorite)" Kind="recent" />
+                            }
+                        </div>
+                        @if (!string.IsNullOrWhiteSpace(sit.Description))
+                        {
+                            <div class="user-card-sub">@sit.Description</div>
+                        }
+                    </div>
+                    <div class="user-card-actions" @onclick:stopPropagation="true">
+                        @if (sit.Statut != SituationStatuts.Resolu)
+                        {
+                            <button class="btn-icon" aria-label="Avancer" title="Avancer" @onclick="() => Advance(sit)">▶</button>
+                        }
+                        <button class="btn-icon" aria-label="Modifier" @onclick="() => StartEdit(sit)">✎</button>
+                        <button class="btn-icon danger" aria-label="Supprimer" @onclick="() => AskDelete(sit)">🗑</button>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+
+    <button class="fab" aria-label="Nouveau suivi" @onclick="StartAdd">+</button>
+
+    <Modal Title="@(_editId == null ? "Nouveau suivi" : "Modifier le suivi")" Show="_showEditor" OnClose="CloseEditor">
+        <ChildContent>
+            <div class="form-group">
+                <label>Membre concerné *</label>
+                <MemberPicker Value="@_membre" ValueChanged="@((string v) => _membre = v)" Placeholder="Écrire pour chercher un membre…" />
+            </div>
+            <div class="form-group">
+                <label for="si-type">Type</label>
+                <select id="si-type" value="@_type" @onchange="e => _type = e.Value?.ToString() ?? SituationTypes.Visite">
+                    <option value="@SituationTypes.Visite">🏠 Visite nécessaire</option>
+                    <option value="@SituationTypes.Accompagnement">🤝 Accompagnement</option>
+                    <option value="@SituationTypes.EvenementImportant">⭐ Événement important</option>
+                    <option value="@SituationTypes.Autre">📌 Autre</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="si-titre">Titre *</label>
+                <input id="si-titre" type="text" value="@_titre" @oninput="e => _titre = e.Value?.ToString() ?? string.Empty" />
+            </div>
+            <div class="form-group">
+                <label for="si-desc">Description</label>
+                <textarea id="si-desc" rows="3" value="@_desc" @oninput="e => _desc = e.Value?.ToString() ?? string.Empty"></textarea>
+            </div>
+            <div class="form-group">
+                <label for="si-prio">Priorité</label>
+                <select id="si-prio" value="@_priorite" @onchange="e => _priorite = e.Value?.ToString() ?? CalendarEventTypes.PrioriteNormale">
+                    <option value="@CalendarEventTypes.PrioriteNormale">Normale</option>
+                    <option value="@CalendarEventTypes.PrioriteImportante">Importante</option>
+                    <option value="@CalendarEventTypes.PrioriteUrgente">Urgente</option>
+                </select>
+            </div>
+            <span class="form-error">@_error</span>
+        </ChildContent>
+        <FooterContent>
+            <button class="btn btn-secondary" @onclick="CloseEditor">Annuler</button>
+            <button class="btn btn-primary" @onclick="Save">Enregistrer</button>
+        </FooterContent>
+    </Modal>
+
+    <ConfirmDialog Show="_deleteTarget != null" Title="Supprimer le suivi"
+                   Message="@(_deleteTarget == null ? "" : "Supprimer « " + _deleteTarget.Titre + " » ?")"
+                   ConfirmLabel="Supprimer" Danger="true" OnConfirm="ConfirmDelete" OnCancel="() => _deleteTarget = null" />
+}
+
+@code {
+    private static readonly (string Key, string Label)[] StatutChoices =
+    {
+        ("", "Tous"), (SituationStatuts.Ouvert, "Ouverts"),
+        (SituationStatuts.EnCours, "En cours"), (SituationStatuts.Resolu, "Résolus")
+    };
+
+    private string _statut = "";
+    private string _search = "";
+    private bool _showEditor;
+    private string? _editId;
+    private string _membre = "";
+    private string _type = SituationTypes.Visite;
+    private string _titre = "";
+    private string _desc = "";
+    private string _priorite = CalendarEventTypes.PrioriteNormale;
+    private string _error = "";
+    private Situation? _deleteTarget;
+
+    private IReadOnlyList<UserAccount> ActiveUsers =>
+        Store.Users.Where(u => u.Actif).OrderBy(u => u.NomComplet).ToList();
+
+    private IReadOnlyList<Situation> Filtered => Store.Situations
+        .Where(s => _statut.Length == 0 || s.Statut == _statut)
+        .Where(MatchSearch)
+        .OrderBy(s => s.Statut == SituationStatuts.Resolu ? 1 : 0)
+        .ThenByDescending(s => s.DateCreation)
+        .ToList();
+
+    private bool MatchSearch(Situation s)
+    {
+        var q = _search.Trim();
+        if (q.Length == 0) return true;
+        return (s.Titre + " " + s.Description + " " + SituationTypes.Label(s.Type)
+            + " " + MemberName(s.MembreIdentifiant))
+            .Contains(q, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private void OnSearch(ChangeEventArgs e) => _search = e.Value?.ToString() ?? string.Empty;
+
+    protected override void OnInitialized()
+    {
+        Store.DataChanged += Refresh;
+    }
+
+    private void Refresh() => _ = InvokeAsync(StateHasChanged);
+
+    private string MemberName(string identifiant)
+        => Store.FindUserByIdentifier(identifiant)?.NomComplet ?? identifiant;
+
+    private static string PriorityLabel(string p) => p switch
+    {
+        CalendarEventTypes.PrioriteUrgente => "Urgente",
+        CalendarEventTypes.PrioriteImportante => "Importante",
+        _ => "Normale"
+    };
+
+    private void StartAdd()
+    {
+        _editId = null;
+        _membre = ""; _type = SituationTypes.Visite;
+        _titre = ""; _desc = "";
+        _priorite = CalendarEventTypes.PrioriteNormale;
+        _error = "";
+        _showEditor = true;
+    }
+
+    private void StartEdit(Situation s)
+    {
+        _editId = s.Id;
+        _membre = s.MembreIdentifiant; _type = s.Type;
+        _titre = s.Titre; _desc = s.Description;
+        _priorite = s.Priorite;
+        _error = "";
+        _showEditor = true;
+    }
+
+    private void CloseEditor() => _showEditor = false;
+
+    private void Save()
+    {
+        _error = "";
+        OperationResult res = _editId == null
+            ? Store.AddSituation(new Situation { MembreIdentifiant = _membre, Type = _type, Titre = _titre, Description = _desc, Priorite = _priorite })
+            : Store.UpdateSituation(_editId, new Situation { MembreIdentifiant = _membre, Type = _type, Titre = _titre, Description = _desc, Priorite = _priorite });
+        if (!res.Success) { _error = res.Error; return; }
+        State.NotifySuccess(_editId == null ? "Suivi ouvert." : "Suivi enregistré.");
+        _showEditor = false;
+    }
+
+    private void Advance(Situation s)
+    {
+        var next = s.Statut == SituationStatuts.Ouvert ? SituationStatuts.EnCours : SituationStatuts.Resolu;
+        var res = Store.SetSituationStatut(s.Id, next);
+        if (res.Success) State.NotifySuccess("Suivi → " + SituationStatuts.Label(next) + ".");
+        else State.NotifyError(res.Error);
+    }
+
+    private void AskDelete(Situation s) => _deleteTarget = s;
+
+    private void ConfirmDelete()
+    {
+        var t = _deleteTarget;
+        _deleteTarget = null;
+        if (t == null) return;
+        var res = Store.DeleteSituation(t.Id);
+        if (res.Success) State.NotifySuccess("Suivi supprimé.");
+        else State.NotifyError(res.Error);
+    }
+
+    public void Dispose() => Store.DataChanged -= Refresh;
+}

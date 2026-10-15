@@ -1,0 +1,282 @@
+@implements IDisposable
+@inject DataStore Store
+@inject AppState State
+
+<div class="page-head">
+    <p>Décisions collectives : un bulletin par membre, modifiable tant que le vote est ouvert.</p>
+</div>
+
+<div class="search-box cal-search">
+    <span class="search-icon" aria-hidden="true">⌕</span>
+    <input type="search" placeholder="Rechercher un vote (question, description, auteur)…" aria-label="Rechercher un vote"
+           value="@_search" @oninput="OnSearch" />
+</div>
+@if (!string.IsNullOrWhiteSpace(_search))
+{
+    <div class="search-summary">@Filtered.Count vote(s) trouvé(s) pour « @_search.Trim() »</div>
+}
+
+<div class="chips-row" role="tablist" aria-label="Filtrer les votes">
+    <button type="button" class="chip @(_filter == "" ? "active" : "")" @onclick='() => _filter = ""'>Tous</button>
+    <button type="button" class="chip @(_filter == VoteStatuts.Ouvert ? "active" : "")" @onclick='() => _filter = VoteStatuts.Ouvert'>Ouverts</button>
+    <button type="button" class="chip @(_filter == VoteStatuts.Clos ? "active" : "")" @onclick='() => _filter = VoteStatuts.Clos'>Clos</button>
+</div>
+
+@if (Store.Can(Permissions.VotesManage))
+{
+    <div class="inline-actions" style="justify-content:flex-end;margin-bottom:10px">
+        <button class="btn btn-secondary btn-sm" @onclick="StartAdd">＋ Nouveau vote</button>
+    </div>
+}
+
+@if (Filtered.Count == 0)
+{
+    <EmptyState Icon="🗳" Title="Aucun vote" Message="Aucun vote dans cette catégorie pour le moment." />
+}
+else
+{
+    @foreach (var v in Filtered)
+    {
+        var vote = v;
+        var results = Store.VoteResults(vote.Id);
+        var total = vote.Bulletins.Count;
+        var myVote = vote.Bulletins.FirstOrDefault(b => b.VotantIdentifiant.Equals(Me, StringComparison.OrdinalIgnoreCase));
+        var open = vote.Statut == VoteStatuts.Ouvert;
+        <div class="card" style="margin-bottom:12px">
+            <div class="inline-actions" style="justify-content:space-between">
+                <h3 style="margin:0">@vote.Titre</h3>
+                <Badge Text="@VoteStatuts.Label(vote.Statut)" Kind="@(open ? "active" : "inactive")" />
+            </div>
+            @if (!string.IsNullOrWhiteSpace(vote.Description))
+            {
+                <p class="muted" style="margin:6px 0">@vote.Description</p>
+            }
+            <div class="text-muted" style="font-size:12px">
+                Par @vote.CreatedBy · @total bulletin(s)
+                @(string.IsNullOrWhiteSpace(vote.DateCloture) ? "" : " · clôture le " + DataStore.FormatDateCourte(vote.DateCloture))
+            </div>
+            <div class="chart-list" style="margin-top:10px">
+                @foreach (var (option, voix, pourcent) in results)
+                {
+                    <div class="chart-row">
+                        <span class="chart-label">@option</span>
+                        <div class="chart-track">
+                            <div class="chart-fill" style="width:@Math.Max(pourcent, voix > 0 ? 8 : 0).ToString("0", System.Globalization.CultureInfo.InvariantCulture)%">
+                                <span class="chart-value">@voix (@pourcent.ToString("0.0", System.Globalization.CultureInfo.InvariantCulture) %)</span>
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+            @if (open)
+            {
+                <div class="form-group" style="margin-top:10px">
+                    <label>Voter@(myVote == null ? "" : " (actuel : " + myVote.Option + ")")</label>
+                    <div class="choice-chips">
+                        @foreach (var opt in vote.Options)
+                        {
+                            <button type="button" class="chip @(myVote?.Option == opt ? "active" : "")" @onclick="() => CastVote(vote, opt)">@opt</button>
+                        }
+                    </div>
+                </div>
+            }
+            else
+            {
+                <p class="muted" style="margin:8px 0 0">Vote clos — résultats figés@(myVote == null ? "" : ", vous aviez voté « " + myVote.Option + " »").</p>
+            }
+            @if (Store.Can(Permissions.VotesManage))
+            {
+                <div class="form-actions" style="margin-top:10px">
+                    @if (open)
+                    {
+                        <button class="btn btn-secondary btn-sm" @onclick="() => StartEdit(vote)">✎ Modifier</button>
+                        <button class="btn btn-secondary btn-sm" @onclick="() => SetStatut(vote, VoteStatuts.Clos)">🔒 Clore</button>
+                    }
+                    else
+                    {
+                        <button class="btn btn-secondary btn-sm" @onclick="() => SetStatut(vote, VoteStatuts.Ouvert)">🔓 Rouvrir</button>
+                    }
+                    <button class="btn btn-danger-outline btn-sm" @onclick="() => AskDelete(vote)">🗑</button>
+                </div>
+            }
+        </div>
+    }
+}
+
+@if (Store.Can(Permissions.VotesManage))
+{
+    <Modal Title="@(_editId == null ? "Nouveau vote" : "Modifier le vote")" Show="_showEditor" OnClose="CloseEditor">
+        <ChildContent>
+            <div class="form-group">
+                <label for="vo-titre">Question *</label>
+                <input id="vo-titre" type="text" placeholder="Ex : Date de la fête annuelle" value="@_titre" @oninput="e => _titre = e.Value?.ToString() ?? string.Empty" />
+            </div>
+            <div class="form-group">
+                <label for="vo-desc">Description</label>
+                <textarea id="vo-desc" rows="2" value="@_desc" @oninput="e => _desc = e.Value?.ToString() ?? string.Empty"></textarea>
+            </div>
+            <div class="form-group">
+                <label for="vo-options">Options (2 minimum) *</label>
+                <div class="opt-list">
+                    @for (var i = 0; i < _optionList.Count; i++)
+                    {
+                        var idx = i;
+                        <div class="opt-row">
+                            <span class="opt-num" aria-hidden="true">@(idx + 1).</span>
+                            <input id="vo-opt-@idx" type="text" placeholder="Option @(idx + 1)" value="@_optionList[idx]"
+                                   @oninput="e => _optionList[idx] = e.Value?.ToString() ?? string.Empty"
+                                   @onkeydown="(k) => OnOptKey(k, idx)" aria-label="Option @(idx + 1)" />
+                            <button type="button" class="btn-icon opt-remove" aria-label="Retirer l'option @(idx + 1)"
+                                    @onclick="() => RemoveOption(idx)" disabled="@(_optionList.Count <= 2)">×</button>
+                        </div>
+                    }
+                </div>
+                <div class="form-actions" style="margin-top:8px">
+                    <button type="button" class="btn btn-secondary btn-sm" @onclick="AddOption">＋ Ajouter une option</button>
+                </div>
+            </div>
+            <div class="form-group">
+                <label for="vo-cloture">Clôture (JJ/MM/AAAA, facultatif)</label>
+                <input id="vo-cloture" type="date" value="@_clotureIso" @onchange="e => _clotureIso = e.Value?.ToString() ?? string.Empty" />
+            </div>
+            <span class="form-error">@_error</span>
+        </ChildContent>
+        <FooterContent>
+            <button class="btn btn-secondary" @onclick="CloseEditor">Annuler</button>
+            <button class="btn btn-primary" @onclick="Save">Enregistrer</button>
+        </FooterContent>
+    </Modal>
+
+    <ConfirmDialog Show="_deleteTarget != null" Title="Supprimer le vote"
+                   Message="@(_deleteTarget == null ? "" : "Supprimer « " + _deleteTarget.Titre + " » et ses " + _deleteTarget.Bulletins.Count + " bulletin(s) ?")"
+                   ConfirmLabel="Supprimer" Danger="true" OnConfirm="ConfirmDelete" OnCancel="() => _deleteTarget = null" />
+}
+
+@code {
+    private string _filter = "";
+    private string _search = "";
+    private bool _showEditor;
+    private string? _editId;
+    private string _titre = "";
+    private string _desc = "";
+    private List<string> _optionList = new() { "", "" };
+    private string _clotureIso = "";
+    private string _error = "";
+    private Vote? _deleteTarget;
+
+    private string Me => Store.GetCurrentUser()?.Identifiant ?? "";
+
+    private IReadOnlyList<Vote> Filtered => Store.Votes
+        .Where(v => _filter.Length == 0 || v.Statut == _filter)
+        .Where(v =>
+        {
+            var q = _search.Trim();
+            if (q.Length == 0) return true;
+            return (v.Titre + " " + v.Description + " " + v.CreatedBy).Contains(q, StringComparison.OrdinalIgnoreCase);
+        })
+        .OrderBy(v => v.Statut == VoteStatuts.Ouvert ? 0 : 1)
+        .ThenByDescending(v => v.DateCreation)
+        .ToList();
+
+    private void OnSearch(ChangeEventArgs e) => _search = e.Value?.ToString() ?? string.Empty;
+
+    protected override void OnInitialized()
+    {
+        Store.DataChanged += Refresh;
+    }
+
+    private void Refresh() => _ = InvokeAsync(StateHasChanged);
+
+    private void CastVote(Vote vote, string option)
+    {
+        var res = Store.CastVote(vote.Id, Me, option);
+        if (res.Success) State.NotifySuccess("Vote enregistré : « " + option + " ».");
+        else State.NotifyError(res.Error);
+    }
+
+    private void StartAdd()
+    {
+        _editId = null;
+        _titre = ""; _desc = "";
+        _optionList = new List<string> { "", "" };
+        _clotureIso = "";
+        _error = "";
+        _showEditor = true;
+    }
+
+    private void StartEdit(Vote v)
+    {
+        _editId = v.Id;
+        _titre = v.Titre; _desc = v.Description;
+        _optionList = v.Options.ToList();
+        _clotureIso = v.DateCloture ?? "";
+        _error = "";
+        _showEditor = true;
+    }
+
+    private void CloseEditor() => _showEditor = false;
+
+    private void AddOption() => _optionList.Add("");
+
+    private void RemoveOption(int idx)
+    {
+        if (_optionList.Count <= 2) return;
+        if (idx >= 0 && idx < _optionList.Count) _optionList.RemoveAt(idx);
+    }
+
+    private void OnOptKey(KeyboardEventArgs k, int idx)
+    {
+        if (k.Key == "Enter" && idx >= 0 && idx < _optionList.Count)
+        {
+            if (string.IsNullOrWhiteSpace(_optionList[idx])) return;
+            _optionList.Add("");
+        }
+    }
+
+    private void Save()
+    {
+        _error = "";
+        var draft = new Vote
+        {
+            Titre = _titre,
+            Description = _desc,
+            Options = _optionList.Where(o => !string.IsNullOrWhiteSpace(o)).Select(o => o.Trim()).ToList(),
+            DateCloture = DataStore.ToYmd(_clotureIso)
+        };
+        if (draft.Options.Count < 2)
+        {
+            _error = "Ajoutez au moins 2 options.";
+            return;
+        }
+        if (!string.IsNullOrWhiteSpace(_clotureIso) && string.IsNullOrWhiteSpace(draft.DateCloture))
+        {
+            _error = "La date de clôture doit être au format JJ/MM/AAAA.";
+            return;
+        }
+        OperationResult res = _editId == null ? Store.AddVote(draft) : Store.UpdateVote(_editId, draft);
+        if (!res.Success) { _error = res.Error; return; }
+        State.NotifySuccess(_editId == null ? "Vote ouvert." : "Vote enregistré.");
+        _showEditor = false;
+    }
+
+    private void SetStatut(Vote vote, string statut)
+    {
+        var res = Store.SetVoteStatut(vote.Id, statut);
+        if (res.Success) State.NotifySuccess(statut == VoteStatuts.Clos ? "Vote clos." : "Vote rouvert.");
+        else State.NotifyError(res.Error);
+    }
+
+    private void AskDelete(Vote v) => _deleteTarget = v;
+
+    private void ConfirmDelete()
+    {
+        var t = _deleteTarget;
+        _deleteTarget = null;
+        if (t == null) return;
+        var res = Store.DeleteVote(t.Id);
+        if (res.Success) State.NotifySuccess("Vote supprimé.");
+        else State.NotifyError(res.Error);
+    }
+
+    public void Dispose() => Store.DataChanged -= Refresh;
+}

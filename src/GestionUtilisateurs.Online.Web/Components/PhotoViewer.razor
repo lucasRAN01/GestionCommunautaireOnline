@@ -1,0 +1,62 @@
+@implements IDisposable
+@inject JavascriptBridge Js
+
+@if (Current != null)
+{
+    <div class="photo-overlay" @onclick="Close" @onkeydown="OnKey" tabindex="0" role="dialog" aria-label="Photo de @Current.NomComplet">
+        <div class="photo-overlay-content" @onclick:stopPropagation="true">
+            @if (ShowImage)
+            {
+                <img class="photo-viewer-img" src="@Current.Photo" alt="Photo de @Current.NomComplet" />
+            }
+            else
+            {
+                <Avatar UserName="@Current.NomComplet" Seed="@Current.Identifiant" Size="xl" />
+            }
+            <div class="photo-overlay-meta">
+                <span class="photo-overlay-name">@Current.NomComplet</span>
+                <button class="btn btn-secondary" @onclick="Close">✕ Fermer</button>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public UserAccount? Current { get; set; }
+    [Parameter] public EventCallback OnClose { get; set; }
+
+    private bool _scrollLocked;
+
+    private bool ShowImage => !string.IsNullOrWhiteSpace(Current?.Photo);
+
+    protected override async Task OnParametersSetAsync()
+    {
+        var open = Current != null;
+        if (open && !_scrollLocked)
+        {
+            _scrollLocked = true;
+            await Js.LockBodyScrollAsync();
+        }
+        else if (!open && _scrollLocked)
+        {
+            _scrollLocked = false;
+            await Js.UnlockBodyScrollAsync();
+        }
+    }
+
+    private void Close() => OnClose.InvokeAsync();
+
+    private void OnKey(KeyboardEventArgs e)
+    {
+        if (e.Key == "Escape") Close();
+    }
+
+    public void Dispose()
+    {
+        if (_scrollLocked)
+        {
+            _scrollLocked = false;
+            try { _ = Js.UnlockBodyScrollAsync(); } catch { }
+        }
+    }
+}

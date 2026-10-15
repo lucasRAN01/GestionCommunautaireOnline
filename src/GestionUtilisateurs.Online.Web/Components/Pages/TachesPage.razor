@@ -1,0 +1,307 @@
+@implements IDisposable
+@inject DataStore Store
+@inject AppState State
+
+@if (!Store.Can(Permissions.TachesUse))
+{
+    <EmptyState Icon="🔒" Title="Accès réservé" Message="Les tâches ne sont pas autorisées pour votre rôle." />
+}
+else
+{
+    <div class="page-head">
+        <p>Suivez l'avancement : à faire, en cours, terminées, avec échéances JJ/MM/AAAA.</p>
+    </div>
+
+    <div class="search-box cal-search">
+        <span class="search-icon" aria-hidden="true">⌕</span>
+        <input type="search" placeholder="Rechercher une tâche (titre, description, membre)…" aria-label="Rechercher une tâche"
+               value="@_search" @oninput="OnSearch" />
+    </div>
+    @if (!string.IsNullOrWhiteSpace(_search))
+    {
+        <div class="search-summary">@Filtered.Count tâche(s) trouvée(s) pour « @_search.Trim() »</div>
+    }
+
+    <div class="chips-row" role="tablist" aria-label="Filtrer les tâches">
+        @foreach (var (key, label) in StatutChoices)
+        {
+            <button type="button" class="chip @(_statut == key ? "active" : "")" @onclick="() => _statut = key">@label</button>
+        }
+        <button type="button" class="chip @(_mineOnly ? "active" : "")" @onclick="() => _mineOnly = !_mineOnly">👤 Les miennes</button>
+    </div>
+
+    @if (Filtered.Count == 0)
+    {
+        <EmptyState Icon="☑" Title="Aucune tâche" Message="Créez la première tâche avec le bouton « + »." />
+        <div class="empty-state-action">
+            <button class="btn btn-primary btn-block" @onclick="StartAdd">＋ Nouvelle tâche</button>
+        </div>
+    }
+    else
+    {
+        <div class="user-list">
+            @foreach (var t in Filtered)
+            {
+                var task = t;
+                <div class="user-card">
+                    <span class="field-type-icon" style="background:@SoftColor(PriorityColor(task.Priorite));color:@PriorityColor(task.Priorite)" aria-hidden="true">@TacheStatuts.Icon(task.Statut)</span>
+                    <div class="user-card-main">
+                        <div class="user-card-name">@task.Titre</div>
+                        <div class="user-card-sub">
+                            @if (!string.IsNullOrWhiteSpace(task.Echeance))
+                            {
+                                <span class="@(IsOverdue(task) ? "text-danger" : "")">⏳ @DataStore.FormatDateCourte(task.Echeance)</span>
+                            }
+                            else
+                            {
+                                <span>Sans échéance</span>
+                            }
+                            @if (task.Assignes.Count > 0)
+                            {
+                                <span> · 👤 @string.Join(", ", task.Assignes)</span>
+                            }
+                        </div>
+                        <div class="user-card-meta">
+                            <Badge Text="@TacheStatuts.Label(task.Statut)" Kind="@(task.Statut == TacheStatuts.Terminee ? "active" : "role")" />
+                            @if (task.Priorite != CalendarEventTypes.PrioriteNormale)
+                            {
+                                <Badge Text="@PriorityLabel(task.Priorite)" Kind="recent" />
+                            }
+                        </div>
+                    </div>
+                    <div class="user-card-actions" @onclick:stopPropagation="true">
+                        @if (task.Statut != TacheStatuts.Terminee)
+                        {
+                            <button class="btn-icon" aria-label="Avancer" title="Avancer" @onclick="() => Advance(task)">▶</button>
+                        }
+                        <button class="btn-icon" aria-label="Modifier" @onclick="() => StartEdit(task)">✎</button>
+                        <button class="btn-icon danger" aria-label="Supprimer" @onclick="() => AskDelete(task)">🗑</button>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+
+    <button class="fab" aria-label="Nouvelle tâche" @onclick="StartAdd">+</button>
+
+    <Modal Title="@(_editId == null ? "Nouvelle tâche" : "Modifier la tâche")" Show="_showEditor" OnClose="CloseEditor">
+        <ChildContent>
+            <div class="form-group">
+                <label for="ta-titre">Titre *</label>
+                <input id="ta-titre" type="text" value="@_titre" @oninput="e => _titre = e.Value?.ToString() ?? string.Empty" />
+            </div>
+            <div class="form-group">
+                <label for="ta-desc">Description</label>
+                <textarea id="ta-desc" rows="2" value="@_desc" @oninput="e => _desc = e.Value?.ToString() ?? string.Empty"></textarea>
+            </div>
+            <div class="form-group">
+                <label>Assignés</label>
+                <div class="search-box cal-search cal-opt-search">
+                    <span class="search-icon" aria-hidden="true">⌕</span>
+                    <input type="search" placeholder="Écrire pour chercher un membre…" aria-label="Chercher un membre"
+                           value="@_assigneSearch" @oninput="e => _assigneSearch = e.Value?.ToString() ?? string.Empty" />
+                </div>
+                <div class="check-group">
+                    @foreach (var u in FilteredAssignes)
+                    {
+                        <label class="form-check">
+                            <input type="checkbox" checked="@_assignes.Contains(u.Identifiant)" @onchange="() => ToggleAssigne(u.Identifiant)" />
+                            @u.NomComplet
+                        </label>
+                    }
+                    @if (FilteredAssignes.Count == 0)
+                    {
+                        <div class="cal-no-events">Aucun membre trouvé pour « @_assigneSearch ».</div>
+                    }
+                </div>
+            </div>
+            <div class="form-group">
+                <label for="ta-prio">Priorité</label>
+                <select id="ta-prio" value="@_priorite" @onchange="e => _priorite = e.Value?.ToString() ?? CalendarEventTypes.PrioriteNormale">
+                    <option value="@CalendarEventTypes.PrioriteNormale">Normale</option>
+                    <option value="@CalendarEventTypes.PrioriteImportante">Importante</option>
+                    <option value="@CalendarEventTypes.PrioriteUrgente">Urgente</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="ta-echeance">Échéance (JJ/MM/AAAA)</label>
+                <input id="ta-echeance" type="date" value="@_echeanceIso" @onchange="e => _echeanceIso = e.Value?.ToString() ?? string.Empty" />
+            </div>
+            <span class="form-error">@_error</span>
+        </ChildContent>
+        <FooterContent>
+            <button class="btn btn-secondary" @onclick="CloseEditor">Annuler</button>
+            <button class="btn btn-primary" @onclick="Save">Enregistrer</button>
+        </FooterContent>
+    </Modal>
+
+    <ConfirmDialog Show="_deleteTarget != null" Title="Supprimer la tâche"
+                   Message="@(_deleteTarget == null ? "" : "Supprimer « " + _deleteTarget.Titre + " » ?")"
+                   ConfirmLabel="Supprimer" Danger="true" OnConfirm="ConfirmDelete" OnCancel="() => _deleteTarget = null" />
+}
+
+@code {
+    private static readonly (string Key, string Label)[] StatutChoices =
+    {
+        ("", "Toutes"), (TacheStatuts.AFaire, "À faire"),
+        (TacheStatuts.EnCours, "En cours"), (TacheStatuts.Terminee, "Terminées")
+    };
+
+    private string _statut = "";
+    private bool _mineOnly = true;
+    private string _search = "";
+    private List<Tache> _list = new();
+
+    private bool _showEditor;
+    private string? _editId;
+    private string _titre = "";
+    private string _desc = "";
+    private HashSet<string> _assignes = new();
+    private string _priorite = CalendarEventTypes.PrioriteNormale;
+    private string _echeanceIso = "";
+    private string _error = "";
+    private Tache? _deleteTarget;
+
+    private string Me => Store.GetCurrentUser()?.Identifiant ?? "";
+
+    private IReadOnlyList<UserAccount> ActiveUsers =>
+        Store.Users.Where(u => u.Actif).OrderBy(u => u.NomComplet).ToList();
+
+    private string _assigneSearch = "";
+
+    private List<UserAccount> FilteredAssignes
+    {
+        get
+        {
+            var q = _assigneSearch.Trim();
+            if (q.Length == 0) return ActiveUsers.ToList();
+            return ActiveUsers.Where(u => (u.NomComplet + " " + u.Identifiant + " " + (u.Matricule ?? ""))
+                .Contains(q, StringComparison.OrdinalIgnoreCase)).ToList();
+        }
+    }
+
+    private IReadOnlyList<Tache> Filtered => _list
+        .Where(t => _statut.Length == 0 || t.Statut == _statut)
+        .Where(t => !_mineOnly || t.Assignes.Any(a => a.Equals(Me, StringComparison.OrdinalIgnoreCase))
+            || t.CreatedBy.Equals(Me, StringComparison.OrdinalIgnoreCase))
+        .Where(MatchSearch)
+        .OrderBy(t => t.Statut == TacheStatuts.Terminee ? 1 : 0)
+        .ThenBy(t => string.IsNullOrWhiteSpace(t.Echeance) ? "9999" : t.Echeance)
+        .ToList();
+
+    private bool MatchSearch(Tache t)
+    {
+        var q = _search.Trim();
+        if (q.Length == 0) return true;
+        if ((t.Titre + " " + t.Description).Contains(q, StringComparison.OrdinalIgnoreCase)) return true;
+        return t.Assignes.Any(a => (Store.FindUserByIdentifier(a)?.NomComplet ?? a)
+            .Contains(q, StringComparison.OrdinalIgnoreCase));
+    }
+
+    private void OnSearch(ChangeEventArgs e) => _search = e.Value?.ToString() ?? string.Empty;
+
+    protected override void OnInitialized()
+    {
+        Store.DataChanged += Refresh;
+        RefreshList();
+    }
+
+    private void Refresh() => _ = InvokeAsync(() => { RefreshList(); StateHasChanged(); });
+
+    private void RefreshList() => _list = Store.GetTachesForUser(Me, true).ToList();
+
+    private static bool IsOverdue(Tache t)
+    {
+        if (t.Statut == TacheStatuts.Terminee) return false;
+        return DataStore.TryParseYmd(t.Echeance, out var d) && d.Date < DateTime.Today;
+    }
+
+    private static string PriorityColor(string p) => p switch
+    {
+        CalendarEventTypes.PrioriteUrgente => "#dc2626",
+        CalendarEventTypes.PrioriteImportante => "#d97706",
+        _ => "#4f46e5"
+    };
+
+    private static string PriorityLabel(string p) => p switch
+    {
+        CalendarEventTypes.PrioriteUrgente => "Urgente",
+        CalendarEventTypes.PrioriteImportante => "Importante",
+        _ => "Normale"
+    };
+
+    private static string SoftColor(string hex) => hex.Length == 7 ? hex + "24" : hex;
+
+    private void StartAdd()
+    {
+        _editId = null;
+        _titre = ""; _desc = "";
+        _assignes = new HashSet<string>();
+        _priorite = CalendarEventTypes.PrioriteNormale;
+        _echeanceIso = "";
+        _error = "";
+        _showEditor = true;
+    }
+
+    private void StartEdit(Tache t)
+    {
+        _editId = t.Id;
+        _titre = t.Titre; _desc = t.Description;
+        _assignes = new HashSet<string>(t.Assignes);
+        _priorite = t.Priorite;
+        _echeanceIso = t.Echeance ?? "";
+        _error = "";
+        _showEditor = true;
+    }
+
+    private void CloseEditor() => _showEditor = false;
+
+    private void ToggleAssigne(string identifiant)
+    {
+        if (!_assignes.Add(identifiant)) _assignes.Remove(identifiant);
+    }
+
+    private void Save()
+    {
+        _error = "";
+        var draft = new Tache
+        {
+            Titre = _titre,
+            Description = _desc,
+            Assignes = _assignes.ToList(),
+            Priorite = _priorite,
+            Echeance = DataStore.ToYmd(_echeanceIso)
+        };
+        if (!string.IsNullOrWhiteSpace(_echeanceIso) && string.IsNullOrWhiteSpace(draft.Echeance))
+        {
+            _error = "L'échéance doit être au format JJ/MM/AAAA.";
+            return;
+        }
+        OperationResult res = _editId == null ? Store.AddTache(draft) : Store.UpdateTache(_editId, draft);
+        if (!res.Success) { _error = res.Error; return; }
+        State.NotifySuccess(_editId == null ? "Tâche créée." : "Tâche enregistrée.");
+        _showEditor = false;
+    }
+
+    private void Advance(Tache t)
+    {
+        var next = t.Statut == TacheStatuts.AFaire ? TacheStatuts.EnCours : TacheStatuts.Terminee;
+        var res = Store.SetTacheStatut(t.Id, next);
+        if (res.Success) State.NotifySuccess("Tâche → " + TacheStatuts.Label(next) + ".");
+        else State.NotifyError(res.Error);
+    }
+
+    private void AskDelete(Tache t) => _deleteTarget = t;
+
+    private void ConfirmDelete()
+    {
+        var t = _deleteTarget;
+        _deleteTarget = null;
+        if (t == null) return;
+        var res = Store.DeleteTache(t.Id);
+        if (res.Success) State.NotifySuccess("Tâche supprimée.");
+        else State.NotifyError(res.Error);
+    }
+
+    public void Dispose() => Store.DataChanged -= Refresh;
+}

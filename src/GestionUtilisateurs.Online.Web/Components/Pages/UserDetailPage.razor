@@ -1,0 +1,401 @@
+@implements IDisposable
+@inject DataStore Store
+@inject AppState State
+@inject NativeFileSaver Saver
+
+@if (_user != null)
+{
+    <div class="detail-hero">
+        <div class="detail-hero-main">
+            <button class="avatar-btn" type="button" @onclick="OpenPhoto" aria-label="Agrandir la photo">
+                <Avatar UserName="@_user.NomComplet" Seed="@_user.Identifiant" Size="lg" Photo="@_user.Photo" />
+            </button>
+            <h2>@_user.NomComplet</h2>
+            <div class="detail-sub">@@@_user.Identifiant</div>
+            <div class="detail-badges">
+                <Badge Text="@_user.Role" Kind="role" />
+                <Badge Text="@_user.Statut" Kind="@(_user.Actif ? "active" : "inactive")" />
+            </div>
+        </div>
+        @if (Store.IsManager || SelfView)
+        {
+            <button class="btn btn-primary detail-edit-btn" @onclick="() => OnEdit.InvokeAsync(_user.Id)">✎ Modifier</button>
+        }
+    </div>
+
+    <div class="section">
+        <h3>Coordonnées</h3>
+        <div class="kv-row"><span class="kv-label">E-mail</span><span class="kv-value">@(string.IsNullOrWhiteSpace(_user.Email) ? "—" : _user.Email)</span></div>
+        <div class="kv-row"><span class="kv-label">Téléphone</span><span class="kv-value">@(string.IsNullOrWhiteSpace(_user.Telephone) ? "—" : _user.Telephone)</span></div>
+        <div class="kv-row"><span class="kv-label">Matricule</span><span class="kv-value">@(string.IsNullOrWhiteSpace(_user.Matricule) ? "—" : _user.Matricule)</span></div>
+    </div>
+
+    <div class="section">
+        <h3>Organisation</h3>
+        <div class="kv-row"><span class="kv-label">Rôle</span><span class="kv-value">@_user.Role</span></div>
+        <div class="kv-row"><span class="kv-label">Créé le</span><span class="kv-value">@FormatDate(_user.DateCreation)</span></div>
+        @if (_user.Role != Roles.Utilisateur)
+        {
+            <div class="kv-row"><span class="kv-label">Dernière connexion</span><span class="kv-value">@(_user.DerniereConnexion == null ? "Jamais" : FormatDate(_user.DerniereConnexion))</span></div>
+        }
+    </div>
+
+    <div class="section">
+        <h3>🎂 Anniversaire</h3>
+        @if (!string.IsNullOrWhiteSpace(_user.DateNaissance))
+        {
+            <div class="kv-row"><span class="kv-label">Date de naissance</span><span class="kv-value">@FormatDate(_user.DateNaissance) (@AgeLabel(_user.DateNaissance) ans)</span></div>
+        }
+        else
+        {
+            <div class="kv-row"><span class="kv-label">Date de naissance</span><span class="kv-value">—</span></div>
+        }
+        @foreach (var evt in BirthdayEvents)
+        {
+            <div class="kv-row"><span class="kv-label">📅 @DataStore.FormatDateCourte(evt.Date)</span><span class="kv-value">@evt.Titre</span></div>
+        }
+        @if (Store.Can(Permissions.CalendarUse) && !string.IsNullOrWhiteSpace(_user.DateNaissance) && BirthdayEvents.Count == 0)
+        {
+            <div class="form-actions" style="margin:8px 0 4px">
+                <button class="btn btn-secondary btn-sm" @onclick="CreateBirthdayEvent">🎂 Créer l'événement d'anniversaire</button>
+            </div>
+        }
+    </div>
+
+    @if (!string.IsNullOrWhiteSpace(_user.Notes))
+    {
+        <div class="section">
+            <h3>Notes</h3>
+            <div class="kv-row"><span class="kv-label">—</span><span class="kv-value">@_user.Notes</span></div>
+        </div>
+    }
+
+    @if (ActiveFields.Count > 0)
+    {
+        <div class="section">
+            <h3>Champs personnalisés</h3>
+            @foreach (var f in ActiveFields)
+            {
+                var val = f.Id == FieldDefinition.FIELD_IDENTIFIANT
+                    ? new FieldValue { Texte = _user.Identifiant }
+                    : _user.GetChamp(f.Id);
+                var isFileField = f.Type is FieldType.Image or FieldType.PieceJointe;
+                <div class="kv-row @(isFileField ? "kv-row-field" : "")">
+                    <span class="kv-label">@f.Label</span>
+                    <span class="kv-value">
+                        @switch (f.Type)
+                        {
+                            case FieldType.Image:
+                                if (val?.Fichier != null && !string.IsNullOrWhiteSpace(val.Fichier.Data))
+                                {
+                                    <div class="field-file">
+                                        <img class="file-preview-img file-preview-tappable" src="@val.Fichier.Data" alt="@val.Fichier.Nom"
+                                             @onclick="() => OpenImage(val.Fichier.Nom, val.Fichier.Data)" />
+                                        <span class="file-name">@val.Fichier.Nom</span>
+                                        <div class="file-actions">
+                                            <button type="button" class="btn btn-secondary btn-sm" @onclick="() => OpenImage(val.Fichier.Nom, val.Fichier.Data)">👁 Voir</button>
+                                            <button type="button" class="btn btn-secondary btn-sm" @onclick="() => OpenFile(val.Fichier)">⇱ Ouvrir</button>
+                                            <button type="button" class="btn btn-secondary btn-sm" @onclick="() => SaveFile(val.Fichier)">⇩ Enregistrer</button>
+                                        </div>
+                                    </div>
+                                }
+                                else
+                                {
+                                    <span>@(val?.Fichier?.Nom ?? "—")</span>
+                                }
+                                break;
+                            case FieldType.PieceJointe:
+                                if (val?.Fichier != null)
+                                {
+                                    <div class="field-file">
+                                        <span class="file-info">📎 <span class="file-name">@val.Fichier.Nom</span><span class="file-size"> (@FormatSize(val.Fichier.Taille))</span></span>
+                                        @if (!string.IsNullOrWhiteSpace(val.Fichier.Data))
+                                        {
+                                            <div class="file-actions">
+                                                <button type="button" class="btn btn-secondary btn-sm" @onclick="() => OpenFile(val.Fichier)">⇱ Ouvrir</button>
+                                                <button type="button" class="btn btn-secondary btn-sm" @onclick="() => SaveFile(val.Fichier)">⇩ Enregistrer</button>
+                                            </div>
+                                        }
+                                    </div>
+                                }
+                                else
+                                {
+                                    <span>—</span>
+                                }
+                                break;
+                            default:
+                                <span>@FieldDisplay(f, val)</span>
+                                break;
+                        }
+                    </span>
+                </div>
+            }
+        </div>
+    }
+
+    @if (Store.IsManager)
+        {
+            <div class="section">
+                <h3>Actions</h3>
+                <div class="form-actions">
+                    @if (CanToggleActive)
+                    {
+                        <button class="btn btn-secondary" @onclick="AskToggle">@(_user.Actif ? "⛔ Désactiver" : "✓ Activer")</button>
+                    }
+                    @if (_user.Role != Roles.Utilisateur)
+                    {
+                        <button class="btn btn-secondary" @onclick="AskReset">🔑 Réinitialiser le mot de passe</button>
+                    }
+                    @if (Store.IsAdmin)
+                    {
+                        <button class="btn btn-danger-outline" @onclick="AskDelete">🗑 Supprimer</button>
+                    }
+                </div>
+            </div>
+        }
+        else if (SelfView)
+        {
+            <div class="section">
+                <h3>Actions</h3>
+                <div class="form-actions">
+                    <button class="btn btn-primary btn-block" @onclick="() => OnEdit.InvokeAsync(_user.Id)">✎ Modifier mes informations</button>
+                </div>
+            </div>
+        }
+        else
+        {
+            <div class="section">
+                <h3>Actions</h3>
+                <p class="muted">Consultation seule : votre rôle ne permet pas de modifier ce compte.</p>
+            </div>
+        }
+
+@if (!SelfView)
+    {
+        <div class="form-actions" style="margin-bottom:8px">
+            <button class="btn btn-secondary btn-block" @onclick="OnBack">← Retour à la liste</button>
+        </div>
+    }
+
+    <ConfirmDialog Show="@_confirm.Show" Title="@_confirm.Title" Message="@_confirm.Message"
+                   ConfirmLabel="@_confirm.ConfirmLabel" Danger="@_confirm.Danger"
+                   OnConfirm="@(() => _confirm.Action?.Invoke())"
+                   OnCancel="@(() => _confirm = _confirm with { Show = false })" />
+
+    <PhotoViewer Current="@_viewer" OnClose="@(() => _viewer = null)" />
+
+    <Modal Show="_previewUrl != null" Title="@_previewTitle" OnClose="() => _previewUrl = null">
+        @if (_previewUrl != null)
+        {
+            <div class="image-viewer-wrap">
+                <img class="image-viewer-img" src="@_previewUrl" alt="@_previewTitle" />
+            </div>
+        }
+    </Modal>
+}
+else
+{
+    <EmptyState Icon="☹" Title="Utilisateur introuvable" Message="Ce compte n'existe plus." />
+    @if (!SelfView)
+    {
+        <div class="form-actions" style="margin:12px 0 8px">
+            <button class="btn btn-secondary btn-block" @onclick="OnBack">← Retour à la liste</button>
+        </div>
+    }
+}
+
+@code {
+    private sealed record ConfirmState(bool Show, string Title, string Message, string ConfirmLabel, bool Danger, Action? Action)
+    {
+        public static ConfirmState Hidden() => new(false, "", "", "OK", true, null);
+    }
+
+    [Parameter] public string? UserId { get; set; }
+    [Parameter] public EventCallback OnBack { get; set; }
+    [Parameter] public EventCallback<string> OnEdit { get; set; }
+    [Parameter] public bool SelfView { get; set; }
+
+    private UserAccount? _user;
+    private UserAccount? _viewer;
+    private ConfirmState _confirm = ConfirmState.Hidden();
+    private string? _previewUrl;
+    private string _previewTitle = "";
+
+    protected override void OnInitialized()
+    {
+        Store.DataChanged += OnChanged;
+    }
+
+    protected override void OnParametersSet()
+    {
+        _user = Store.FindUser(UserId ?? "");
+    }
+
+    private void OnChanged() => _ = InvokeAsync(() => { _user = Store.FindUser(UserId ?? ""); StateHasChanged(); });
+
+    private IReadOnlyList<CalendarEvent> BirthdayEvents =>
+        _user == null
+            ? new List<CalendarEvent>()
+            : Store.GetBirthdayEventsForUser(_user.Identifiant, _user.NomComplet);
+
+    private static string AgeLabel(string ymd)
+    {
+        if (!DataStore.TryParseYmd(ymd, out var birth)) return "—";
+        var today = DateTime.Today;
+        var age = today.Year - birth.Year;
+        if (today < birth.AddYears(age)) age--;
+        return age < 0 ? "—" : age.ToString();
+    }
+
+    private void CreateBirthdayEvent()
+    {
+        if (_user == null) return;
+        var res = Store.EnsureBirthdayEvent(_user.Id);
+        if (res.Success) State.NotifySuccess("Événement d'anniversaire créé dans le calendrier.");
+        else State.NotifyError(res.Error);
+    }
+
+    private void OpenPhoto() => _viewer = _user;
+
+    private void OpenImage(string title, string dataUrl)
+    {
+        _previewTitle = title;
+        _previewUrl = dataUrl;
+    }
+
+    /// <summary>Ouvre le fichier : aperçu intégré pour les images, application externe sinon.</summary>
+    private async Task OpenFile(FileRef file)
+    {
+        if (string.IsNullOrWhiteSpace(file.Data))
+        {
+            State.NotifyError("Le contenu de ce fichier n'est pas disponible.");
+            return;
+        }
+        if ((file.Mime ?? "").StartsWith("image/", StringComparison.OrdinalIgnoreCase))
+        {
+            OpenImage(file.Nom, file.Data);
+            return;
+        }
+        var bytes = DecodeDataUrl(file.Data);
+        if (bytes == null)
+        {
+            State.NotifyError("Impossible de lire le contenu du fichier.");
+            return;
+        }
+        var opened = await Saver.OpenExternalAsync(file.Nom, bytes, file.Mime ?? "application/octet-stream");
+        if (!opened) opened = await Saver.OpenWithChooserAsync(file.Nom, bytes, file.Mime ?? "application/octet-stream");
+        if (!opened) State.NotifyError("Aucune application disponible pour ouvrir ce fichier. Utilisez « Enregistrer » puis ouvrez-le depuis Téléchargements.");
+    }
+
+    private async Task SaveFile(FileRef file)
+    {
+        if (string.IsNullOrWhiteSpace(file.Data))
+        {
+            State.NotifyError("Le contenu de ce fichier n'est pas disponible.");
+            return;
+        }
+        var bytes = DecodeDataUrl(file.Data);
+        if (bytes == null)
+        {
+            State.NotifyError("Impossible de lire le contenu du fichier.");
+            return;
+        }
+        var path = await Saver.SaveAsync(file.Nom, bytes, file.Mime);
+        State.Notify(path == null ? "Échec de l'enregistrement du fichier." : "Fichier enregistré : " + path,
+            path == null ? "error" : "success");
+    }
+
+    private static byte[]? DecodeDataUrl(string dataUrl)
+    {
+        var idx = dataUrl.IndexOf("base64,", StringComparison.Ordinal);
+        if (idx < 0) return null;
+        try { return Convert.FromBase64String(dataUrl[(idx + 7)..]); }
+        catch { return null; }
+    }
+
+    private static string FormatSize(long bytes)
+    {
+        if (bytes < 1024) return bytes + " o";
+        if (bytes < 1024 * 1024) return Math.Round(bytes / 1024.0, 1) + " Ko";
+        return Math.Round(bytes / (1024.0 * 1024), 1) + " Mo";
+    }
+
+    private IReadOnlyList<FieldDefinition> ActiveFields =>
+        Store.Fields.Where(f => f.Actif).OrderBy(f => f.Ordre).ToList();
+
+    private static string FieldDisplay(FieldDefinition f, FieldValue? val)
+    {
+        if (val == null) return "—";
+        return f.Type switch
+        {
+            FieldType.Booleen => val.Booleen ? "Oui" : "Non",
+            FieldType.Nombre => val.Nombre?.ToString(CultureInfo.InvariantCulture) ?? "—",
+            FieldType.Liste => string.IsNullOrWhiteSpace(val.Texte) ? "—" : val.Texte,
+            FieldType.Date => DataStore.FormatDateCourte(val.Texte),
+            _ => string.IsNullOrWhiteSpace(val.Texte) ? "—" : val.Texte
+        };
+    }
+
+    private static string FormatDate(string s) => DataStore.FormatDateCourte(s);
+
+    /// <summary>Le gestionnaire gère les comptes applicatifs ; le compte technique (dba) reste réservé à l'admin/dba.</summary>
+    private bool CanToggleActive
+    {
+        get
+        {
+            if (_user == null) return false;
+            if (_user.Role == Roles.BaseAdmin) return Store.IsAdmin;
+            return Store.IsManager;
+        }
+    }
+
+    private void AskToggle()
+    {
+        if (_user == null) return;
+        var activate = !_user.Actif;
+        _confirm = new ConfirmState(true, activate ? "Activer" : "Désactiver",
+            $"Voulez-vous vraiment {(activate ? "activer" : "désactiver")} « {_user.NomComplet} » ?",
+            activate ? "Activer" : "Désactiver", !activate, () =>
+            {
+                var res = Store.SetUserActive(_user.Id, activate);
+                State.Notify(res.Success ? (activate ? "Utilisateur activé." : "Utilisateur désactivé.") : "Erreur : " + res.Error,
+                    res.Success ? "success" : "error");
+            });
+    }
+
+    private void AskReset()
+    {
+        if (_user == null) return;
+        _confirm = new ConfirmState(true, "Réinitialiser le mot de passe",
+            $"Le nouveau mot de passe de « {_user.NomComplet} » sera : « {DataStore.DEFAULT_PASSWORD} ».",
+            "Réinitialiser", false, () =>
+            {
+                var res = Store.ResetPassword(_user.Id);
+                State.Notify(res.Success ? $"Mot de passe réinitialisé : « {DataStore.DEFAULT_PASSWORD} »." : "Erreur : " + res.Error,
+                    res.Success ? "success" : "error");
+            });
+    }
+
+    private void AskDelete()
+    {
+        if (_user == null) return;
+        _confirm = new ConfirmState(true, "Supprimer l'utilisateur",
+            $"Supprimer « {_user.NomComplet} » ? Le compte sera placé dans les archives.",
+            "Supprimer", true, () =>
+            {
+                var actor = Store.GetCurrentUser()?.Id;
+                var res = Store.DeleteUser(_user.Id, actor);
+                if (res.Success)
+                {
+                    State.NotifySuccess("Utilisateur supprimé et archivé.");
+                    _ = OnBack.InvokeAsync();
+                }
+                else
+                {
+                    State.NotifyError("Erreur : " + res.Error);
+                }
+            });
+    }
+
+    public void Dispose() => Store.DataChanged -= OnChanged;
+}

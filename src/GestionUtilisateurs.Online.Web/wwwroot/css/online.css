@@ -1,0 +1,296 @@
+/* ============================================================
+   Gestion communautaire – version en ligne
+   - Sur téléphone et tablette (< 1024 px) : design mobile inchangé (app.css).
+   - Sur ordinateur (≥ 1024 px) : mise en page web moderne avec barre
+     latérale, contenu centré et composants plus denses.
+   - Écrans propres à la version en ligne : connexion / inscription,
+     comptes en ligne, capacité du serveur.
+   ============================================================ */
+
+/* ---------- Barre latérale web (masquée sur mobile) ---------- */
+.web-sidebar { display: none; }
+
+/* ---------- Écran de chargement ---------- */
+.online-splash-text { margin-top: 18px; color: var(--text-muted); font-size: 14px; text-align: center; }
+
+/* ---------- Connexion / inscription ---------- */
+.online-auth { min-height: 100vh; display: flex; }
+.online-auth-hero { display: none; }
+.online-auth-main { flex: 1; }
+.online-auth-tabs {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 4px;
+    padding: 4px;
+    margin-bottom: 16px;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+}
+.online-auth-tabs button {
+    border: none;
+    background: transparent;
+    padding: 9px 10px;
+    border-radius: 9px;
+    font-weight: 600;
+    font-size: 14px;
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: background .15s, color .15s, box-shadow .15s;
+}
+.online-auth-tabs button.active { background: var(--surface); color: var(--text); box-shadow: var(--shadow); }
+.online-auth-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+.online-status .login-card { text-align: center; }
+.online-status-text { margin: 0 0 12px; line-height: 1.6; }
+.online-status-account { font-size: 13px; margin: 0 0 14px; }
+.online-status-logout { margin-top: 10px; }
+
+/* ---------- Composants communs aux pages en ligne ---------- */
+.online-muted { color: var(--text-muted); }
+.online-error { color: var(--danger); background: var(--danger-soft); border-color: transparent; }
+.online-section { margin-bottom: 14px; }
+.online-section-head { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+.online-section-head h3 { margin: 0; flex: 1; }
+.online-count {
+    min-width: 26px;
+    padding: 2px 9px;
+    border-radius: 999px;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    font-size: 12.5px;
+    font-weight: 700;
+    text-align: center;
+}
+.online-count-hot { background: var(--accent); border-color: var(--accent); color: var(--accent-contrast); }
+.online-row { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.online-row .form-group { flex: 1 1 160px; margin-bottom: 8px; }
+
+/* Comptes */
+.online-account-list { display: flex; flex-direction: column; }
+.online-account {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 12px 0;
+    border-top: 1px solid var(--border);
+}
+.online-account:first-child { border-top: none; padding-top: 2px; }
+.online-account-main { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.online-account-meta { font-size: 12.5px; overflow-wrap: anywhere; }
+.online-account-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.online-account-actions select {
+    padding: 7px 10px;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--text);
+}
+.online-status-pill {
+    display: inline-block;
+    margin-left: 6px;
+    padding: 1px 8px;
+    border-radius: 999px;
+    font-size: 11.5px;
+    font-weight: 600;
+    background: var(--surface-2);
+    color: var(--text-muted);
+}
+.online-status-actif { background: var(--success-soft); color: var(--success); }
+.online-status-refuse, .online-status-desactive { background: var(--danger-soft); color: var(--danger); }
+.online-status-en_attente { background: var(--warning-soft); color: var(--warning); }
+.online-pending-banner { border-color: color-mix(in srgb, var(--accent) 35%, var(--border)); background: var(--accent-soft); }
+
+/* Capacité : jauges */
+.online-gauges { display: grid; grid-template-columns: 1fr; gap: 12px; margin-bottom: 14px; }
+.online-gauge { margin: 0; }
+.online-gauge-head { display: flex; align-items: center; gap: 8px; }
+.online-gauge-head h3 { margin: 0; flex: 1; }
+.online-gauge-value { font-size: 30px; font-weight: 800; letter-spacing: -.02em; margin: 8px 0 10px; }
+.online-gauge-value small { display: block; font-size: 13px; font-weight: 500; color: var(--text-muted); letter-spacing: 0; }
+.online-gauge p { margin: 8px 0 0; font-size: 13px; }
+.online-projection { font-weight: 600; }
+.online-level { padding: 2px 10px; border-radius: 999px; font-size: 12px; font-weight: 700; }
+.online-level-ok { background: var(--success-soft); color: var(--success); }
+.online-level-attention { background: var(--warning-soft); color: var(--warning); }
+.online-level-critique { background: var(--danger-soft); color: var(--danger); }
+.online-gauge-attention { border-color: color-mix(in srgb, var(--warning) 45%, var(--border)); }
+.online-gauge-critique { border-color: color-mix(in srgb, var(--danger) 55%, var(--border)); }
+
+.online-meter { position: relative; height: 12px; border-radius: 999px; background: var(--surface-2); border: 1px solid var(--border); overflow: visible; }
+.online-meter-fill { position: absolute; inset: 0 auto 0 0; border-radius: 999px; background: var(--success); transition: width .4s ease; }
+.online-gauge-attention .online-meter-fill { background: var(--warning); }
+.online-gauge-critique .online-meter-fill { background: var(--danger); }
+.online-meter-mark { position: absolute; top: -4px; bottom: -4px; width: 2px; background: var(--warning); border-radius: 2px; }
+.online-meter-mark-crit { background: var(--danger); }
+
+/* Capacité : alertes */
+.online-alert {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 12px;
+    padding: 12px;
+    border-radius: var(--radius-sm);
+    margin-top: 8px;
+    background: var(--warning-soft);
+}
+.online-alert-critique { background: var(--danger-soft); }
+.online-alert-icon { font-size: 20px; }
+.online-alert-main { flex: 1 1 220px; display: flex; flex-direction: column; gap: 2px; font-size: 13.5px; }
+
+/* Capacité : historique */
+.online-chart { width: 100%; height: 180px; display: block; background: var(--surface-2); border-radius: var(--radius-sm); }
+.online-chart polyline { fill: none; stroke-width: 2.5; vector-effect: non-scaling-stroke; stroke-linejoin: round; stroke-linecap: round; }
+.online-chart-db { stroke: var(--accent); }
+.online-chart-files { stroke: #0d9488; }
+.online-chart-limit { stroke: var(--warning); stroke-dasharray: 6 5; stroke-width: 1.5; vector-effect: non-scaling-stroke; }
+.online-chart-crit { stroke: var(--danger); }
+.online-chart-axis { display: flex; justify-content: space-between; font-size: 12px; color: var(--text-muted); margin-top: 4px; }
+.online-legend { display: flex; flex-wrap: wrap; gap: 14px; margin-top: 8px; font-size: 12.5px; color: var(--text-muted); }
+.online-dot { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 6px; vertical-align: -1px; }
+.online-dot-db { background: var(--accent); }
+.online-dot-files { background: #0d9488; }
+.online-dot-limit { background: var(--warning); }
+
+/* Capacité : répartition */
+.online-bars { display: flex; flex-direction: column; gap: 8px; }
+.online-bar-row { display: grid; grid-template-columns: minmax(90px, 1fr) 2fr auto; align-items: center; gap: 10px; font-size: 13px; }
+.online-bar-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.online-bar-track { height: 8px; border-radius: 999px; background: var(--surface-2); overflow: hidden; }
+.online-bar-fill { display: block; height: 100%; background: var(--accent); border-radius: 999px; }
+.online-bar-size { color: var(--text-muted); font-variant-numeric: tabular-nums; }
+.online-tips { margin: 0 0 10px; padding-left: 18px; font-size: 13.5px; color: var(--text-muted); }
+.online-tips li { margin-bottom: 4px; }
+.online-two-cols { display: grid; grid-template-columns: 1fr; gap: 0 14px; }
+
+@media (min-width: 720px) {
+    .online-gauges { grid-template-columns: repeat(3, 1fr); }
+    .online-two-cols { grid-template-columns: 1.3fr 1fr; }
+}
+
+/* ============================================================
+   Ordinateur : mise en page web moderne
+   ============================================================ */
+@media (min-width: 1024px) {
+    :root { --sidebar-w: 264px; --topbar-h: 64px; }
+
+    html, body { font-size: 15px; }
+    body { background: var(--bg); }
+
+    /* Barre latérale */
+    .web-sidebar {
+        display: flex;
+        flex-direction: column;
+        position: fixed;
+        inset: 0 auto 0 0;
+        width: var(--sidebar-w);
+        z-index: 70;
+        background: var(--surface);
+        border-right: 1px solid var(--border);
+        padding: 18px 14px;
+        gap: 14px;
+    }
+    .web-sidebar-brand { display: flex; align-items: center; gap: 12px; padding: 4px 8px 10px; }
+    .web-sidebar-brand img { width: 40px; height: 40px; border-radius: 12px; object-fit: cover; }
+    .web-sidebar-mark {
+        width: 40px; height: 40px; border-radius: 12px;
+        display: inline-flex; align-items: center; justify-content: center;
+        background: linear-gradient(135deg, var(--accent), color-mix(in srgb, var(--accent) 60%, #0ea5e9));
+        color: #fff; font-weight: 800; letter-spacing: .02em;
+    }
+    .web-sidebar-name { font-weight: 800; font-size: 15.5px; line-height: 1.2; }
+    .web-sidebar-nav { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 2px; padding-right: 2px; }
+    .web-sidebar-nav::-webkit-scrollbar { width: 6px; }
+    .web-sidebar-nav::-webkit-scrollbar-thumb { background: var(--border); border-radius: 6px; }
+    .web-nav-item {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        width: 100%;
+        padding: 9px 12px;
+        border: none;
+        border-radius: 10px;
+        background: transparent;
+        color: var(--text);
+        font-size: 14px;
+        font-weight: 550;
+        text-align: left;
+        cursor: pointer;
+        transition: background .12s, color .12s;
+    }
+    .web-nav-item:hover { background: var(--surface-2); }
+    .web-nav-item.active { background: var(--accent-soft); color: var(--accent); font-weight: 700; }
+    .web-nav-icon { width: 22px; text-align: center; font-size: 17px; }
+    .web-nav-label { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .web-nav-label small { display: block; font-size: 12px; font-weight: 500; color: var(--text-muted); }
+    .web-nav-badge {
+        min-width: 22px; padding: 1px 7px; border-radius: 999px;
+        background: var(--accent); color: var(--accent-contrast);
+        font-size: 11.5px; font-weight: 700; text-align: center;
+    }
+    .web-sidebar-foot { border-top: 1px solid var(--border); padding-top: 10px; }
+
+    /* La barre du bas et l'icône logo de la barre supérieure laissent place à la barre latérale. */
+    .bottom-nav { display: none; }
+    .app-topbar { padding: 0 32px 0 calc(var(--sidebar-w) + 32px); height: var(--topbar-h); }
+    .app-topbar .page-title { font-size: 21px; letter-spacing: -.01em; }
+    .app-topbar .logo-btn { display: none; }
+    .app-content {
+        max-width: 1280px;
+        margin: 0;
+        padding: 28px 40px 56px calc(var(--sidebar-w) + 40px);
+    }
+    .sel-bar { left: calc(var(--sidebar-w) + 28px); }
+
+    /* Cartes plus aérées, survol discret */
+    .card { border-radius: 14px; border: 1px solid var(--border); box-shadow: 0 1px 2px rgba(15, 23, 42, .04); }
+    .card h3 { font-size: 16px; }
+    .btn { cursor: pointer; transition: transform .08s ease, box-shadow .15s ease, background .15s ease; }
+    .btn:hover { box-shadow: 0 2px 8px rgba(15, 23, 42, .12); }
+    .btn:active { transform: translateY(1px); }
+    .user-list { grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); }
+    .stats-grid { grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); }
+    .stats-grid .stat-card { flex-direction: row; text-align: left; }
+    .modal { max-width: 640px; border-radius: 18px; }
+
+    /* Menu « … » : inutile avec la barre latérale */
+    .topbar-menu-btn { display: none; }
+
+    /* Connexion : panneau de présentation à gauche, formulaire à droite */
+    .online-auth-hero {
+        display: flex;
+        align-items: center;
+        flex: 0 0 46%;
+        padding: 64px;
+        color: #fff;
+        background:
+            radial-gradient(1200px 600px at -10% -20%, rgba(255, 255, 255, .18), transparent 60%),
+            linear-gradient(140deg, var(--accent), color-mix(in srgb, var(--accent) 55%, #0ea5e9));
+    }
+    .online-auth-hero-inner { max-width: 460px; }
+    .online-auth-brand {
+        width: 56px; height: 56px; border-radius: 16px;
+        display: flex; align-items: center; justify-content: center;
+        background: rgba(255, 255, 255, .18); font-weight: 800; font-size: 20px; margin-bottom: 28px;
+    }
+    .online-auth-hero h2 { font-size: 38px; line-height: 1.15; margin: 0 0 14px; letter-spacing: -.02em; }
+    .online-auth-hero p { font-size: 17px; opacity: .92; margin: 0 0 22px; }
+    .online-auth-hero ul { margin: 0; padding: 0; list-style: none; }
+    .online-auth-hero li { padding: 8px 0 8px 30px; position: relative; font-size: 15.5px; }
+    .online-auth-hero li::before {
+        content: "✓"; position: absolute; left: 0; top: 8px;
+        width: 20px; height: 20px; border-radius: 50%;
+        background: rgba(255, 255, 255, .22); font-size: 12px; text-align: center; line-height: 20px;
+    }
+    .online-auth-main { display: flex; flex-direction: column; justify-content: center; padding: 48px; }
+    .online-auth-main .login-card { max-width: 440px; width: 100%; margin: 0 auto; }
+    .online-auth-main .login-logo { margin-bottom: 18px; }
+    .online-auth-main .login-logo-mark { display: none; }
+}
+
+@media (min-width: 1440px) {
+    .app-content { max-width: 1440px; }
+}

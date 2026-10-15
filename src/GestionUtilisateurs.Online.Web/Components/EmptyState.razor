@@ -1,0 +1,11 @@
+<div class="empty-state">
+    <div class="empty-state-icon" aria-hidden="true">@Icon</div>
+    <h3>@Title</h3>
+    <p>@Message</p>
+</div>
+
+@code {
+    [Parameter] public string Icon { get; set; } = "📋";
+    [Parameter] public string Title { get; set; } = "Aucun élément";
+    [Parameter] public string? Message { get; set; }
+}

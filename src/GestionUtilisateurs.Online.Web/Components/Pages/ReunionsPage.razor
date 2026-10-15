@@ -1,0 +1,345 @@
+@implements IDisposable
+@inject DataStore Store
+@inject AppState State
+
+@if (!Store.Can(Permissions.PresenceManage))
+{
+    <EmptyState Icon="🔒" Title="Accès réservé" Message="Les réunions et la présence ne sont pas autorisées pour votre rôle." />
+}
+else
+{
+    <div class="page-head">
+        <p>Réunions, participants et feuilles de présence.</p>
+    </div>
+
+    <div class="search-box cal-search">
+        <span class="search-icon" aria-hidden="true">⌕</span>
+        <input type="search" placeholder="Rechercher une réunion (titre, lieu, participant, compte rendu)…" aria-label="Rechercher une réunion"
+               value="@_search" @oninput="OnSearch" />
+    </div>
+    @if (!string.IsNullOrWhiteSpace(_search))
+    {
+        <div class="search-summary">@Filtered.Count réunion(s) trouvée(s) pour « @_search.Trim() »</div>
+    }
+
+    <div class="chips-row" role="tablist" aria-label="Filtrer les réunions">
+        <button type="button" class="chip @(_filter == "" ? "active" : "")" @onclick='() => _filter = ""'>Toutes</button>
+        <button type="button" class="chip @(_filter == "avenir" ? "active" : "")" @onclick='() => _filter = "avenir"'>À venir</button>
+        <button type="button" class="chip @(_filter == "passees" ? "active" : "")" @onclick='() => _filter = "passees"'>Passées</button>
+    </div>
+
+    <div class="inline-actions" style="justify-content:flex-end;margin-bottom:10px">
+        <button class="btn btn-secondary btn-sm" @onclick="StartAdd">＋ Réunion</button>
+    </div>
+
+    @if (Filtered.Count == 0)
+    {
+        <EmptyState Icon="👥" Title="Aucune réunion" Message="Créez la première réunion avec le bouton ci-dessus." />
+    }
+    else
+    {
+        <div class="user-list">
+            @foreach (var r in Filtered)
+            {
+                var reunion = r;
+                var stats = Store.ReunionStats(reunion.Id);
+                <div class="user-card" @onclick="() => Select(reunion.Id)">
+                    <span class="field-type-icon" aria-hidden="true">👥</span>
+                    <div class="user-card-main">
+                        <div class="user-card-name">@reunion.Titre</div>
+                        <div class="user-card-sub">@DataStore.FormatDateCourte(reunion.Date)@(string.IsNullOrWhiteSpace(reunion.HeureDebut) ? "" : " · " + reunion.HeureDebut)@(string.IsNullOrWhiteSpace(reunion.Lieu) ? "" : " · " + reunion.Lieu)</div>
+                        <div class="user-card-meta">
+                            <Badge Text="@(stats.Presents + "/" + stats.Total + " présent(s)")" Kind="@(stats.Presents == stats.Total && stats.Total > 0 ? "active" : "role")" />
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+
+    @if (_selected != null)
+    {
+        var reunion = Store.FindReunion(_selected.Id) ?? _selected;
+        var stats = Store.ReunionStats(reunion.Id);
+        <div class="card" style="margin-top:12px">
+            <div class="inline-actions" style="justify-content:space-between">
+                <h3 style="margin:0">@reunion.Titre</h3>
+                <div class="inline-actions">
+                    <button class="btn btn-secondary btn-sm" @onclick="() => StartEdit(reunion)">✎</button>
+                    <button class="btn btn-secondary btn-sm" @onclick="CreateCalendarEvent">📅 Calendrier</button>
+                    <button class="btn-icon danger" aria-label="Supprimer" @onclick="() => AskDelete(reunion)">🗑</button>
+                </div>
+            </div>
+            <div class="storage-line"><span>Date</span><strong>@DataStore.FormatDateCourte(reunion.Date)@(string.IsNullOrWhiteSpace(reunion.HeureDebut) ? "" : " · " + reunion.HeureDebut)@(reunion.HeureFin != null ? " → " + reunion.HeureFin : "")</strong></div>
+            <div class="storage-line"><span>Lieu</span><strong>@(string.IsNullOrWhiteSpace(reunion.Lieu) ? "—" : reunion.Lieu)</strong></div>
+            <div class="storage-line storage-total"><span>Présents</span><strong>@stats.Presents / @stats.Total (✗ @stats.Absents · ◐ @stats.Excuses · … @stats.NonPointes)</strong></div>
+            @if (!string.IsNullOrWhiteSpace(reunion.CompteRendu))
+            {
+                <div class="cal-detail-label">Compte rendu</div>
+                <div class="cal-detail-notes">@reunion.CompteRendu</div>
+            }
+            <div class="divider-section">Feuille de présence (touchez pour pointer)</div>
+            @if (reunion.Participants.Count == 0)
+            {
+                <p class="muted">Aucun participant. Modifiez la réunion pour en ajouter.</p>
+            }
+            @foreach (var p in reunion.Participants)
+            {
+                var membre = p;
+                reunion.Presences.TryGetValue(membre, out var statut);
+                statut ??= "";
+                <button type="button" class="cal-person-row" @onclick="() => CyclePresence(reunion.Id, membre)">
+                    <Avatar UserName="@MemberName(membre)" Seed="@membre" Size="sm" Photo="@MemberPhoto(membre)" />
+                    <span class="cal-person-name">@MemberName(membre)</span>
+                    <span class="cal-person-check" aria-hidden="true">@(statut.Length == 0 ? "…" : PresenceStatuts.Icon(statut))</span>
+                    <Badge Text="@(statut.Length == 0 ? "Non pointé" : PresenceStatuts.Label(statut))" Kind="@(statut == PresenceStatuts.Present ? "active" : "role")" />
+                </button>
+            }
+        </div>
+    }
+
+    <Modal Title="@(_editId == null ? "Nouvelle réunion" : "Modifier la réunion")" Show="_showEditor" OnClose="CloseEditor">
+        <ChildContent>
+            <div class="form-group">
+                <label for="re-titre">Titre *</label>
+                <input id="re-titre" type="text" value="@_titre" @oninput="e => _titre = e.Value?.ToString() ?? string.Empty" />
+            </div>
+            <div class="form-group">
+                <label for="re-date">Date (JJ/MM/AAAA) *</label>
+                <input id="re-date" type="date" value="@_dateIso" @onchange="e => _dateIso = e.Value?.ToString() ?? string.Empty" />
+            </div>
+            <div class="cal-time-row">
+                <div class="form-group cal-time-col">
+                    <label for="re-debut">Début</label>
+                    <input id="re-debut" type="time" placeholder="09:00" value="@_debut" @oninput="e => _debut = e.Value?.ToString() ?? string.Empty" />
+                </div>
+                <div class="form-group cal-time-col">
+                    <label for="re-fin">Fin</label>
+                    <input id="re-fin" type="time" placeholder="10:00" value="@_fin" @oninput="e => _fin = e.Value?.ToString() ?? string.Empty" />
+                </div>
+            </div>
+            <div class="form-group">
+                <label for="re-lieu">Lieu</label>
+                <input id="re-lieu" type="text" value="@_lieu" @oninput="e => _lieu = e.Value?.ToString() ?? string.Empty" />
+            </div>
+            <div class="form-group">
+                <label>Participants</label>
+                <div class="search-box cal-search cal-opt-search">
+                    <span class="search-icon" aria-hidden="true">⌕</span>
+                    <input type="search" placeholder="Écrire pour chercher un membre…" aria-label="Chercher un membre"
+                           value="@_participantSearch" @oninput="e => _participantSearch = e.Value?.ToString() ?? string.Empty" />
+                </div>
+                <div class="check-group">
+                    @foreach (var u in FilteredParticipants)
+                    {
+                        <label class="form-check">
+                            <input type="checkbox" checked="@_participants.Contains(u.Identifiant)" @onchange="() => ToggleParticipant(u.Identifiant)" />
+                            @u.NomComplet
+                        </label>
+                    }
+                    @if (FilteredParticipants.Count == 0)
+                    {
+                        <div class="cal-no-events">Aucun membre trouvé pour « @_participantSearch ».</div>
+                    }
+                </div>
+            </div>
+            <div class="form-group">
+                <label for="re-cr">Compte rendu</label>
+                <textarea id="re-cr" rows="3" value="@_cr" @oninput="e => _cr = e.Value?.ToString() ?? string.Empty"></textarea>
+            </div>
+            <span class="form-error">@_error</span>
+        </ChildContent>
+        <FooterContent>
+            <button class="btn btn-secondary" @onclick="CloseEditor">Annuler</button>
+            <button class="btn btn-primary" @onclick="Save">Enregistrer</button>
+        </FooterContent>
+    </Modal>
+
+    <ConfirmDialog Show="_deleteTarget != null" Title="Supprimer la réunion"
+                   Message="@(_deleteTarget == null ? "" : "Supprimer « " + _deleteTarget.Titre + " » et sa feuille de présence ?")"
+                   ConfirmLabel="Supprimer" Danger="true" OnConfirm="ConfirmDelete" OnCancel="() => _deleteTarget = null" />
+}
+
+@code {
+    private string _filter = "";
+    private string _search = "";
+    private Reunion? _selected;
+
+    private bool _showEditor;
+    private string? _editId;
+    private string _titre = "";
+    private string _dateIso = "";
+    private string _debut = "";
+    private string _fin = "";
+    private string _lieu = "";
+    private HashSet<string> _participants = new();
+    private string _cr = "";
+    private string _error = "";
+    private Reunion? _deleteTarget;
+
+    private IReadOnlyList<UserAccount> ActiveUsers =>
+        Store.Users.Where(u => u.Actif).OrderBy(u => u.NomComplet).ToList();
+
+    private string _participantSearch = "";
+
+    private List<UserAccount> FilteredParticipants
+    {
+        get
+        {
+            var q = _participantSearch.Trim();
+            if (q.Length == 0) return ActiveUsers.ToList();
+            return ActiveUsers.Where(u => (u.NomComplet + " " + u.Identifiant + " " + (u.Matricule ?? ""))
+                .Contains(q, StringComparison.OrdinalIgnoreCase)).ToList();
+        }
+    }
+
+    private IReadOnlyList<Reunion> Filtered
+    {
+        get
+        {
+            var today = DateTime.Today.ToString("yyyy-MM-dd");
+            var query = Store.Reunions.AsEnumerable();
+            if (_filter == "avenir") query = query.Where(r => string.Compare(r.Date, today, StringComparison.Ordinal) >= 0);
+            else if (_filter == "passees") query = query.Where(r => string.Compare(r.Date, today, StringComparison.Ordinal) < 0);
+            return (_filter == "passees"
+                ? query.OrderByDescending(r => r.Date)
+                : query.OrderBy(r => r.Date))
+                .Where(MatchSearch)
+                .ToList();
+        }
+    }
+
+    private bool MatchSearch(Reunion r)
+    {
+        var q = _search.Trim();
+        if (q.Length == 0) return true;
+        if ((r.Titre + " " + r.Lieu + " " + r.CompteRendu).Contains(q, StringComparison.OrdinalIgnoreCase)) return true;
+        return r.Participants.Any(p => (Store.FindUserByIdentifier(p)?.NomComplet ?? p)
+            .Contains(q, StringComparison.OrdinalIgnoreCase));
+    }
+
+    private void OnSearch(ChangeEventArgs e) => _search = e.Value?.ToString() ?? string.Empty;
+
+    protected override void OnInitialized()
+    {
+        Store.DataChanged += Refresh;
+    }
+
+    private void Refresh() => _ = InvokeAsync(() =>
+    {
+        if (_selected != null) _selected = Store.FindReunion(_selected.Id);
+        StateHasChanged();
+    });
+
+    private string MemberName(string identifiant)
+        => Store.FindUserByIdentifier(identifiant)?.NomComplet ?? identifiant;
+
+    private string? MemberPhoto(string identifiant)
+        => Store.FindUserByIdentifier(identifiant)?.Photo;
+
+    private void Select(string id) => _selected = Store.FindReunion(id);
+
+    private void StartAdd()
+    {
+        _editId = null;
+        _titre = ""; _dateIso = ""; _debut = ""; _fin = ""; _lieu = "";
+        _participants = new HashSet<string>();
+        _cr = ""; _error = "";
+        _showEditor = true;
+    }
+
+    private void StartEdit(Reunion r)
+    {
+        _editId = r.Id;
+        _titre = r.Titre; _dateIso = r.Date ?? "";
+        _debut = r.HeureDebut ?? ""; _fin = r.HeureFin ?? ""; _lieu = r.Lieu ?? "";
+        _participants = new HashSet<string>(r.Participants);
+        _cr = r.CompteRendu ?? "";
+        _error = "";
+        _showEditor = true;
+    }
+
+    private void CloseEditor() => _showEditor = false;
+
+    private void ToggleParticipant(string identifiant)
+    {
+        if (!_participants.Add(identifiant)) _participants.Remove(identifiant);
+    }
+
+    private void Save()
+    {
+        _error = "";
+        if (string.IsNullOrWhiteSpace(_dateIso))
+        {
+            _error = "La date est obligatoire (JJ/MM/AAAA).";
+            return;
+        }
+        var draft = new Reunion
+        {
+            Titre = _titre,
+            Date = _dateIso,
+            HeureDebut = string.IsNullOrWhiteSpace(_debut) ? null : _debut.Trim(),
+            HeureFin = string.IsNullOrWhiteSpace(_fin) ? null : _fin.Trim(),
+            Lieu = _lieu,
+            Participants = _participants.ToList(),
+            CompteRendu = _cr
+        };
+        OperationResult res = _editId == null ? Store.AddReunion(draft) : Store.UpdateReunion(_editId, draft);
+        if (!res.Success) { _error = res.Error; return; }
+        State.NotifySuccess(_editId == null ? "Réunion créée." : "Réunion enregistrée.");
+        _showEditor = false;
+        if (_editId != null) _selected = Store.Reunions.FirstOrDefault(r => r.Id == _editId);
+    }
+
+    private void CyclePresence(string reunionId, string membre)
+    {
+        var reunion = Store.FindReunion(reunionId);
+        if (reunion == null) return;
+        reunion.Presences.TryGetValue(membre, out var current);
+        var next = current switch
+        {
+            PresenceStatuts.Present => PresenceStatuts.Absent,
+            PresenceStatuts.Absent => PresenceStatuts.Excuse,
+            _ => PresenceStatuts.Present
+        };
+        var res = Store.MarkPresence(reunionId, membre, next);
+        if (!res.Success) State.NotifyError(res.Error);
+    }
+
+    private void CreateCalendarEvent()
+    {
+        if (_selected == null) return;
+        var r = _selected;
+        var res = Store.AddEvent(new CalendarEvent
+        {
+            Type = CalendarEventTypes.Reunion,
+            Titre = r.Titre,
+            Date = r.Date,
+            HeureDebut = r.HeureDebut,
+            HeureFin = r.HeureFin,
+            TouteLaJournee = string.IsNullOrWhiteSpace(r.HeureDebut),
+            Lieu = r.Lieu,
+            PersonnesConcernees = r.Participants.ToList()
+        });
+        if (res.Success) State.NotifySuccess("Événement ajouté au calendrier.");
+        else State.NotifyError(res.Error);
+    }
+
+    private void AskDelete(Reunion r) => _deleteTarget = r;
+
+    private void ConfirmDelete()
+    {
+        var t = _deleteTarget;
+        _deleteTarget = null;
+        if (t == null) return;
+        var res = Store.DeleteReunion(t.Id);
+        if (res.Success)
+        {
+            if (_selected?.Id == t.Id) _selected = null;
+            State.NotifySuccess("Réunion supprimée.");
+        }
+        else State.NotifyError(res.Error);
+    }
+
+    public void Dispose() => Store.DataChanged -= Refresh;
+}

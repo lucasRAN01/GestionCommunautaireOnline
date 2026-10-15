@@ -1,0 +1,219 @@
+@inject DataStore Store
+@inject AppState State
+
+<div class="page-head">
+    <p>Personnalisez le formulaire utilisateur : texte, nombre, liste, choix, pièce jointe, image…</p>
+</div>
+
+@if (Store.Fields.Count == 0)
+{
+    <EmptyState Icon="🧩" Title="Aucun champ personnalisé" Message="Ajoutez votre premier champ pour enrichir le formulaire utilisateur." />
+}
+else
+{
+    <div class="fields-list">
+        @foreach (var f in _fields)
+        {
+            <div class="field-item @(f.Actif ? "" : "inactive")">
+                <span class="field-icon" title="@FieldTypeInfo.Label(f.Type)">@FieldTypeInfo.Icon(f.Type)</span>
+                <div class="field-item-content">
+                    <div class="field-item-title">
+                        <span>@f.Label</span>
+                        @if (f.SystemField)
+                        {
+                            <Badge Text="Compte" Kind="role" />
+                        }
+                        @if (f.Requis)
+                        {
+                            <Badge Text="Obligatoire" Kind="active" />
+                        }
+                        @if (!f.Actif)
+                        {
+                            <Badge Text="Désactivé" Kind="inactive" />
+                        }
+                    </div>
+                    <div class="field-item-meta">@FieldTypeInfo.Label(f.Type)@(FieldTypeInfo.SupportsOptions(f.Type) && f.Options.Count > 0 ? " · " + string.Join(", ", f.Options) : "")</div>
+                </div>
+                <div class="field-item-actions">
+                    <button class="btn-icon" title="Monter" disabled="@(f == _fields.First())" @onclick="() => Move(f, -1)">↑</button>
+                    <button class="btn-icon" title="Descendre" disabled="@(f == _fields.Last())" @onclick="() => Move(f, 1)">↓</button>
+                    <button class="btn btn-secondary btn-sm" @onclick="() => OpenEdit(f)">Modifier</button>
+                    @if (!f.SystemField)
+                    {
+                        <button class="btn-icon danger" title="Supprimer" @onclick="() => AskDelete(f)">🗑</button>
+                    }
+                </div>
+            </div>
+        }
+    </div>
+}
+
+<button class="fab" aria-label="Ajouter un champ" @onclick="OpenAdd">+</button>
+
+<Modal Title="Éditeur de champ" Show="_showEditor" OnClose="CloseEditor">
+    <ChildContent>
+        @if (_draft.SystemField)
+        {
+            <p class="muted" style="margin-top:0">Champ lié au compte (identifiant ou département). Le libellé, la visibilité et l'obligation (hors identifiant) sont modifiables.</p>
+        }
+        <div class="form-group">
+            <label for="ff-label">Libellé du champ <span class="required">*</span></label>
+            <input id="ff-label" type="text" value="@_draft.Label" @oninput="e => _draft.Label = e.Value?.ToString() ?? string.Empty" />
+        </div>
+        <div class="form-group">
+            <label for="ff-type">Type de champ</label>
+            <select id="ff-type" value="@_draft.Type.ToString()" disabled="@(_draft.SystemField)" @onchange="OnTypeChanged">
+                @foreach (var (val, label) in Store.FieldTypeChoices())
+                {
+                    <option value="@val">@label</option>
+                }
+            </select>
+        </div>
+        <div class="form-group">
+            <label class="checkbox-label">
+                <input type="checkbox" checked="@_draft.Requis"
+                       disabled="@(_draft.SystemField && _draft.Id == FieldDefinition.FIELD_IDENTIFIANT)"
+                       @onchange="e => _draft.Requis = e.Value is true" />
+                Requis
+            </label>
+        </div>
+        @if (FieldTypeInfo.SupportsOptions(_draft.Type))
+        {
+            <div class="form-group">
+                <label for="ff-options">Options <span class="required">*</span></label>
+                <textarea id="ff-options" rows="5" placeholder="Une option par ligne" value="@_optionsText" @oninput="e => _optionsText = e.Value?.ToString() ?? string.Empty"></textarea>
+            </div>
+        }
+        @if (!_isNew)
+        {
+            <div class="form-group">
+                <label class="checkbox-label">
+                    <input type="checkbox" checked="@_draft.Actif" @onchange="e => _draft.Actif = e.Value is true" />
+                    Champ actif (visible dans le formulaire)
+                </label>
+            </div>
+        }
+        <span class="form-error">@_editorError</span>
+    </ChildContent>
+    <FooterContent>
+        <button class="btn btn-secondary" @onclick="CloseEditor">Annuler</button>
+        <button class="btn btn-primary" @onclick="SaveField" disabled="@_savingField">@(_savingField ? "Enregistrement…" : "Enregistrer")</button>
+    </FooterContent>
+</Modal>
+
+<ConfirmDialog Show="_deleteTarget != null" Title="Supprimer le champ"
+               Message="@($"Le champ « {(_deleteTarget?.Label ?? "")} » sera supprimé. Les valeurs déjà saisies seront perdues. Continuer ?")"
+               ConfirmLabel="Supprimer" Danger="true" OnConfirm="ConfirmDelete" OnCancel="() => _deleteTarget = null" />
+
+@code {
+    private List<FieldDefinition> _fields = new();
+    private bool _showEditor;
+    private bool _isNew;
+    private FieldDefinition _draft = new();
+    private string _optionsText = "";
+    private string _editorError = "";
+    private bool _savingField;
+    private FieldDefinition? _deleteTarget;
+
+    protected override void OnParametersSet()
+    {
+        _fields = Store.Fields.ToList();
+    }
+
+    private void OnTypeChanged(ChangeEventArgs e)
+    {
+        if (Enum.TryParse<FieldType>(e.Value?.ToString(), out var t))
+            _draft.Type = t;
+    }
+
+    private void OpenAdd()
+    {
+        _isNew = true;
+        _draft = new FieldDefinition { Type = FieldType.Texte, Actif = true, Requis = false };
+        _optionsText = "";
+        _editorError = "";
+        _showEditor = true;
+    }
+
+    private void OpenEdit(FieldDefinition f)
+    {
+        _isNew = false;
+        _draft = new FieldDefinition
+        {
+            Id = f.Id,
+            Label = f.Label,
+            Type = f.Type,
+            Requis = f.Requis,
+            Ordre = f.Ordre,
+            Actif = f.Actif,
+            SystemField = f.SystemField,
+            Options = f.Options.ToList()
+        };
+        _optionsText = string.Join("\n", f.Options);
+        _editorError = "";
+        _showEditor = true;
+    }
+
+    private void CloseEditor() => _showEditor = false;
+
+    private FieldDefinition PrepareDraft()
+    {
+        _draft.Label = (_draft.Label ?? "").Trim();
+        if (FieldTypeInfo.SupportsOptions(_draft.Type))
+        {
+            _draft.Options = _optionsText.Split('\n', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries).Distinct().ToList();
+        }
+        else
+        {
+            _draft.Options = new List<string>();
+        }
+        return _draft;
+    }
+
+    private void SaveField()
+    {
+        _savingField = true;
+        _editorError = "";
+        try
+        {
+            var draft = PrepareDraft();
+            var result = _isNew ? Store.AddField(draft) : Store.UpdateField(draft);
+            if (!result.Success)
+            {
+                _editorError = result.Error;
+                return;
+            }
+            _showEditor = false;
+            _fields = Store.Fields.ToList();
+            State.NotifySuccess(_isNew ? "Champ ajouté." : "Champ modifié.");
+        }
+        finally
+        {
+            _savingField = false;
+        }
+    }
+
+    private void Move(FieldDefinition f, int direction)
+    {
+        Store.MoveField(f.Id, direction);
+        _fields = Store.Fields.ToList();
+    }
+
+    private void AskDelete(FieldDefinition f) => _deleteTarget = f;
+
+    private void ConfirmDelete()
+    {
+        var target = _deleteTarget;
+        _deleteTarget = null;
+        if (target == null) return;
+
+        var (result, _) = Store.DeleteField(target.Id);
+        if (!result.Success)
+        {
+            State.NotifyError(result.Error);
+            return;
+        }
+        _fields = Store.Fields.ToList();
+        State.NotifySuccess("Champ supprimé : " + target.Label);
+    }
+}

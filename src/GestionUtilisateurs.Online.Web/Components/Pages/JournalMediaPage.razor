@@ -1,0 +1,325 @@
+@implements IDisposable
+@inject DataStore Store
+@inject AppState State
+@inject PhotoService Photos
+
+@if (!Store.Can(Permissions.JournalMediaUse))
+{
+    <EmptyState Icon="🔒" Title="Accès réservé" Message="Le journal multimédia n'est pas autorisé pour votre rôle." />
+}
+else
+{
+    <div class="page-head">
+        <p>Photos, vidéos et enregistrements audio, stockés sur l'appareil.</p>
+    </div>
+
+    <div class="search-box cal-search">
+        <span class="search-icon" aria-hidden="true">⌕</span>
+        <input type="search" placeholder="Rechercher un média (titre, description, type)…" aria-label="Rechercher un média"
+               value="@_search" @oninput="OnSearch" />
+    </div>
+    @if (!string.IsNullOrWhiteSpace(_search))
+    {
+        <div class="search-summary">@Filtered.Count média(s) trouvé(s) pour « @_search.Trim() »</div>
+    }
+
+    <div class="chips-row" role="tablist" aria-label="Filtrer par type">
+        <button type="button" class="chip @(_type == "" ? "active" : "")" @onclick='() => _type = ""'>Tout</button>
+        <button type="button" class="chip @(_type == MediaTypes.Photo ? "active" : "")" @onclick='() => _type = MediaTypes.Photo'>🖼 Photos</button>
+        <button type="button" class="chip @(_type == MediaTypes.Video ? "active" : "")" @onclick='() => _type = MediaTypes.Video'>🎬 Vidéos</button>
+        <button type="button" class="chip @(_type == MediaTypes.Audio ? "active" : "")" @onclick='() => _type = MediaTypes.Audio'>🎙 Audios</button>
+    </div>
+
+    @if (Filtered.Count == 0)
+    {
+        <EmptyState Icon="🖼" Title="Journal vide" Message="Ajoutez la première photo, vidéo ou audio avec le bouton « + »." />
+    }
+    else
+    {
+        <div class="media-grid">
+            @foreach (var m in Filtered)
+            {
+                var item = m;
+                <div class="media-card" @onclick="() => OpenViewer(item)" role="button" tabindex="0" @onkeydown="(k) => OnCardKey(k, item)">
+                    @if (item.Type == MediaTypes.Photo && !string.IsNullOrWhiteSpace(item.Data))
+                    {
+                        <img class="media-thumb" src="@item.Data" alt="@item.Titre" loading="lazy" />
+                    }
+                    else
+                    {
+                        <span class="media-thumb media-thumb-icon" aria-hidden="true">@MediaTypes.Icon(item.Type)</span>
+                    }
+                    <div class="media-main">
+                        <div class="media-title">@item.Titre</div>
+                        <div class="media-sub">@MediaTypes.Label(item.Type) · @DataStore.FormatDateCourte(item.Date)</div>
+                    </div>
+                    <button type="button" class="btn-icon danger" aria-label="Supprimer" @onclick:stopPropagation="true" @onclick="() => AskDelete(item)">🗑</button>
+                </div>
+            }
+        </div>
+    }
+
+    <button class="fab" aria-label="Ajouter au journal" @onclick="() => _showAdd = true">+</button>
+
+    <Modal Show="_showAdd" Title="Ajouter au journal" OnClose="() => _showAdd = false">
+        <div class="sheet-options">
+            <button class="sheet-option" @onclick="AddPhotoGallery">
+                <span class="sheet-icon" style="background:#05966924;color:#059669">🖼</span>
+                <span class="sheet-main"><strong>Photo (galerie)</strong><span>Choisir une image (max 5 Mo)</span></span>
+                <span aria-hidden="true">›</span>
+            </button>
+            <button class="sheet-option" @onclick="AddPhotoCamera">
+                <span class="sheet-icon" style="background:#05966924;color:#059669">📷</span>
+                <span class="sheet-main"><strong>Photo (caméra)</strong><span>Photographier (max 5 Mo)</span></span>
+                <span aria-hidden="true">›</span>
+            </button>
+            <button class="sheet-option" @onclick="AddVideoGallery">
+                <span class="sheet-icon" style="background:#0891b224;color:#0891b2">🎬</span>
+                <span class="sheet-main"><strong>Vidéo (galerie)</strong><span>Choisir une vidéo (max 20 Mo)</span></span>
+                <span aria-hidden="true">›</span>
+            </button>
+            <button class="sheet-option" @onclick="AddVideoCamera">
+                <span class="sheet-icon" style="background:#0891b224;color:#0891b2">📹</span>
+                <span class="sheet-main"><strong>Vidéo (caméra)</strong><span>Filmer (max 20 Mo)</span></span>
+                <span aria-hidden="true">›</span>
+            </button>
+            <button class="sheet-option" @onclick="AddAudio">
+                <span class="sheet-icon" style="background:#7c3aed24;color:#7c3aed">🎙</span>
+                <span class="sheet-main"><strong>Audio</strong><span>Fichier importé MP3, M4A, WAV (max 10 Mo)</span></span>
+                <span aria-hidden="true">›</span>
+            </button>
+        </div>
+        <span class="field-hint">La prise de son intégrée n'existe pas : importez un enregistrement audio.</span>
+    </Modal>
+
+    <Modal Show="_staged != null" Title="@(MediaTypes.Label(_stagedType) + " — informations")" OnClose="CancelStaged">
+        <ChildContent>
+            @if (_staged != null)
+            {
+                <p class="muted" style="margin-top:0">📎 @_staged.FileName · @FormatSize(_staged.Size)</p>
+                <div class="form-group">
+                    <label for="jm-titre">Titre *</label>
+                    <input id="jm-titre" type="text" value="@_titre" @oninput="e => _titre = e.Value?.ToString() ?? string.Empty" />
+                </div>
+                <div class="form-group">
+                    <label for="jm-desc">Description</label>
+                    <textarea id="jm-desc" rows="2" value="@_desc" @oninput="e => _desc = e.Value?.ToString() ?? string.Empty"></textarea>
+                </div>
+                <div class="form-group">
+                    <label for="jm-date">Date (JJ/MM/AAAA)</label>
+                    <input id="jm-date" type="date" value="@_dateIso" @onchange="e => _dateIso = e.Value?.ToString() ?? string.Empty" />
+                </div>
+                <span class="form-error">@_stagedError</span>
+            }
+        </ChildContent>
+        <FooterContent>
+            <button class="btn btn-secondary" @onclick="CancelStaged">Annuler</button>
+            <button class="btn btn-primary" @onclick="SaveStaged">Enregistrer</button>
+        </FooterContent>
+    </Modal>
+
+    <Modal Show="_viewer != null" Title="@(_viewer?.Titre ?? "")" OnClose="() => _viewer = null">
+        @if (_viewer != null)
+        {
+            @if (_viewer.Type == MediaTypes.Photo && !string.IsNullOrWhiteSpace(_viewer.Data))
+            {
+                <div class="image-viewer-wrap">
+                    <img class="image-viewer-img" src="@_viewer.Data" alt="@_viewer.Titre" />
+                </div>
+            }
+            else if (_viewer.Type == MediaTypes.Video && !string.IsNullOrWhiteSpace(_viewer.Data))
+            {
+                <video class="media-player" controls playsinline src="@_viewer.Data"></video>
+            }
+            else if (_viewer.Type == MediaTypes.Audio && !string.IsNullOrWhiteSpace(_viewer.Data))
+            {
+                <audio class="media-player-audio" controls src="@_viewer.Data"></audio>
+            }
+            @if (!string.IsNullOrWhiteSpace(_viewer.Description))
+            {
+                <div class="cal-detail-notes" style="margin-top:10px">@_viewer.Description</div>
+            }
+            <div class="storage-line" style="margin-top:8px"><span>Date</span><strong>@DataStore.FormatDateCourte(_viewer.Date)</strong></div>
+        }
+    </Modal>
+
+    <ConfirmDialog Show="_deleteTarget != null" Title="Supprimer du journal"
+                   Message="@(_deleteTarget == null ? "" : "Supprimer « " + _deleteTarget.Titre + " » ?")"
+                   ConfirmLabel="Supprimer" Danger="true" OnConfirm="ConfirmDelete" OnCancel="() => _deleteTarget = null" />
+}
+
+@code {
+    private string _type = "";
+    private string _search = "";
+    private bool _showAdd;
+    private PhotoService.PickResult? _staged;
+    private string _stagedType = MediaTypes.Photo;
+    private string _titre = "";
+    private string _desc = "";
+    private string _dateIso = "";
+    private string _stagedError = "";
+    private MediaItem? _viewer;
+    private MediaItem? _deleteTarget;
+
+    private IReadOnlyList<MediaItem> Filtered => Store.JournalMedia
+        .Where(m => _type.Length == 0 || m.Type == _type)
+        .Where(m =>
+        {
+            var q = _search.Trim();
+            if (q.Length == 0) return true;
+            return (m.Titre + " " + m.Description + " " + MediaTypes.Label(m.Type))
+                .Contains(q, StringComparison.OrdinalIgnoreCase);
+        })
+        .OrderByDescending(m => m.Date)
+        .ThenByDescending(m => m.DateCreation)
+        .ToList();
+
+    private void OnSearch(ChangeEventArgs e) => _search = e.Value?.ToString() ?? string.Empty;
+
+    protected override void OnInitialized()
+    {
+        Store.DataChanged += Refresh;
+    }
+
+    private void Refresh() => _ = InvokeAsync(StateHasChanged);
+
+    private void OnCardKey(KeyboardEventArgs k, MediaItem item)
+    {
+        if (k.Key is "Enter" or " ") OpenViewer(item);
+    }
+
+    private void OpenViewer(MediaItem item) => _viewer = item;
+
+    private async Task AddPhotoGallery()
+    {
+        _showAdd = false;
+        var dataUrl = await Photos.PickPhotoAsync();
+        if (dataUrl == null)
+        {
+            if (!string.IsNullOrEmpty(Photos.LastError)) State.NotifyError(Photos.LastError);
+            return;
+        }
+        StageDataUrl(dataUrl, "photo.jpg", MediaTypes.Photo);
+    }
+
+    private async Task AddPhotoCamera()
+    {
+        _showAdd = false;
+        var dataUrl = await Photos.CapturePhotoAsync();
+        if (dataUrl == null)
+        {
+            if (!string.IsNullOrEmpty(Photos.LastError)) State.NotifyError(Photos.LastError);
+            return;
+        }
+        StageDataUrl(dataUrl, "photo.jpg", MediaTypes.Photo);
+    }
+
+    private async Task AddVideoGallery()
+    {
+        _showAdd = false;
+        var pick = await Photos.PickVideoAsync();
+        if (pick == null)
+        {
+            if (!string.IsNullOrEmpty(Photos.LastError)) State.NotifyError(Photos.LastError);
+            return;
+        }
+        StagePick(pick, MediaTypes.Video);
+    }
+
+    private async Task AddVideoCamera()
+    {
+        _showAdd = false;
+        var pick = await Photos.CaptureVideoAsync();
+        if (pick == null)
+        {
+            if (!string.IsNullOrEmpty(Photos.LastError)) State.NotifyError(Photos.LastError);
+            return;
+        }
+        StagePick(pick, MediaTypes.Video);
+    }
+
+    private async Task AddAudio()
+    {
+        _showAdd = false;
+        var pick = await Photos.PickAudioAsync();
+        if (pick == null)
+        {
+            if (!string.IsNullOrEmpty(Photos.LastError)) State.NotifyError(Photos.LastError);
+            return;
+        }
+        StagePick(pick, MediaTypes.Audio);
+    }
+
+    private void StageDataUrl(string dataUrl, string fileName, string type)
+    {
+        var comma = dataUrl.IndexOf(',');
+        var mime = dataUrl.StartsWith("data:", StringComparison.Ordinal) && comma > 5
+            ? dataUrl[5..comma].Split(';')[0]
+            : "image/jpeg";
+        long size;
+        try
+        {
+            var b64 = comma >= 0 ? dataUrl[(comma + 1)..] : "";
+            size = Convert.FromBase64String(b64).Length;
+        }
+        catch { size = 0; }
+        StagePick(new PhotoService.PickResult { FileName = fileName, Mime = mime, Size = size, DataUrl = dataUrl }, type);
+    }
+
+    private void StagePick(PhotoService.PickResult pick, string type)
+    {
+        _staged = pick;
+        _stagedType = type;
+        _titre = Path.GetFileNameWithoutExtension(pick.FileName);
+        if (string.IsNullOrWhiteSpace(_titre)) _titre = MediaTypes.Label(type);
+        _desc = "";
+        _dateIso = DateTime.Today.ToString("yyyy-MM-dd");
+        _stagedError = "";
+    }
+
+    private void CancelStaged()
+    {
+        _staged = null;
+        _stagedError = "";
+    }
+
+    private void SaveStaged()
+    {
+        _stagedError = "";
+        if (_staged == null) return;
+        var res = Store.AddMedia(new MediaItem
+        {
+            Titre = _titre,
+            Description = _desc,
+            Type = _stagedType,
+            Mime = _staged.Mime,
+            Taille = _staged.Size,
+            Data = _staged.DataUrl,
+            Date = DataStore.ToYmd(_dateIso)
+        });
+        if (!res.Success) { _stagedError = res.Error; return; }
+        State.NotifySuccess(MediaTypes.Label(_stagedType) + " ajouté au journal.");
+        _staged = null;
+    }
+
+    private void AskDelete(MediaItem m) => _deleteTarget = m;
+
+    private void ConfirmDelete()
+    {
+        var t = _deleteTarget;
+        _deleteTarget = null;
+        if (t == null) return;
+        var res = Store.DeleteMedia(t.Id);
+        if (res.Success) State.NotifySuccess("Élément supprimé.");
+        else State.NotifyError(res.Error);
+    }
+
+    private static string FormatSize(long bytes)
+    {
+        if (bytes < 1024) return bytes + " o";
+        if (bytes < 1024 * 1024) return (bytes / 1024.0).ToString("0.0") + " Ko";
+        return (bytes / (1024.0 * 1024)).ToString("0.0") + " Mo";
+    }
+
+    public void Dispose() => Store.DataChanged -= Refresh;
+}

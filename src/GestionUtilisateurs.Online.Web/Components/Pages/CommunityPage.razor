@@ -1,0 +1,407 @@
+@implements IDisposable
+@inject DataStore Store
+@inject AppState State
+@inject PhotoService Photos
+
+<div class="page-head">
+    <p>@(string.IsNullOrWhiteSpace(Store.Community.SousTitre) ? "Le récit vivant de notre communauté, chapitre par chapitre." : Store.Community.SousTitre)</p>
+</div>
+
+<div class="search-box cal-search">
+    <span class="search-icon" aria-hidden="true">⌕</span>
+    <input type="search" placeholder="Rechercher dans l'histoire (chapitre, texte)…" aria-label="Rechercher un chapitre"
+           value="@_search" @oninput="OnSearch" />
+</div>
+@if (!string.IsNullOrWhiteSpace(_search))
+{
+    <div class="search-summary">@SearchResults.Count chapitre(s) trouvé(s) pour « @_search.Trim() »</div>
+}
+
+@if (_editing && CanEdit)
+{
+    <div class="card" style="margin-bottom:12px">
+        <h3>Histoire de la communauté</h3>
+        <div class="form-group">
+            <label for="cm-titre">Titre *</label>
+            <input id="cm-titre" type="text" value="@_storyTitre" @oninput="e => _storyTitre = e.Value?.ToString() ?? string.Empty" />
+        </div>
+        <div class="form-group">
+            <label for="cm-soustitre">Sous-titre</label>
+            <input id="cm-soustitre" type="text" value="@_storySousTitre" @oninput="e => _storySousTitre = e.Value?.ToString() ?? string.Empty" />
+        </div>
+        <div class="form-actions">
+            <button class="btn btn-secondary" @onclick="CancelStory">Annuler</button>
+            <button class="btn btn-primary" @onclick="SaveStory">Enregistrer</button>
+        </div>
+    </div>
+
+    <div class="card" style="margin-bottom:12px">
+        <h3>@(_chapterId == null ? "Ajouter un chapitre" : "Modifier le chapitre")</h3>
+        <div class="form-group">
+            <label for="cm-ch-titre">Titre du chapitre *</label>
+            <input id="cm-ch-titre" type="text" placeholder="Ex : La fondation" value="@_cTitre" @oninput="e => _cTitre = e.Value?.ToString() ?? string.Empty" />
+        </div>
+        <div class="form-group">
+            <label for="cm-ch-date">Date (JJ/MM/AAAA)</label>
+            <input id="cm-ch-date" type="date" value="@_cDateIso" @onchange="OnChapterDate" />
+            <span class="field-hint">Affichée au format JJ/MM/AAAA.</span>
+        </div>
+        <div class="form-group">
+            <label for="cm-ch-texte">Récit</label>
+            <textarea id="cm-ch-texte" rows="4" placeholder="Racontez ce moment de la communauté…" value="@_cTexte" @oninput="e => _cTexte = e.Value?.ToString() ?? string.Empty"></textarea>
+        </div>
+        <div class="form-group">
+            <label>Image (facultatif, max 5 Mo)</label>
+            <div class="photo-control">
+                @if (!string.IsNullOrWhiteSpace(_cImage))
+                {
+                    <img class="settings-logo-preview" src="@_cImage" alt="Illustration du chapitre" />
+                }
+                else
+                {
+                    <div class="photo-placeholder">Aucune image</div>
+                }
+                <div class="photo-actions">
+                    <button type="button" class="btn btn-secondary btn-sm" @onclick="PickChapterImage">🖼 Choisir</button>
+                    <button type="button" class="btn btn-secondary btn-sm" @onclick="CaptureChapterImage">📷 Photo</button>
+                    @if (!string.IsNullOrWhiteSpace(_cImage))
+                    {
+                        <button type="button" class="btn btn-secondary btn-sm" @onclick="() => _cImage = string.Empty">Retirer</button>
+                    }
+                </div>
+            </div>
+        </div>
+        <span class="form-error">@_chapterError</span>
+        <div class="form-actions">
+            <button class="btn btn-secondary" @onclick="CancelChapter">Annuler</button>
+            <button class="btn btn-primary" @onclick="SaveChapter">@(_chapterId == null ? "Ajouter" : "Enregistrer")</button>
+        </div>
+    </div>
+}
+
+<div class="inline-actions" style="justify-content:space-between;margin-bottom:10px">
+    <p class="user-count">@Store.Community.Chapitres.Count chapitre(s)</p>
+    <div class="inline-actions">
+        @if (CanEdit)
+        {
+            <button class="btn btn-secondary btn-sm" @onclick="ToggleEdit">@(_editing ? "👁 Voir" : "✏️ Modifier")</button>
+        }
+        @if (!_editing && Store.Community.Chapitres.Count > 1)
+        {
+            <button class="btn btn-secondary btn-sm" @onclick="Prev" disabled="@(_index <= 0)">‹ Préc.</button>
+            <button class="btn btn-secondary btn-sm" @onclick="Next" disabled="@(_index >= Store.Community.Chapitres.Count - 1)">Suiv. ›</button>
+        }
+    </div>
+</div>
+
+@if (Store.Community.Chapitres.Count == 0)
+{
+    <EmptyState Icon="📖" Title="Histoire à écrire" Message="@(CanEdit ? "Ajoutez le premier chapitre avec le mode Modifier." : "La communauté n'a pas encore raconté son histoire.")" />
+}
+else if (_editing && CanEdit)
+{
+    <div class="community-timeline">
+        @for (var i = 0; i < Store.Community.Chapitres.Count; i++)
+        {
+            var idx = i;
+            var c = Store.Community.Chapitres[idx];
+            <div class="community-card">
+                <div class="community-rail"><span class="community-dot">@(idx + 1)</span></div>
+                <div class="community-main">
+                    <div class="community-date">@ChapterDate(c)</div>
+                    <div class="community-title">@c.Titre</div>
+                    @if (!string.IsNullOrWhiteSpace(c.Texte))
+                    {
+                        <div class="community-text">@c.Texte</div>
+                    }
+                    @if (!string.IsNullOrWhiteSpace(c.Image))
+                    {
+                        <img class="community-img" src="@c.Image" alt="@c.Titre" loading="lazy" />
+                    }
+                    <div class="community-actions">
+                        <button class="btn-icon" aria-label="Monter" disabled="@(idx == 0)" @onclick="() => Move(c.Id, -1)">↑</button>
+                        <button class="btn-icon" aria-label="Descendre" disabled="@(idx == Store.Community.Chapitres.Count - 1)" @onclick="() => Move(c.Id, 1)">↓</button>
+                        <button class="btn btn-secondary btn-sm" @onclick="() => StartEditChapter(c)">Modifier</button>
+                        <button class="btn-icon danger" aria-label="Supprimer" @onclick="() => AskDelete(c)">🗑</button>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+}
+else if (!string.IsNullOrWhiteSpace(_search))
+{
+    <div class="user-list">
+        @foreach (var c in SearchResults)
+        {
+            var ch = c;
+            <div class="user-card" role="button" tabindex="0" @onclick="() => JumpToChapter(ch)" @onkeydown="(k) => OnJumpKey(k, ch)">
+                <span class="field-type-icon" aria-hidden="true">📖</span>
+                <div class="user-card-main">
+                    <div class="user-card-name">@ch.Titre</div>
+                    <div class="user-card-sub">@ChapterDateShort(ch)</div>
+                    @if (!string.IsNullOrWhiteSpace(ch.Texte))
+                    {
+                        <div class="user-card-sub">@TruncateText(ch.Texte, 120)</div>
+                    }
+                </div>
+                <span class="sel-count" aria-hidden="true">›</span>
+            </div>
+        }
+    </div>
+}
+else
+{
+    var chapters = Store.Community.Chapitres;
+    var current = chapters[Math.Clamp(_index, 0, chapters.Count - 1)];
+    <div class="community-reader">
+        <div class="community-progress">@(_index + 1) / @chapters.Count</div>
+        <div class="community-bar"><div class="community-fill" style="width:@(((double)(_index + 1) / chapters.Count * 100.0).ToString("0", System.Globalization.CultureInfo.InvariantCulture))%"></div></div>
+        <div class="community-card community-current">
+            <div class="community-date">@ChapterDate(current)</div>
+            <h3 class="community-title-lg">@current.Titre</h3>
+            @if (!string.IsNullOrWhiteSpace(current.Image))
+            {
+                <button type="button" class="community-img-btn" @onclick="() => _preview = current.Image" aria-label="Agrandir l'image">
+                    <img class="community-img-lg" src="@current.Image" alt="@current.Titre" />
+                </button>
+            }
+            @if (!string.IsNullOrWhiteSpace(current.Texte))
+            {
+                @if (_expanded)
+                {
+                    <div class="community-text-lg">@current.Texte</div>
+                    <button type="button" class="btn btn-secondary btn-sm" @onclick="() => _expanded = false">Réduire</button>
+                }
+                else if (current.Texte.Length > 220)
+                {
+                    <div class="community-text-lg">@current.Texte.Substring(0, 220)…</div>
+                    <button type="button" class="btn btn-secondary btn-sm" @onclick="() => _expanded = true">Lire la suite</button>
+                }
+                else
+                {
+                    <div class="community-text-lg">@current.Texte</div>
+                }
+            }
+        </div>
+        <div class="community-dots">
+            @for (var i = 0; i < chapters.Count; i++)
+            {
+                var idx = i;
+                <button type="button" class="community-dot-btn @(idx == _index ? "active" : "")" aria-label="Chapitre @(idx + 1)" @onclick="() => GoTo(idx)">@(idx + 1)</button>
+            }
+        </div>
+    </div>
+}
+
+<ConfirmDialog Show="_deleteTarget != null" Title="Supprimer le chapitre"
+               Message="@(_deleteTarget == null ? "" : "Supprimer « " + _deleteTarget.Titre + " » de l'histoire ?")"
+               ConfirmLabel="Supprimer" Danger="true" OnConfirm="ConfirmDelete" OnCancel="() => _deleteTarget = null" />
+
+<Modal Title="Illustration" Show="_preview != null" OnClose="() => _preview = null">
+    @if (_preview != null)
+    {
+        <div class="image-viewer-wrap">
+            <img class="image-viewer-img" src="@_preview" alt="Illustration" />
+        </div>
+    }
+</Modal>
+
+@code {
+    private bool CanEdit => Store.IsManager;
+    private bool _editing;
+    private int _index;
+    private bool _expanded;
+    private string? _preview;
+    private string _search = "";
+
+    private List<CommunityChapter> SearchResults
+    {
+        get
+        {
+            var q = _search.Trim();
+            if (q.Length == 0) return new List<CommunityChapter>();
+            return Store.Community.Chapitres
+                .Where(c => (c.Titre + " " + c.Texte + " " + (c.Date ?? ""))
+                    .Contains(q, StringComparison.OrdinalIgnoreCase))
+                .ToList();
+        }
+    }
+
+    private void OnSearch(ChangeEventArgs e)
+    {
+        _search = e.Value?.ToString() ?? string.Empty;
+        _expanded = false;
+    }
+
+    private void JumpToChapter(CommunityChapter c)
+    {
+        var idx = Store.Community.Chapitres.ToList().FindIndex(x => x.Id == c.Id);
+        if (idx >= 0) _index = idx;
+        _search = "";
+        _expanded = false;
+    }
+
+    private void OnJumpKey(KeyboardEventArgs k, CommunityChapter c)
+    {
+        if (k.Key is "Enter" or " ") JumpToChapter(c);
+    }
+
+    private static string ChapterDateShort(CommunityChapter c)
+        => string.IsNullOrWhiteSpace(c.Date) ? "Date à venir" : DataStore.FormatDateCourte(c.Date);
+
+    private static string TruncateText(string s, int max)
+    {
+        var v = s ?? "";
+        return v.Length <= max ? v : v[..max] + "…";
+    }
+
+    private string _storyTitre = "";
+    private string _storySousTitre = "";
+
+    private string? _chapterId;
+    private string _cTitre = "";
+    private string _cTexte = "";
+    private string _cDateIso = "";
+    private string _cImage = "";
+    private string _chapterError = "";
+    private CommunityChapter? _deleteTarget;
+
+    protected override void OnInitialized()
+    {
+        Store.DataChanged += Refresh;
+        ResetStoryDraft();
+    }
+
+    protected override void OnParametersSet()
+    {
+        var count = Store.Community.Chapitres.Count;
+        if (_index >= count) _index = Math.Max(0, count - 1);
+    }
+
+    private void Refresh() => _ = InvokeAsync(() =>
+    {
+        var count = Store.Community.Chapitres.Count;
+        if (_index >= count) _index = Math.Max(0, count - 1);
+        StateHasChanged();
+    });
+
+    private void ResetStoryDraft()
+    {
+        _storyTitre = Store.Community.Titre;
+        _storySousTitre = Store.Community.SousTitre;
+    }
+
+    private void ToggleEdit()
+    {
+        _editing = !_editing;
+        if (_editing) { ResetStoryDraft(); CancelChapter(); }
+    }
+
+    private void CancelStory() => ResetStoryDraft();
+
+    private void SaveStory()
+    {
+        var res = Store.SaveCommunityStory(_storyTitre, _storySousTitre);
+        if (!res.Success) State.NotifyError(res.Error);
+        else State.NotifySuccess("Histoire enregistrée.");
+    }
+
+    private void CancelChapter()
+    {
+        _chapterId = null;
+        _cTitre = "";
+        _cTexte = "";
+        _cDateIso = "";
+        _cImage = "";
+        _chapterError = "";
+    }
+
+    private void StartEditChapter(CommunityChapter c)
+    {
+        _chapterId = c.Id;
+        _cTitre = c.Titre;
+        _cTexte = c.Texte;
+        _cDateIso = ToIsoDate(c.Date);
+        _cImage = c.Image ?? "";
+        _chapterError = "";
+    }
+
+    private void OnChapterDate(ChangeEventArgs e) => _cDateIso = e.Value?.ToString() ?? "";
+
+    private async Task PickChapterImage()
+    {
+        var data = await Photos.PickPhotoAsync();
+        if (data != null) _cImage = data;
+        else if (!string.IsNullOrEmpty(Photos.LastError)) State.NotifyError(Photos.LastError);
+    }
+
+    private async Task CaptureChapterImage()
+    {
+        var data = await Photos.CapturePhotoAsync();
+        if (data != null) _cImage = data;
+        else if (!string.IsNullOrEmpty(Photos.LastError)) State.NotifyError(Photos.LastError);
+    }
+
+    private void SaveChapter()
+    {
+        _chapterError = "";
+        var dateDisplay = string.IsNullOrWhiteSpace(_cDateIso) ? "" : DataStore.FormatDateCourte(ToIsoOrDisplay(_cDateIso));
+        OperationResult res;
+        if (_chapterId == null)
+            res = Store.AddCommunityChapter(_cTitre, _cTexte, dateDisplay, string.IsNullOrWhiteSpace(_cImage) ? null : _cImage);
+        else
+            res = Store.UpdateCommunityChapter(_chapterId, _cTitre, _cTexte, dateDisplay, string.IsNullOrWhiteSpace(_cImage) ? null : _cImage, string.IsNullOrWhiteSpace(_cImage));
+        if (!res.Success) { _chapterError = res.Error; return; }
+        State.NotifySuccess(_chapterId == null ? "Chapitre ajouté." : "Chapitre enregistré.");
+        CancelChapter();
+    }
+
+    private void AskDelete(CommunityChapter c) => _deleteTarget = c;
+
+    private void ConfirmDelete()
+    {
+        var t = _deleteTarget;
+        _deleteTarget = null;
+        if (t == null) return;
+        var res = Store.DeleteCommunityChapter(t.Id);
+        if (res.Success) State.NotifySuccess("Chapitre supprimé.");
+        else State.NotifyError(res.Error);
+    }
+
+    private void Move(string id, int dir) => Store.MoveCommunityChapter(id, dir);
+
+    private void Prev() { if (_index > 0) { _index--; _expanded = false; } }
+    private void Next() { if (_index < Store.Community.Chapitres.Count - 1) { _index++; _expanded = false; } }
+    private void GoTo(int idx) { _index = idx; _expanded = false; }
+
+    private static string ChapterDate(CommunityChapter c)
+    {
+        if (string.IsNullOrWhiteSpace(c.Date)) return "Date à venir";
+        var f = DataStore.FormatDateCourte(c.Date);
+        return f == "—" ? c.Date : f;
+    }
+
+    private static string ToIsoDate(string date)
+    {
+        if (string.IsNullOrWhiteSpace(date)) return "";
+        // Stockage = JJ/MM/AAAA : reconvertit en yyyy-MM-dd pour l'input date.
+        if (DateTime.TryParseExact(date.Trim(), "dd/MM/yyyy",
+                System.Globalization.CultureInfo.GetCultureInfo("fr-FR"),
+                System.Globalization.DateTimeStyles.None, out var d))
+            return d.ToString("yyyy-MM-dd");
+        if (DateTime.TryParse(date, out var any)) return any.ToString("yyyy-MM-dd");
+        return "";
+    }
+
+    private static string ToIsoOrDisplay(string isoOrAny)
+    {
+        if (DateTime.TryParseExact(isoOrAny.Trim(), "yyyy-MM-dd",
+                System.Globalization.CultureInfo.InvariantCulture,
+                System.Globalization.DateTimeStyles.None, out var d))
+            return d.ToString("dd/MM/yyyy");
+        return isoOrAny;
+    }
+
+    public void Dispose() => Store.DataChanged -= Refresh;
+}

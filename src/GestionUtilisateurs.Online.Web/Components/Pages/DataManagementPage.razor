@@ -1,0 +1,953 @@
+@implements IDisposable
+@inject DataStore Store
+@inject AppState State
+@inject JavascriptBridge Js
+
+@if (!Store.IsBaseAdmin)
+{
+    <EmptyState Icon="🔒" Title="Accès réservé" Message="La gestion directe des données est réservée au gestionnaire de la base." />
+}
+else
+{
+    <div class="page-head">
+        <p>Consultez, ajoutez ou modifiez simplement vos données locales, sans JSON.</p>
+    </div>
+
+    <div class="chips-row data-set-tabs" role="tablist" aria-label="Collections de données">
+        @foreach (var dataSet in DataStore.ManagedDataSets)
+        {
+            <button type="button" class="chip @(_selectedKey == dataSet.Key ? "active" : "")" @onclick="() => SelectDataSet(dataSet.Key)">@dataSet.Label</button>
+        }
+    </div>
+
+    @if (_selectedKey == "users")
+    {
+        <div class="card data-editor-card">
+            <div class="inline-actions" style="justify-content:space-between">
+                <h3 style="margin:0">Utilisateurs</h3>
+                <button class="btn btn-secondary btn-sm" @onclick="StartAddUser">＋ Ajouter</button>
+            </div>
+            <div class="form-group" style="margin:10px 0 0">
+                <input type="search" placeholder="Rechercher un utilisateur (nom, identifiant, e-mail)…" value="@_search" @oninput="OnSearchChanged" />
+            </div>
+        </div>
+
+        @if (_userFormVisible && _userDraft != null)
+        {
+            <div class="card" style="margin-top:10px">
+                <h3>@(_userEditId == null ? "Ajouter un utilisateur" : "Modifier l'utilisateur")</h3>
+                <div class="form-group">
+                    <label for="dm-prenom">Prénom *</label>
+                    <input id="dm-prenom" type="text" value="@_userDraft.Prenom" @oninput="e => _userDraft.Prenom = e.Value?.ToString() ?? string.Empty" />
+                </div>
+                <div class="form-group">
+                    <label for="dm-nom">Nom *</label>
+                    <input id="dm-nom" type="text" value="@_userDraft.Nom" @oninput="e => _userDraft.Nom = e.Value?.ToString() ?? string.Empty" />
+                </div>
+                <div class="form-group">
+                    <label for="dm-identifiant">Identifiant</label>
+                    <input id="dm-identifiant" type="text" value="@_userDraft.Identifiant" disabled="@(_userEditId != null)" @oninput="e => _userDraft.Identifiant = e.Value?.ToString() ?? string.Empty" />
+                    @if (_userEditId == null)
+                    {
+                        <span class="field-hint">Vide = généré automatiquement (prénom.nom).</span>
+                    }
+                </div>
+                <div class="form-group">
+                    <label for="dm-email">E-mail</label>
+                    <input id="dm-email" type="email" value="@_userDraft.Email" @oninput="e => _userDraft.Email = e.Value?.ToString() ?? string.Empty" />
+                </div>
+                <div class="form-group">
+                    <label for="dm-tel">Téléphone</label>
+                    <input id="dm-tel" type="tel" value="@_userDraft.Telephone" @oninput="e => _userDraft.Telephone = e.Value?.ToString() ?? string.Empty" />
+                </div>
+                <div class="form-group">
+                    <label for="dm-role">Rôle</label>
+                    <select id="dm-role" value="@_userDraft.Role" @onchange="e => _userDraft.Role = e.Value?.ToString() ?? Roles.Utilisateur">
+                        @if (_userEditId != null)
+                        {
+                            <option disabled value="@Roles.BaseAdmin">@Roles.BaseAdmin</option>
+                        }
+                        @foreach (var r in RoleChoices)
+                        {
+                            <option value="@r">@r</option>
+                        }
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-check" for="dm-actif">
+                        <input id="dm-actif" type="checkbox" checked="@_userDraft.Actif" @onchange="e => _userDraft.Actif = bool.TryParse(e.Value?.ToString(), out var b) ? b : true" />
+                        Compte actif
+                    </label>
+                </div>
+                <div class="form-group">
+                    <label for="dm-mdp">@(_userEditId == null ? "Mot de passe" : "Nouveau mot de passe (vide = inchangé)")</label>
+                    <input id="dm-mdp" type="text" value="@_userPassword" @oninput="e => _userPassword = e.Value?.ToString() ?? string.Empty" />
+                    @if (_userEditId == null)
+                    {
+                        <span class="field-hint">Vide = mot de passe par défaut « @DataStore.DEFAULT_PASSWORD ».</span>
+                    }
+                </div>
+                @if (!string.IsNullOrWhiteSpace(_userError))
+                {
+                    <div class="form-error" role="alert">@_userError</div>
+                }
+                <div class="form-actions">
+                    <button class="btn btn-secondary" @onclick="CancelUserForm">Annuler</button>
+                    <button class="btn btn-primary" @onclick="SaveUser">@(_userEditId == null ? "Ajouter" : "Enregistrer")</button>
+                </div>
+            </div>
+        }
+
+        @if (FilteredUsers.Count == 0)
+        {
+            <EmptyState Icon="☺" Title="Aucun utilisateur" Message="@(_search.Length > 0 ? "Aucun résultat pour cette recherche." : "Ajoutez le premier compte depuis le bouton « Ajouter ».")" />
+        }
+        else
+        {
+            <div class="user-list">
+                @foreach (var user in PagedUsers)
+                {
+                    <div class="user-card">
+                        <Avatar UserName="@user.NomComplet" Seed="@user.Identifiant" Size="sm" Photo="@user.Photo" />
+                        <div class="user-card-main">
+                            <div class="user-card-name">@user.NomComplet</div>
+                            <div class="user-card-sub">@user.Identifiant</div>
+                            <div class="user-card-meta">
+                                <Badge Text="@user.Role" Kind="role" />
+                                <Badge Text="@user.Statut" Kind="@(user.Actif ? "active" : "inactive")" />
+                            </div>
+                            <div class="user-card-pwd">
+                                <span class="pwd-lock" aria-hidden="true">🔒</span>
+                                @if (_revealedPasswords.Contains(user.Id))
+                                {
+                                    <code class="pwd-plain">@Store.GetPlainPassword(user.Id)</code>
+                                    <button type="button" class="btn-icon" aria-label="Masquer le mot de passe" @onclick="() => HidePassword(user.Id)">🙈</button>
+                                }
+                                else
+                                {
+                                    <code class="pwd-cipher" title="Mot de passe chiffré">@Store.GetEncryptedPasswordDisplay(user.Id)</code>
+                                    <button type="button" class="btn-icon" aria-label="Déchiffrer le mot de passe" @onclick="() => RevealPassword(user.Id)">🔓</button>
+                                }
+                            </div>
+                        </div>
+                        <div class="user-card-actions" @onclick:stopPropagation="true">
+                            <button class="btn-icon" aria-label="Modifier" @onclick="@(() => StartEditUser(user))">✎</button>
+                            <button class="btn-icon danger" aria-label="Supprimer" @onclick="@(() => AskDeleteUser(user))">🗑</button>
+                        </div>
+                    </div>
+                }
+            </div>
+            <PaginationBar Page="_page" PageCount="TotalPages(FilteredUsers.Count)" Total="FilteredUsers.Count"
+                           OnPrev="() => _page--" OnNext="() => _page++" />
+        }
+    }
+    else if (_selectedKey == "fields")
+    {
+        <div class="card data-editor-card">
+            <div class="inline-actions" style="justify-content:space-between">
+                <h3 style="margin:0">Champs personnalisés</h3>
+                <button class="btn btn-secondary btn-sm" @onclick="StartAddField">＋ Ajouter</button>
+            </div>
+            <div class="form-group" style="margin:10px 0 0">
+                <input type="search" placeholder="Rechercher un champ…" value="@_search" @oninput="OnSearchChanged" />
+            </div>
+        </div>
+
+        @if (_fieldFormVisible && _fieldDraft != null)
+        {
+            <div class="card" style="margin-top:10px">
+                <h3>@(_fieldEditId == null ? "Ajouter un champ" : "Modifier le champ")</h3>
+                <div class="form-group">
+                    <label for="dm-flabel">Libellé *</label>
+                    <input id="dm-flabel" type="text" value="@_fieldDraft.Label" @oninput="e => _fieldDraft.Label = e.Value?.ToString() ?? string.Empty" />
+                </div>
+                <div class="form-group">
+                    <label for="dm-ftype">Type</label>
+                    <select id="dm-ftype" value="@_fieldDraft.Type.ToString()" disabled="@_fieldDraft.SystemField" @onchange="OnFieldTypeChanged">
+                        @foreach (var t in Store.FieldTypeChoices())
+                        {
+                            <option value="@t.id">@t.label</option>
+                        }
+                    </select>
+                </div>
+                @if (FieldTypeInfo.SupportsOptions(_fieldDraft.Type))
+                {
+                    <div class="form-group">
+                        <label for="dm-foptions">Options (une par ligne)</label>
+                        <textarea id="dm-foptions" rows="3" value="@_fieldOptions" @oninput="e => _fieldOptions = e.Value?.ToString() ?? string.Empty"></textarea>
+                    </div>
+                }
+                <div class="form-group">
+                    <label class="form-check" for="dm-factif">
+                        <input id="dm-factif" type="checkbox" checked="@_fieldDraft.Actif" @onchange="e => _fieldDraft.Actif = bool.TryParse(e.Value?.ToString(), out var b) ? b : true" />
+                        Champ actif dans le formulaire
+                    </label>
+                </div>
+                @if (!_fieldDraft.SystemField && _fieldDraft.Id != FieldDefinition.FIELD_IDENTIFIANT)
+                {
+                    <div class="form-group">
+                        <label class="form-check" for="dm-frequis">
+                            <input id="dm-frequis" type="checkbox" checked="@_fieldDraft.Requis" @onchange="e => _fieldDraft.Requis = bool.TryParse(e.Value?.ToString(), out var b) ? b : false" />
+                            Champ requis
+                        </label>
+                    </div>
+                }
+                @if (!string.IsNullOrWhiteSpace(_fieldError))
+                {
+                    <div class="form-error" role="alert">@_fieldError</div>
+                }
+                <div class="form-actions">
+                    <button class="btn btn-secondary" @onclick="CancelFieldForm">Annuler</button>
+                    <button class="btn btn-primary" @onclick="SaveField">@(_fieldEditId == null ? "Ajouter" : "Enregistrer")</button>
+                </div>
+            </div>
+        }
+
+        @if (FilteredFields.Count == 0)
+        {
+            <EmptyState Icon="🧩" Title="Aucun champ" Message="@(_search.Length > 0 ? "Aucun résultat pour cette recherche." : "Ajoutez un champ personnalisé pour le formulaire utilisateur.")" />
+        }
+        else
+        {
+            <div class="user-list">
+                @foreach (var field in FilteredFields)
+                {
+                    <div class="user-card">
+                        <span class="field-type-icon" aria-hidden="true">@FieldTypeInfo.Icon(field.Type)</span>
+                        <div class="user-card-main">
+                            <div class="user-card-name">@field.Label</div>
+                            <div class="user-card-sub">@FieldTypeInfo.Label(field.Type)</div>
+                            <div class="user-card-meta">
+                                <Badge Text="Actif" Kind="@(field.Actif ? "active" : "inactive")" />
+                                @if (field.Requis) { <Badge Text="Requis" Kind="role" /> }
+                                @if (field.SystemField) { <Badge Text="Système" Kind="recent" /> }
+                            </div>
+                        </div>
+                        <div class="user-card-actions" @onclick:stopPropagation="true">
+                            <button class="btn-icon" aria-label="Modifier" @onclick="@(() => StartEditField(field))">✎</button>
+                            @if (!field.SystemField)
+                            {
+                                <button class="btn-icon danger" aria-label="Supprimer" disabled="@field.SystemField" @onclick="@(() => AskDeleteField(field))">🗑</button>
+                            }
+                        </div>
+                    </div>
+                }
+            </div>
+            <PaginationBar Page="_page" PageCount="TotalPages(FilteredFields.Count)" Total="FilteredFields.Count"
+                           OnPrev="() => _page--" OnNext="() => _page++" />
+        }
+    }
+    else if (_selectedKey == "activity")
+    {
+        <div class="card data-editor-card">
+            <div class="inline-actions" style="justify-content:space-between">
+                <h3 style="margin:0">Journal d'activité</h3>
+                <button class="btn btn-danger-outline btn-sm" disabled="@(Store.Activity.Count == 0)" @onclick="AskClearActivity">Vider le journal</button>
+            </div>
+        </div>
+
+        @if (Store.Activity.Count == 0)
+        {
+            <EmptyState Icon="✎" Title="Aucune activité" Message="Le journal est vide pour le moment." />
+        }
+        else
+        {
+            var activityRows = FilteredActivityEntries;
+            <div class="card">
+                @if (activityRows.Count == 0)
+                {
+                    <EmptyState Icon="✎" Title="Aucun résultat" Message="Aucune entrée ne correspond à cette recherche." />
+                }
+                else
+                {
+                    <div class="activity-list">
+                        @foreach (var e in activityRows)
+                        {
+                            <div class="activity-item">
+                                <span class="activity-icon" aria-hidden="true">@ActivityIcon(e.Type)</span>
+                                <div class="activity-content">
+                                    <div class="activity-desc"><strong>@ActivityTypes.Label(e.Type)</strong> — @e.Description</div>
+                                    <div class="activity-meta">
+                                        <span class="activity-user">@e.User</span>
+                                        <span class="activity-date">@DataStore.FormatExportDate(e.Date)</span>
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                }
+            </div>
+        }
+    }
+    else if (_selectedKey == "archives")
+    {
+        <div class="card data-editor-card">
+            <div class="inline-actions" style="justify-content:space-between">
+                <h3 style="margin:0">Archives des utilisateurs</h3>
+                <button class="btn btn-danger-outline btn-sm" disabled="@(Store.ArchivedUsers.Count == 0)" @onclick="AskPurgeAll">Vider les archives</button>
+            </div>
+            <div class="form-group" style="margin:10px 0 0">
+                <input type="search" placeholder="Rechercher dans les archives…" value="@_search" @oninput="OnSearchChanged" />
+            </div>
+        </div>
+
+        @if (FilteredArchives.Count == 0)
+        {
+            <EmptyState Icon="🗃" Title="Aucun utilisateur archivé" Message="@(_search.Length > 0 ? "Aucun résultat pour cette recherche." : "Les comptes supprimés apparaîtront ici.")" />
+        }
+        else
+        {
+            <div class="user-list">
+                @foreach (var a in PagedArchives)
+                {
+                    var user = a.User;
+                    <div class="user-card">
+                        <Avatar UserName="@user.NomComplet" Seed="@user.Identifiant" Size="sm" />
+                        <div class="user-card-main">
+                            <div class="user-card-name">@user.NomComplet</div>
+                            <div class="user-card-sub">@user.Identifiant · @user.Role</div>
+                            <div class="user-card-meta">
+                                <Badge Text="Archivé" Kind="inactive" />
+                                <span class="text-muted" style="font-size:12px">Supprimé le @DataStore.FormatExportDate(a.DeletedAt) par @a.DeletedBy</span>
+                            </div>
+                        </div>
+                        <div class="user-card-actions" @onclick:stopPropagation="true">
+                            <button class="btn btn-secondary btn-sm" @onclick="@(() => AskRestore(user.Id))">♻ Restaurer</button>
+                            <button class="btn btn-danger-outline btn-sm" @onclick="@(() => AskPurge(user.Id))">🗑</button>
+                        </div>
+                    </div>
+                }
+            </div>
+            <PaginationBar Page="_page" PageCount="TotalPages(FilteredArchives.Count)" Total="FilteredArchives.Count"
+                           OnPrev="() => _page--" OnNext="() => _page++" />
+        }
+    }
+    else if (_selectedKey == "events")
+    {
+        <div class="card data-editor-card">
+            <div class="inline-actions" style="justify-content:space-between">
+                <h3 style="margin:0">Événements du calendrier</h3>
+            </div>
+            <div class="form-group" style="margin:10px 0 0">
+                <input type="search" placeholder="Rechercher un événement…" value="@_search" @oninput="OnSearchChanged" />
+            </div>
+        </div>
+
+        @if (FilteredManagedEvents.Count == 0)
+        {
+            <EmptyState Icon="📅" Title="Aucun événement" Message="@(_search.Length > 0 ? "Aucun résultat pour cette recherche." : "Le calendrier est vide pour le moment.")" />
+        }
+        else
+        {
+            <div class="user-list">
+                @foreach (var evt in PagedManagedEvents)
+                {
+                    <div class="user-card">
+                        <span class="field-type-icon" style="background:@SoftColor(CalendarEventTypes.Color(evt.Type));color:@CalendarEventTypes.Color(evt.Type)" aria-hidden="true">@CalendarEventTypes.Icon(evt.Type)</span>
+                        <div class="user-card-main">
+                            <div class="user-card-name">@evt.Titre</div>
+                            <div class="user-card-sub">@DataStore.FormatDateCourte(evt.Date)@(evt.HeureDebut ?? "")@(evt.HeureFin != null ? " → " + evt.HeureFin : "")</div>
+                            <div class="user-card-meta">
+                                <Badge Text="@CalendarEventTypes.Label(evt.Type)" Kind="role" />
+                                @if (evt.TouteLaJournee) { <Badge Text="Toute la journée" Kind="recent" /> }
+                                @if ((evt.PersonnesConcernees?.Count ?? 0) > 0)
+                                {
+                                    <span class="text-muted" style="font-size:12px">@evt.PersonnesConcernees!.Count personne(s)</span>
+                                }
+                            </div>
+                        </div>
+                        <div class="user-card-actions" @onclick:stopPropagation="true">
+                            <button class="btn-icon danger" aria-label="Supprimer l'événement" @onclick="@(() => AskDeleteEvent(evt))">🗑</button>
+                        </div>
+                    </div>
+                }
+            </div>
+            <PaginationBar Page="_page" PageCount="TotalPages(FilteredManagedEvents.Count)" Total="FilteredManagedEvents.Count"
+                           OnPrev="() => _page--" OnNext="() => _page++" />
+        }
+    }
+    else if (_selectedKey == "settings")
+    {
+        <div class="card data-editor-card">
+            <h3>Paramètres applicatifs</h3>
+            <div class="form-group">
+                <label for="dm-appname">Nom de l'application</label>
+                <input id="dm-appname" type="text" value="@_appName" @oninput="e => _appName = e.Value?.ToString() ?? string.Empty" />
+            </div>
+            <div class="form-group">
+                <label for="dm-theme">Thème</label>
+                <select id="dm-theme" value="@_theme" @onchange="OnThemeChanged">
+                    <option value="light">Clair</option>
+                    <option value="dark">Sombre</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Couleur d'accent</label>
+                <div class="color-swatches">
+                    @foreach (var c in AccentColors)
+                    {
+                        <button type="button" class="color-swatch @(c == _color ? "selected" : "")" style="background:@c" title="@c" @onclick="() => SelectAccent(c)"></button>
+                    }
+                </div>
+            </div>
+            <div class="form-group">
+                <label class="form-check" for="dm-autoexport">
+                    <input id="dm-autoexport" type="checkbox" checked="@_autoExport" @onchange="e => _autoExport = e.Value is bool b ? b : !_autoExport" />
+                    Export automatique mensuel de toutes les données
+                </label>
+                <span class="field-hint">Sauvegarde complète (JSON) + utilisateurs (Excel) dans Téléchargements. Dernier export : @(string.IsNullOrWhiteSpace(Store.Settings.DernierExportAuto) ? "jamais" : Store.Settings.DernierExportAuto).</span>
+            </div>
+            <div class="form-actions">
+                <button class="btn btn-primary" @onclick="SaveSettingsAsync" disabled="@_saving">@(_saving ? "Enregistrement…" : "Enregistrer")</button>
+            </div>
+        </div>
+    }
+    else
+    {
+        <div class="card data-editor-card">
+            <h3>@DataSetLabel(_selectedKey)</h3>
+            <p class="muted">Cette collection se gère depuis sa page dédiée (données stockées localement, sans JSON).</p>
+            <div class="form-actions">
+                @if (_selectedKey == "documents" || _selectedKey == "folders")
+                {
+                    <button class="btn btn-secondary" @onclick='() => State.Navigate("documents")'>📄 Ouvrir la gestion documentaire</button>
+                }
+                else if (_selectedKey == "community")
+                {
+                    <button class="btn btn-secondary" @onclick='() => State.Navigate("community")'>📖 Ouvrir l'histoire de la communauté</button>
+                }
+                else if (_selectedKey == "permissions")
+                {
+                    <button class="btn btn-secondary" @onclick='() => State.Navigate("roles")'>🛡 Ouvrir les rôles et permissions</button>
+                }
+                else if (_selectedKey == "messages")
+                {
+                    <button class="btn btn-secondary" @onclick='() => State.Navigate("messagerie")'>✉ Ouvrir la messagerie</button>
+                }
+                else if (_selectedKey == "taches")
+                {
+                    <button class="btn btn-secondary" @onclick='() => State.Navigate("taches")'>☑ Ouvrir les tâches</button>
+                }
+                else if (_selectedKey == "cotisations" || _selectedKey == "tresorerie")
+                {
+                    <button class="btn btn-secondary" @onclick='() => State.Navigate("finances")'>💰 Ouvrir les finances</button>
+                }
+                else if (_selectedKey == "materiels" || _selectedKey == "prets")
+                {
+                    <button class="btn btn-secondary" @onclick='() => State.Navigate("materiel")'>🧰 Ouvrir le matériel</button>
+                }
+                else if (_selectedKey == "reunions")
+                {
+                    <button class="btn btn-secondary" @onclick='() => State.Navigate("reunions")'>👥 Ouvrir les réunions</button>
+                }
+                else if (_selectedKey == "situations")
+                {
+                    <button class="btn btn-secondary" @onclick='() => State.Navigate("situations")'>🤝 Ouvrir les situations</button>
+                }
+                else if (_selectedKey == "votes")
+                {
+                    <button class="btn btn-secondary" @onclick='() => State.Navigate("votes")'>🗳 Ouvrir les votes</button>
+                }
+                else if (_selectedKey == "journal_media")
+                {
+                    <button class="btn btn-secondary" @onclick='() => State.Navigate("journal")'>🎞 Ouvrir le journal</button>
+                }
+            </div>
+        </div>
+    }
+
+    <ConfirmDialog Show="@_confirm.Show" Title="@_confirm.Title" Message="@_confirm.Message"
+                   ConfirmLabel="@_confirm.ConfirmLabel" Danger="@_confirm.Danger"
+                   OnConfirm="@(() => _confirm.Action?.Invoke())"
+                   OnCancel="@(() => _confirm = _confirm with { Show = false })" />
+}
+
+@code {
+    private sealed record ConfirmState(bool Show, string Title, string Message, string ConfirmLabel, bool Danger, Action? Action)
+    {
+        public static ConfirmState Hidden() => new(false, "", "", "OK", true, null);
+    }
+
+    private static readonly string[] AccentColors =
+    {
+        "#4f46e5", "#0891b2", "#059669", "#d97706", "#dc2626", "#7c3aed", "#0ea5e9"
+    };
+
+    private static readonly string[] RoleChoices =
+    {
+        Roles.Administrateur, Roles.Gestionnaire, Roles.Utilisateur
+    };
+
+    private string _selectedKey = "users";
+    private List<UserAccount> _users = new();
+    private List<FieldDefinition> _fields = new();
+
+    private string _search = "";
+    private int _page = 1;
+    private readonly HashSet<string> _revealedPasswords = new();
+
+    private ConfirmState _confirm = ConfirmState.Hidden();
+
+    // Formulaire utilisateur inline
+    private bool _userFormVisible;
+    private UserAccount? _userDraft;
+    private string? _userEditId;
+    private string _userPassword = "";
+    private string _userError = "";
+
+    // Formulaire champ inline
+    private bool _fieldFormVisible;
+    private string? _fieldEditId;
+    private FieldDefinition? _fieldDraft;
+    private string _fieldOptions = "";
+    private string _fieldError = "";
+
+    // Paramètres
+    private string _appName = "Gestion des utilisateurs";
+    private string _theme = "light";
+    private string _color = "#4f46e5";
+    private bool _autoExport = true;
+    private bool _saving;
+
+    protected override void OnInitialized()
+    {
+        Store.DataChanged += OnChanged;
+        Reload();
+    }
+
+    private void OnChanged() => _ = InvokeAsync(() => { Reload(); StateHasChanged(); });
+
+    private void SelectDataSet(string key)
+    {
+        _selectedKey = key;
+        _search = "";
+        _page = 1;
+        _revealedPasswords.Clear();
+        Reload();
+    }
+
+    private void OnSearchChanged(ChangeEventArgs e)
+    {
+        _search = e.Value?.ToString() ?? "";
+        _page = 1;
+    }
+
+    private string Search => _search.Trim();
+
+    private List<UserAccount> FilteredUsers
+    {
+        get
+        {
+            if (Search.Length == 0) return _users;
+            var q = Search;
+            return _users.Where(u =>
+                u.NomComplet.Contains(q, StringComparison.OrdinalIgnoreCase) ||
+                u.Identifiant.Contains(q, StringComparison.OrdinalIgnoreCase) ||
+                u.Email.Contains(q, StringComparison.OrdinalIgnoreCase) ||
+                u.Role.Contains(q, StringComparison.OrdinalIgnoreCase)).ToList();
+        }
+    }
+
+    private IEnumerable<UserAccount> PagedUsers
+    {
+        get
+        {
+            var list = FilteredUsers;
+            var pages = TotalPages(list.Count);
+            if (_page > pages) _page = pages;
+            if (_page < 1) _page = 1;
+            return list.Skip((_page - 1) * PageSize).Take(PageSize);
+        }
+    }
+
+    private int PageSize => Math.Max(1, Store.Settings.PageSize);
+
+    private int TotalPages(int count) => Math.Max(1, (int)Math.Ceiling(count / (double)PageSize));
+
+    private List<ArchivedUser> FilteredArchives
+    {
+        get
+        {
+            if (Search.Length == 0) return Store.ArchivedUsers.ToList();
+            var q = Search;
+            return Store.ArchivedUsers.Where(a =>
+                a.User.NomComplet.Contains(q, StringComparison.OrdinalIgnoreCase) ||
+                a.User.Identifiant.Contains(q, StringComparison.OrdinalIgnoreCase)).ToList();
+        }
+    }
+
+    private IEnumerable<ArchivedUser> PagedArchives
+    {
+        get
+        {
+            var list = FilteredArchives;
+            var pages = TotalPages(list.Count);
+            if (_page > pages) _page = pages;
+            if (_page < 1) _page = 1;
+            return list.Skip((_page - 1) * PageSize).Take(PageSize);
+        }
+    }
+
+    private List<FieldDefinition> FilteredFields
+    {
+        get
+        {
+            if (Search.Length == 0) return _fields;
+            var q = Search;
+            return _fields.Where(f => f.Label.Contains(q, StringComparison.OrdinalIgnoreCase)).ToList();
+        }
+    }
+
+    private List<CalendarEvent> FilteredManagedEvents
+    {
+        get
+        {
+            var events = Store.Events.ToList();
+            if (Search.Length == 0) return events;
+            var q = Search;
+            return events.Where(e =>
+                e.Titre.Contains(q, StringComparison.OrdinalIgnoreCase) ||
+                e.Date.Contains(q, StringComparison.OrdinalIgnoreCase) ||
+                e.Lieu.Contains(q, StringComparison.OrdinalIgnoreCase) ||
+                CalendarEventTypes.Label(e.Type).Contains(q, StringComparison.OrdinalIgnoreCase)).ToList();
+        }
+    }
+
+    private IReadOnlyList<ActivityEntry> FilteredActivityEntries
+    {
+        get
+        {
+            var rows = Store.Activity.Take(100).ToList();
+            if (Search.Length == 0) return rows;
+            var q = Search;
+            return rows.Where(a =>
+                a.Description.Contains(q, StringComparison.OrdinalIgnoreCase) ||
+                a.User.Contains(q, StringComparison.OrdinalIgnoreCase) ||
+                ActivityTypes.Label(a.Type).Contains(q, StringComparison.OrdinalIgnoreCase)).ToList();
+        }
+    }
+
+    private IEnumerable<CalendarEvent> PagedManagedEvents
+    {
+        get
+        {
+            var list = FilteredManagedEvents;
+            var pages = TotalPages(list.Count);
+            if (_page > pages) _page = pages;
+            if (_page < 1) _page = 1;
+            return list.Skip((_page - 1) * PageSize).Take(PageSize);
+        }
+    }
+
+    private static string SoftColor(string hex) => hex.Length == 7 ? hex + "22" : hex;
+
+    private void AskDeleteEvent(CalendarEvent e)
+    {
+        _confirm = new ConfirmState(true, "Supprimer l'événement",
+            $"Supprimer « {e.Titre} » du calendrier ?",
+            "Supprimer", true, () =>
+            {
+                var res = Store.DeleteEvent(e.Id);
+                if (res.Success) State.NotifySuccess("Événement supprimé.");
+                else State.NotifyError("Erreur : " + res.Error);
+            });
+    }
+
+    private void RevealPassword(string userId) => _revealedPasswords.Add(userId);
+
+    private void HidePassword(string userId) => _revealedPasswords.Remove(userId);
+
+    private static string DataSetLabel(string key) =>
+        DataStore.ManagedDataSets.FirstOrDefault(d => d.Key == key)?.Label ?? key;
+
+    private void Reload()
+    {
+        _users = Store.Users.ToList();
+        _fields = Store.Fields.ToList();
+        var s = Store.Settings;
+        _appName = s.AppName;
+        _theme = s.Theme;
+        _color = s.Color;
+        _autoExport = s.ExportAutoMensuel;
+    }
+
+    // ---------- Utilisateurs ----------
+
+    private void StartAddUser()
+    {
+        _userEditId = null;
+        _userDraft = new UserAccount { Role = Roles.Utilisateur, Actif = true };
+        _userPassword = "";
+        _userError = "";
+        _userFormVisible = true;
+    }
+
+    private void StartEditUser(UserAccount u)
+    {
+        _userEditId = u.Id;
+        _userDraft = new UserAccount
+        {
+            Id = u.Id, Prenom = u.Prenom, Nom = u.Nom, Identifiant = u.Identifiant,
+            Email = u.Email, Telephone = u.Telephone, Role = u.Role, Actif = u.Actif, Notes = u.Notes
+        };
+        _userPassword = "";
+        _userError = "";
+        _userFormVisible = true;
+    }
+
+    private void CancelUserForm()
+    {
+        _userDraft = null;
+        _userEditId = null;
+        _userFormVisible = false;
+        _userError = "";
+    }
+
+    private void SaveUser()
+    {
+        _userError = "";
+        if (_userDraft == null) return;
+        if (string.IsNullOrWhiteSpace(_userDraft.Prenom) || string.IsNullOrWhiteSpace(_userDraft.Nom))
+        {
+            _userError = "Le prénom et le nom sont obligatoires.";
+            return;
+        }
+        if (!string.IsNullOrWhiteSpace(_userDraft.Email) && !Store.IsEmailValid(_userDraft.Email))
+        {
+            _userError = "L'adresse e-mail n'est pas valide.";
+            return;
+        }
+        if (!string.IsNullOrWhiteSpace(_userDraft.Telephone) && !DataStore.IsPhoneValid(_userDraft.Telephone))
+        {
+            _userError = "Le numéro de téléphone est invalide (format +261…).";
+            return;
+        }
+
+        if (_userEditId != null)
+        {
+            var draft = _userDraft;
+            var passwordChanged = !string.IsNullOrWhiteSpace(_userPassword);
+            if (passwordChanged) draft.MotDePasse = _userPassword.Trim();
+            var res = Store.UpdateUser(_userEditId, draft, passwordChanged);
+            if (!res.Success)
+            {
+                _userError = res.Error;
+                return;
+            }
+            State.NotifySuccess("Utilisateur « " + draft.NomComplet + " » enregistré.");
+        }
+        else
+        {
+            var draft = _userDraft;
+            draft.MotDePasse = _userPassword.Trim();
+            var res = Store.AddUser(draft);
+            if (!res.Success)
+            {
+                _userError = res.Error;
+                return;
+            }
+            State.NotifySuccess("Utilisateur « " + draft.NomComplet + " » ajouté.");
+        }
+        CancelUserForm();
+    }
+
+    private void AskDeleteUser(UserAccount u)
+    {
+        _confirm = new ConfirmState(true, "Supprimer l'utilisateur",
+            $"Supprimer « {u.NomComplet} » ? Le compte sera archivé.",
+            "Supprimer", true, () =>
+            {
+                var res = Store.DeleteUser(u.Id);
+                if (res.Success) State.NotifySuccess("Utilisateur supprimé.");
+                else State.NotifyError("Erreur : " + res.Error);
+            });
+    }
+
+    // ---------- Champs ----------
+
+    private void StartAddField()
+    {
+        _fieldEditId = null;
+        _fieldDraft = new FieldDefinition { Type = FieldType.Texte, Actif = true };
+        _fieldOptions = "";
+        _fieldError = "";
+        _fieldFormVisible = true;
+    }
+
+    private void StartEditField(FieldDefinition f)
+    {
+        _fieldEditId = f.Id;
+        _fieldDraft = new FieldDefinition
+        {
+            Id = f.Id, Label = f.Label, Type = f.Type, Requis = f.Requis,
+            Options = f.Options.ToList(), Ordre = f.Ordre, Actif = f.Actif, SystemField = f.SystemField
+        };
+        _fieldOptions = string.Join('\n', f.Options);
+        _fieldError = "";
+        _fieldFormVisible = true;
+    }
+
+    private void CancelFieldForm()
+    {
+        _fieldDraft = null;
+        _fieldEditId = null;
+        _fieldFormVisible = false;
+        _fieldError = "";
+    }
+
+    private void SaveField()
+    {
+        _fieldError = "";
+        if (_fieldDraft == null) return;
+        _fieldDraft.Options = _fieldOptions
+            .Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+        var res = _fieldEditId == null ? Store.AddField(_fieldDraft) : Store.UpdateField(_fieldDraft);
+        if (!res.Success)
+        {
+            _fieldError = res.Error;
+            return;
+        }
+        State.NotifySuccess(_fieldEditId == null
+            ? "Champ « " + _fieldDraft.Label + " » ajouté."
+            : "Champ « " + _fieldDraft.Label + " » enregistré.");
+        CancelFieldForm();
+    }
+
+    private void AskDeleteField(FieldDefinition f)
+    {
+        _confirm = new ConfirmState(true, "Supprimer le champ",
+            $"Supprimer le champ « {f.Label} » du formulaire et des utilisateurs ?",
+            "Supprimer", true, () =>
+            {
+                var (res, _) = Store.DeleteField(f.Id);
+                if (res.Success) State.NotifySuccess("Champ supprimé.");
+                else State.NotifyError("Erreur : " + res.Error);
+            });
+    }
+
+    private void OnFieldTypeChanged(ChangeEventArgs e)
+    {
+        if (_fieldDraft == null) return;
+        var value = e.Value?.ToString() ?? FieldType.Texte.ToString();
+        if (Enum.TryParse<FieldType>(value, true, out var type))
+        {
+            var previous = _fieldDraft.Type;
+            _fieldDraft.Type = type;
+            if (previous != type)
+            {
+                _fieldDraft.Options = new List<string>();
+                _fieldOptions = "";
+            }
+        }
+    }
+
+    // ---------- Journal ----------
+
+    private void AskClearActivity()
+    {
+        _confirm = new ConfirmState(true, "Vider le journal",
+            "Supprimer tout l'historique d'activité ? Action définitive.",
+            "Vider", true, () =>
+            {
+                Store.ClearActivity();
+                State.NotifySuccess("Le journal a été vidé.");
+            });
+    }
+
+    private static string ActivityIcon(string type) => type switch
+    {
+        ActivityTypes.Login => "🔐",
+        ActivityTypes.Logout => "👋",
+        ActivityTypes.Create => "➕",
+        ActivityTypes.Update => "✏️",
+        ActivityTypes.Delete => "🗑️",
+        ActivityTypes.Activate => "✅",
+        ActivityTypes.Deactivate => "⛔",
+        ActivityTypes.PasswordReset => "🔑",
+        ActivityTypes.Export => "⇩",
+        ActivityTypes.Import => "⇪",
+        ActivityTypes.FieldsChange => "🧩",
+        _ => "•"
+    };
+
+    // ---------- Archives ----------
+
+    private void AskRestore(string id)
+    {
+        var u = Store.FindArchivedUser(id);
+        if (u == null) return;
+        _confirm = new ConfirmState(true, "Restaurer l'utilisateur",
+            $"Restaurer « {u.NomComplet} » dans la liste des utilisateurs actifs ?",
+            "Restaurer", false, () =>
+            {
+                var res = Store.RestoreArchivedUser(id);
+                if (res.Success) State.NotifySuccess("Utilisateur restauré.");
+                else State.NotifyError("Erreur : " + res.Error);
+            });
+    }
+
+    private void AskPurge(string id)
+    {
+        var u = Store.FindArchivedUser(id);
+        if (u == null) return;
+        _confirm = new ConfirmState(true, "Supprimer définitivement",
+            $"Supprimer définitivement l'archivage de « {u.NomComplet} » ?",
+            "Supprimer", true, () =>
+            {
+                Store.PurgeUser(id);
+                State.NotifySuccess("Archivage définitivement supprimé.");
+            });
+    }
+
+    private void AskPurgeAll()
+    {
+        _confirm = new ConfirmState(true, "Vider les archives",
+            "Supprimer définitivement tous les comptes archivés ?",
+            "Vider", true, () =>
+            {
+                Store.PurgeAllArchive();
+                State.NotifySuccess("Les archives ont été vidées.");
+            });
+    }
+
+    // ---------- Paramètres ----------
+
+    private void SelectAccent(string color)
+    {
+        _color = color;
+    }
+
+    private void OnThemeChanged(ChangeEventArgs e)
+    {
+        _theme = e.Value?.ToString() ?? "light";
+    }
+
+    private async Task SaveSettingsAsync()
+    {
+        _saving = true;
+        try
+        {
+            Store.SaveSettings(new AppSettings
+            {
+                AppName = string.IsNullOrWhiteSpace(_appName) ? "Gestion des utilisateurs" : _appName.Trim(),
+                Theme = _theme,
+                Color = _color,
+                PageSize = Store.Settings.PageSize,
+                Logo = Store.Settings.Logo,
+                SessionTimeoutMinutes = Store.Settings.SessionTimeoutMinutes,
+                ExportAutoMensuel = _autoExport,
+                DernierExportAuto = Store.Settings.DernierExportAuto
+            });
+            await Js.ApplySettingsAsync(Store.Settings);
+            State.NotifySuccess("Paramètres enregistrés.");
+        }
+        finally
+        {
+            _saving = false;
+        }
+    }
+
+    public void Dispose() => Store.DataChanged -= OnChanged;
+}

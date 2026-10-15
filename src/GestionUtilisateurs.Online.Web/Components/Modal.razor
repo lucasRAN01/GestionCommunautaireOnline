@@ -1,0 +1,62 @@
+@implements IDisposable
+@inject JavascriptBridge Js
+
+@if (Show)
+{
+    <div class="modal-overlay" @onclick="() => _ = OnClose.InvokeAsync()" @onmousedown="OnOverlayDown">
+        <div class="modal @CssClass" @onmousedown="NoOp" @onmousedown:stopPropagation="true" @onclick="NoOp" @onclick:stopPropagation="true">
+            <div class="modal-grabber"></div>
+            <div class="modal-header">
+                <h3>@Title</h3>
+                <button type="button" class="modal-close" aria-label="Fermer" @onclick="() => _ = OnClose.InvokeAsync()">&times;</button>
+            </div>
+            <div class="modal-body">
+                @ChildContent
+            </div>
+            @if (FooterContent != null)
+            {
+                <div class="modal-footer">
+                    @FooterContent
+                </div>
+            }
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public bool Show { get; set; }
+    [Parameter] public string Title { get; set; } = "";
+    [Parameter] public string? CssClass { get; set; }
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+    [Parameter] public RenderFragment? FooterContent { get; set; }
+    [Parameter] public EventCallback OnClose { get; set; }
+
+    private bool _scrollLocked;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (Show && !_scrollLocked)
+        {
+            _scrollLocked = true;
+            await Js.LockBodyScrollAsync();
+        }
+        else if (!Show && _scrollLocked)
+        {
+            _scrollLocked = false;
+            await Js.UnlockBodyScrollAsync();
+        }
+    }
+
+    private void OnOverlayDown(MouseEventArgs e) => _ = OnClose.InvokeAsync();
+
+    private void NoOp(MouseEventArgs e) { }
+
+    public void Dispose()
+    {
+        if (_scrollLocked)
+        {
+            _scrollLocked = false;
+            try { _ = Js.UnlockBodyScrollAsync(); } catch { }
+        }
+    }
+}

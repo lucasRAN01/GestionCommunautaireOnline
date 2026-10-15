@@ -1,0 +1,37 @@
+@page "/"
+@using GestionUtilisateurs.Shared.Services
+
+<h1>Gestion des utilisateurs - Mobile</h1>
+<p>Application hors ligne pour g�rer vos utilisateurs</p>
+
+<div class="stats">
+    <div class="stat-card">
+        <h3>@totalUsers</h3>
+        <p>Utilisateurs</p>
+    </div>
+</div>
+
+<button class="btn btn-primary" @onclick="NavigateToUsers">
+    Voir les Utilisateurs
+</button>
+
+@code {
+    private int totalUsers = 0;
+
+    protected override void OnInitialized()
+    {
+      // Initialize from local storage
+        LoadStats();
+}
+
+    private void LoadStats()
+    {
+      // Load user count from DataStore
+totalUsers = 0;
+    }
+
+    private void NavigateToUsers()
+    {
+    // Navigate to users page
+    }
+}

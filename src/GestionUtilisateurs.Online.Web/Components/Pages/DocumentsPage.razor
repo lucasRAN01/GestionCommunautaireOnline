@@ -1,0 +1,1335 @@
+@implements IDisposable
+@inject DataStore Store
+@inject AppState State
+@inject DocumentService Docs
+@inject NativeFileSaver Saver
+
+@if (!string.IsNullOrEmpty(_error))
+{
+    <EmptyState Icon="⚠" Title="Impossible d'afficher les documents" Message="@_error" />
+    <div class="empty-state-action">
+        <button class="btn btn-primary btn-block" @onclick="RetryLoad">Réessayer</button>
+    </div>
+}
+else
+{
+    @if (_quotaAlmostFull)
+    {
+        <div class="quota-banner">
+            <span class="quota-banner-icon" aria-hidden="true">⚠</span>
+            <div class="quota-banner-main">
+                <strong>Stockage presque plein (@_quotaPercent.ToString("0") %)</strong>
+                <span>@FormatSize(Store.StorageUsedBytes()) utilisés sur l'appareil. Pensez à vider la corbeille.</span>
+            </div>
+            @if (_trashCount > 0)
+            {
+                <button type="button" class="btn btn-secondary btn-sm" @onclick="AskEmptyTrash">Vider la corbeille</button>
+            }
+        </div>
+    }
+
+    <div class="filters-panel">
+        <div class="cal-toolbar">
+            <div class="search-box cal-search">
+                <span class="search-icon" aria-hidden="true">⌕</span>
+                <input type="text" placeholder="Rechercher un document…" aria-label="Rechercher" value="@_search"
+                       @oninput="e => OnSearch(e.Value?.ToString() ?? string.Empty)" />
+            </div>
+            <button class="btn btn-secondary btn-sm cal-filter-btn @(_hasActiveFilters ? "active" : "")" @onclick="() => _filtersOpen = true">
+                <span aria-hidden="true">⚲</span> Filtres
+                @if (_hasActiveFilters)
+                {
+                    <Badge Text="@_activeFilterCount.ToString()" Kind="role" />
+                }
+            </button>
+        </div>
+
+        <div class="inline-actions" style="justify-content:space-between;margin-top:12px">
+            <p class="user-count">@_filtered.Count document(s)</p>
+            <div class="inline-actions">
+                <select class="cal-year-select" aria-label="Trier les documents" value="@_sort" @onchange="OnSort">
+                    <option value="recent">⇅ Récents</option>
+                    <option value="nom">⇅ Nom A-Z</option>
+                    <option value="taille">⇅ Taille</option>
+                </select>
+                <button class="btn btn-secondary btn-sm @(_selectionMode ? "cal-filter-btn active" : "")" @onclick="ToggleSelectMode">
+                    @(_selectionMode ? "✕ Annuler" : "☑ Sélectionner")
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div class="cal-view-tabs">
+        <button class="cal-tab @(ViewCls("docs"))" @onclick='() => SetView("docs")'>Documents</button>
+        <button class="cal-tab @(ViewCls("corbeille"))" @onclick='() => SetView("corbeille")'>Corbeille (@_trashCount)</button>
+    </div>
+
+    @if (_view == "docs")
+    {
+        <div class="doc-crumbs" aria-label="Fil d'Ariane">
+            <button type="button" class="doc-crumb @(_currentFolderId == null ? "active" : "")" @onclick="() => OpenFolder(null)">🏠 Racine</button>
+            @foreach (var f in _breadcrumb)
+            {
+                var folder = f;
+                <span class="doc-crumb-sep" aria-hidden="true">›</span>
+                <button type="button" class="doc-crumb @(folder.Id == _currentFolderId ? "active" : "")" @onclick="() => OpenFolder(folder.Id)">@folder.Nom</button>
+            }
+        </div>
+
+        @if (string.IsNullOrWhiteSpace(_search))
+        {
+            @if (_visibleFolders.Count > 0)
+            {
+                <div class="folder-grid">
+                    @foreach (var folder in _visibleFolders)
+                    {
+                        var f = folder;
+                        <div class="folder-card" @onclick="() => OpenFolder(f.Id)" role="button" tabindex="0" @onkeydown="(k) => OnFolderKey(k, f.Id)">
+                            <span class="folder-icon" style="background:@SoftColor(f.Couleur);color:@f.Couleur" aria-hidden="true">📁</span>
+                            <div class="folder-main">
+                                <div class="folder-name">@f.Nom</div>
+                                <div class="folder-sub">@FolderCountLabel(f.Id)</div>
+                            </div>
+                            <div class="folder-actions" @onclick:stopPropagation="true">
+                                <button class="btn-icon" aria-label="Options du dossier" @onclick="() => OpenFolderMenu(f)">⋮</button>
+                            </div>
+                        </div>
+                    }
+                </div>
+            }
+        }
+
+        @if (_filtered.Count == 0)
+        {
+            @if (Store.Documents.Any(d => !d.Supprime))
+            {
+                <EmptyState Icon="🔍" Title="Aucun résultat" Message="Aucun document ne correspond à votre recherche ou à vos filtres." />
+            }
+            else
+            {
+                <EmptyState Icon="📁" Title="Aucun document" Message="Importez un fichier, scannez un document ou créez un dossier avec le bouton « + »." />
+                <div class="empty-state-action">
+                    <button class="btn btn-primary btn-block" @onclick="() => _fabOpen = true">＋ Ajouter un document</button>
+                </div>
+            }
+        }
+        else
+        {
+            <div class="doc-list">
+                @foreach (var d in _filtered)
+                {
+                    var doc = d;
+                    <div class="doc-card" @onclick="() => OpenDetail(doc)">
+                        @if (_selectionMode)
+                        {
+                            <label class="doc-check" @onclick:stopPropagation="true">
+                                <input type="checkbox" checked="@_selected.Contains(doc.Id)" @onchange="() => ToggleSelected(doc.Id)" aria-label="Sélectionner @doc.Titre" />
+                            </label>
+                        }
+                        @if (DocumentKinds.IsImage(doc.Mime) && !string.IsNullOrWhiteSpace(doc.Data))
+                        {
+                            <img class="doc-thumb" src="@doc.Data" alt="" loading="lazy" />
+                        }
+                        else
+                        {
+                            <span class="doc-thumb doc-thumb-icon" style="background:@SoftColor(DocColor(doc));color:@DocColor(doc)" aria-hidden="true">@DocIcon(doc)</span>
+                        }
+                        <div class="doc-main">
+                            <div class="doc-title">@doc.Titre</div>
+                            <div class="doc-sub">@FormatSize(doc.Taille) · @ShortDate(doc.DateModification)</div>
+                            <div class="doc-meta">
+                                <span class="badge" style="color:@DocumentCategories.Color(doc.Categorie);background:@SoftColor(DocumentCategories.Color(doc.Categorie))">@DocumentCategories.Label(doc.Categorie)</span>
+                                @if (!string.IsNullOrWhiteSpace(_search) && !string.IsNullOrWhiteSpace(doc.FolderId))
+                                {
+                                    <span class="badge">📁 @FolderName(doc.FolderId)</span>
+                                }
+                                @if (!string.IsNullOrWhiteSpace(doc.UtilisateurId))
+                                {
+                                    <span class="badge badge-role">👤 @UserName(doc.UtilisateurId)</span>
+                                }
+                            </div>
+                        </div>
+                        <button type="button" class="doc-fav @(doc.Favori ? "on" : "")" aria-label="Favori" @onclick:stopPropagation="true" @onclick="() => ToggleFav(doc)">★</button>
+                    </div>
+                }
+            </div>
+        }
+    }
+    else
+    {
+        @if (_trash.Count == 0)
+        {
+            <EmptyState Icon="🗑" Title="Corbeille vide" Message="Les documents supprimés apparaîtront ici et pourront être restaurés." />
+        }
+        else
+        {
+            <div class="inline-actions" style="justify-content:space-between;margin-bottom:10px">
+                <p class="user-count">@_trash.Count document(s) dans la corbeille</p>
+                <button class="btn btn-danger-outline btn-sm" @onclick="AskEmptyTrash">Vider la corbeille</button>
+            </div>
+            <div class="doc-list">
+                @foreach (var d in _trash)
+                {
+                    var doc = d;
+                    <div class="doc-card">
+                        <span class="doc-thumb doc-thumb-icon" style="background:var(--surface-2);color:var(--text-muted)" aria-hidden="true">@DocIcon(doc)</span>
+                        <div class="doc-main" @onclick="() => OpenDetail(doc)" role="button" tabindex="0">
+                            <div class="doc-title">@doc.Titre</div>
+                            <div class="doc-sub">Supprimé le @ShortDateTime(doc.DateSuppression)</div>
+                        </div>
+                        <div class="doc-trash-actions">
+                            <button class="btn btn-secondary btn-sm" @onclick="() => DoRestore(doc.Id)">♻ Restaurer</button>
+                            <button class="btn-icon danger" aria-label="Supprimer définitivement" @onclick="() => AskPurge(doc)">🗑</button>
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+    }
+
+    @if (_selectionMode && _selected.Count > 0)
+    {
+        <div class="sel-bar" role="toolbar" aria-label="Actions groupées">
+            <span class="sel-count">@_selected.Count sélectionné(s)</span>
+            <div class="sel-actions">
+                @if (_view == "docs")
+                {
+                    <button class="btn btn-secondary btn-sm" @onclick="BatchFav" aria-label="Ajouter aux favoris">★</button>
+                    <button class="btn btn-secondary btn-sm" @onclick="() => OpenMove(_selected.ToList())">⤵ Déplacer</button>
+                    <button class="btn btn-secondary btn-sm" @onclick="BatchShare">↗ Partager</button>
+                    <button class="btn btn-danger-outline btn-sm" @onclick="AskTrashSelected">🗑 Corbeille</button>
+                }
+                else
+                {
+                    <button class="btn btn-secondary btn-sm" @onclick="BatchRestore">♻ Restaurer</button>
+                }
+            </div>
+        </div>
+    }
+
+    @if (!_selectionMode)
+    {
+        <button class="fab" aria-label="Ajouter un document ou un dossier" @onclick="() => _fabOpen = true">+</button>
+    }
+
+    <Modal Show="_fabOpen" Title="Ajouter" OnClose="() => _fabOpen = false">
+        <div class="import-format" style="margin-bottom:10px">
+            <div class="import-format-title">📋 Formats acceptés : PDF, JPG, PNG, GIF, WEBP, TXT, DOC, DOCX, XLS, XLSX, ZIP, MP3, MP4 — max 10 Mo, 100 % hors ligne.</div>
+        </div>
+        <div class="sheet-options">
+            <button class="sheet-option" @onclick="StartNewFolder">
+                <span class="sheet-icon" style="background:#4f46e524;color:#4f46e5">📁</span>
+                <span class="sheet-main"><strong>Nouveau dossier</strong><span>Créer un dossier de classement</span></span>
+                <span aria-hidden="true">›</span>
+            </button>
+            <button class="sheet-option" @onclick="ImportFile">
+                <span class="sheet-icon" style="background:#0891b224;color:#0891b2">📄</span>
+                <span class="sheet-main"><strong>Importer un fichier</strong><span>PDF, image, DOCX, XLSX, TXT, ZIP… (max 10 Mo)</span></span>
+                <span aria-hidden="true">›</span>
+            </button>
+            <button class="sheet-option" @onclick="ImportImage">
+                <span class="sheet-icon" style="background:#05966924;color:#059669">🖼</span>
+                <span class="sheet-main"><strong>Choisir une image</strong><span>JPG, PNG, GIF, WEBP depuis la galerie (max 10 Mo)</span></span>
+                <span aria-hidden="true">›</span>
+            </button>
+            <button class="sheet-option" @onclick="OpenScan">
+                <span class="sheet-icon" style="background:#dc262624;color:#dc2626">📷</span>
+                <span class="sheet-main"><strong>Scanner un document</strong><span>Photos JPEG → PDF, hors ligne</span></span>
+                <span aria-hidden="true">›</span>
+            </button>
+        </div>
+    </Modal>
+
+    <Modal Show="_folderModal" Title="@(_editingFolder == null ? "Nouveau dossier" : "Renommer le dossier")" OnClose="CloseFolderModal">
+        <div class="form-group">
+            <label for="doc-folder-name">Nom du dossier *</label>
+            <input id="doc-folder-name" type="text" placeholder="Ex : Factures 2026" value="@_folderName" @oninput="e => _folderName = e.Value?.ToString() ?? string.Empty" />
+        </div>
+        <div class="form-group">
+            <label>Couleur</label>
+            <div class="color-swatches">
+                @foreach (var c in FolderColors)
+                {
+                    <button type="button" class="color-swatch @(c == _folderColor ? "selected" : "")"
+                            style="background:@c" title="@c" @onclick="() => _folderColor = c"></button>
+                }
+            </div>
+        </div>
+        <span class="form-error">@_folderError</span>
+        <div class="form-actions filter-actions">
+            <button type="button" class="btn btn-secondary" @onclick="CloseFolderModal">Annuler</button>
+            <button type="button" class="btn btn-primary" @onclick="SaveFolder">Enregistrer</button>
+        </div>
+    </Modal>
+
+    <Modal Show="_folderMenu != null" Title="@(_folderMenu == null ? "" : _folderMenu.Nom)" OnClose="() => _folderMenu = null">
+        <div class="sheet-options">
+            <button class="sheet-option" @onclick="() => StartRenameFolder(_folderMenu!)">
+                <span class="sheet-icon" style="background:#4f46e524;color:#4f46e5">✏️</span>
+                <span class="sheet-main"><strong>Renommer</strong></span>
+                <span aria-hidden="true">›</span>
+            </button>
+            <button class="sheet-option" @onclick="() => AskDeleteFolder(_folderMenu!)">
+                <span class="sheet-icon" style="background:#dc262624;color:#dc2626">🗑</span>
+                <span class="sheet-main"><strong>Supprimer le dossier</strong><span>Le contenu sera conservé (remonté au dossier parent)</span></span>
+                <span aria-hidden="true">›</span>
+            </button>
+        </div>
+    </Modal>
+
+    <Modal Show="_staged != null" Title="Importer un document" OnClose="CancelImport">
+        <ChildContent>
+            @if (_staged != null)
+            {
+                <p class="muted" style="margin-top:0">📎 @_staged.FileName · @_staged.Mime · @FormatSize(_staged.Size)</p>
+                <div class="import-format" style="margin-bottom:10px">
+                    <div class="import-format-title">Contenu : @KindName(_staged.Mime) — formats : PDF, images (JPG/PNG/GIF/WEBP), TXT, DOC(X), XLS(X), ZIP, MP3, MP4. Taille max 10 Mo.</div>
+                </div>
+                <div class="form-group">
+                    <label for="doc-import-titre">Titre *</label>
+                    <input id="doc-import-titre" type="text" value="@_iTitre" @oninput="e => _iTitre = e.Value?.ToString() ?? string.Empty" />
+                </div>
+                <div class="form-group">
+                    <label for="doc-import-desc">Description</label>
+                    <textarea id="doc-import-desc" rows="2" value="@_iDesc" @oninput="e => _iDesc = e.Value?.ToString() ?? string.Empty"></textarea>
+                </div>
+                <div class="form-group">
+                    <label for="doc-import-cat">Catégorie</label>
+                    <select id="doc-import-cat" value="@_iCat" @onchange="e => _iCat = e.Value?.ToString() ?? DocumentCategories.Autre">
+                        @foreach (var c in DocumentCategories.Toutes)
+                        {
+                            <option value="@c">@DocumentCategories.Icon(c) @DocumentCategories.Label(c)</option>
+                        }
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="doc-import-tags">Tags (séparés par des virgules)</label>
+                    <input id="doc-import-tags" type="text" placeholder="Ex : urgent, maison" value="@_iTags" @oninput="e => _iTags = e.Value?.ToString() ?? string.Empty" />
+                </div>
+                <div class="form-group">
+                    <label for="doc-import-folder">Dossier</label>
+                    <select id="doc-import-folder" value="@_iFolder" @onchange="e => _iFolder = e.Value?.ToString() ?? string.Empty">
+                        <option value="">🏠 Racine</option>
+                        @foreach (var f in Store.Folders)
+                        {
+                            <option value="@f.Id">📁 @FolderPath(f.Id)</option>
+                        }
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="doc-import-user">Utilisateur associé</label>
+                    <select id="doc-import-user" value="@_iUser" @onchange="e => _iUser = e.Value?.ToString() ?? string.Empty">
+                        <option value="">— Aucun —</option>
+                        @foreach (var u in ActiveUsers)
+                        {
+                            <option value="@u.Identifiant">@u.NomComplet</option>
+                        }
+                    </select>
+                </div>
+                <span class="form-error">@_importError</span>
+            }
+        </ChildContent>
+        <FooterContent>
+            <button type="button" class="btn btn-secondary" @onclick="CancelImport">Annuler</button>
+            <button type="button" class="btn btn-primary" @onclick="SaveImport" disabled="@(_saving || _staged == null)">Enregistrer</button>
+        </FooterContent>
+    </Modal>
+
+    <Modal Show="_scanOpen" Title="Scanner un document" OnClose="CloseScan">
+        <ChildContent>
+            @if (_scanPages.Count == 0)
+            {
+                <EmptyState Icon="📷" Title="Aucune page" Message="Photographiez chaque page du document, puis convertissez l'ensemble en PDF." />
+            }
+            else
+            {
+                <div class="scan-thumbs">
+                    @for (var i = 0; i < _scanPages.Count; i++)
+                    {
+                        var idx = i;
+                        var page = _scanPages[idx];
+                        <div class="scan-thumb">
+                            <img src="@("data:" + page.Mime + ";base64," + Convert.ToBase64String(page.Bytes))" alt="Page @(idx + 1)" />
+                            <span class="scan-num">@(idx + 1)</span>
+                            <button type="button" class="scan-remove" aria-label="Retirer la page @(idx + 1)" @onclick="() => _scanPages.RemoveAt(idx)">×</button>
+                        </div>
+                    }
+                </div>
+            }
+            <div class="inline-actions" style="margin:10px 0">
+                <button type="button" class="btn btn-secondary btn-sm" @onclick="ScanCapture">📷 Capturer une page</button>
+                <button type="button" class="btn btn-secondary btn-sm" @onclick="ScanGallery">🖼 Depuis la galerie</button>
+            </div>
+            <div class="form-group">
+                <label for="doc-scan-titre">Titre du PDF *</label>
+                <input id="doc-scan-titre" type="text" placeholder="Ex : Contrat signé" value="@_scanTitre" @oninput="e => _scanTitre = e.Value?.ToString() ?? string.Empty" />
+            </div>
+            <span class="form-error">@_scanError</span>
+            <span class="field-hint">Seules les photos JPEG (caméra) peuvent être converties en PDF, hors ligne.</span>
+        </ChildContent>
+        <FooterContent>
+            <button type="button" class="btn btn-secondary" @onclick="CloseScan">Annuler</button>
+            <button type="button" class="btn btn-primary" @onclick="ConvertScan" disabled="@(_saving || _scanPages.Count == 0)">Convertir en PDF (@_scanPages.Count p.)</button>
+        </FooterContent>
+    </Modal>
+
+    <Modal Show="_detail != null" Title="@(_detail == null ? "" : _detail.Titre)" OnClose="() => _detail = null">
+        <ChildContent>
+            @if (_detail != null)
+            {
+                var doc = _detail;
+                @if (DocumentKinds.IsImage(doc.Mime) && !string.IsNullOrWhiteSpace(doc.Data))
+                {
+                    <div class="doc-preview-wrap">
+                        <img class="doc-preview-img" src="@doc.Data" alt="@doc.Titre" />
+                    </div>
+                }
+                else
+                {
+                    <div class="doc-preview-file" style="--doc-color:@DocColor(doc)">
+                        <span class="doc-preview-icon" aria-hidden="true">@DocIcon(doc)</span>
+                        <div><strong>@doc.FileName</strong><span>@KindName(doc.Mime) · @FormatSize(doc.Taille)</span></div>
+                        <div class="file-actions">
+                            <button type="button" class="btn btn-secondary btn-sm" @onclick="() => OpenDoc(doc)">⇱ Ouvrir</button>
+                            <button type="button" class="btn btn-secondary btn-sm" @onclick="() => SaveDoc(doc)">⇩ Enregistrer</button>
+                        </div>
+                    </div>
+                    @if (IsTextPreviewable(doc))
+                    {
+                        <div class="cal-detail-notes" style="max-height:220px;overflow:auto">@TextPreview(doc)</div>
+                    }
+                    else if (DocumentKinds.IsPdf(doc.Mime) && !string.IsNullOrWhiteSpace(doc.Data))
+                    {
+                        <div class="doc-pdf-preview">
+                            <iframe src="@doc.Data" title="Aperçu @doc.Titre" class="doc-pdf-frame"></iframe>
+                            <span class="field-hint">Si l'aperçu ne s'affiche pas, utilisez « Ouvrir » ou « Enregistrer ».</span>
+                        </div>
+                    }
+                }
+                <div class="doc-detail-lines">
+                    <div class="storage-line"><span>Catégorie</span><strong>@DocumentCategories.Icon(doc.Categorie) @DocumentCategories.Label(doc.Categorie)</strong></div>
+                    <div class="storage-line"><span>Dossier</span><strong>@(string.IsNullOrWhiteSpace(doc.FolderId) ? "🏠 Racine" : "📁 " + FolderPath(doc.FolderId))</strong></div>
+                    <div class="storage-line"><span>Ajouté le</span><strong>@ShortDateTime(doc.DateCreation)</strong></div>
+                    <div class="storage-line"><span>Modifié le</span><strong>@ShortDateTime(doc.DateModification)</strong></div>
+                    @if (!string.IsNullOrWhiteSpace(doc.UtilisateurId))
+                    {
+                        <div class="storage-line"><span>Associé à</span><strong>👤 @UserName(doc.UtilisateurId)</strong></div>
+                    }
+                    @if (doc.Tags.Count > 0)
+                    {
+                        <div class="doc-tags">@foreach (var t in doc.Tags)
+                        {
+                            <span class="tag-chip">🏷 @t</span>
+                        }</div>
+                    }
+                    @if (!string.IsNullOrWhiteSpace(doc.Description))
+                    {
+                        <div class="cal-detail-notes">@doc.Description</div>
+                    }
+                </div>
+            }
+        </ChildContent>
+        <FooterContent>
+            @if (_detail != null && !_detail.Supprime)
+            {
+                <button type="button" class="btn btn-secondary" @onclick="() => _detail = null">Fermer</button>
+                <button type="button" class="btn btn-secondary" @onclick="() => ShareDocs(new[] { _detail! })">↗ Partager</button>
+                <button type="button" class="btn btn-secondary" @onclick="() => StartEdit(_detail!)">✏️ Modifier</button>
+                <button type="button" class="btn btn-danger-outline" @onclick="() => AskTrash(new[] { _detail!.Id })">🗑 Supprimer</button>
+            }
+            else
+            {
+                <button type="button" class="btn btn-secondary" @onclick="() => _detail = null">Fermer</button>
+                <button type="button" class="btn btn-primary" @onclick="() => DoRestore((_detail!).Id)">♻ Restaurer</button>
+            }
+        </FooterContent>
+    </Modal>
+
+    <Modal Show="_editing != null" Title="Modifier le document" OnClose="() => _editing = null">
+        <ChildContent>
+            <div class="form-group">
+                <label for="doc-edit-titre">Titre *</label>
+                <input id="doc-edit-titre" type="text" value="@_eTitre" @oninput="e => _eTitre = e.Value?.ToString() ?? string.Empty" />
+            </div>
+            <div class="form-group">
+                <label for="doc-edit-desc">Description</label>
+                <textarea id="doc-edit-desc" rows="2" value="@_eDesc" @oninput="e => _eDesc = e.Value?.ToString() ?? string.Empty"></textarea>
+            </div>
+            <div class="form-group">
+                <label for="doc-edit-cat">Catégorie</label>
+                <select id="doc-edit-cat" value="@_eCat" @onchange="e => _eCat = e.Value?.ToString() ?? DocumentCategories.Autre">
+                    @foreach (var c in DocumentCategories.Toutes)
+                    {
+                        <option value="@c">@DocumentCategories.Icon(c) @DocumentCategories.Label(c)</option>
+                    }
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="doc-edit-tags">Tags (séparés par des virgules)</label>
+                <input id="doc-edit-tags" type="text" value="@_eTags" @oninput="e => _eTags = e.Value?.ToString() ?? string.Empty" />
+            </div>
+            <div class="form-group">
+                <label for="doc-edit-folder">Dossier</label>
+                <select id="doc-edit-folder" value="@_eFolder" @onchange="e => _eFolder = e.Value?.ToString() ?? string.Empty">
+                    <option value="">🏠 Racine</option>
+                    @foreach (var f in Store.Folders)
+                    {
+                        <option value="@f.Id">📁 @FolderPath(f.Id)</option>
+                    }
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="doc-edit-user">Utilisateur associé</label>
+                <select id="doc-edit-user" value="@_eUser" @onchange="e => _eUser = e.Value?.ToString() ?? string.Empty">
+                    <option value="">— Aucun —</option>
+                    @foreach (var u in ActiveUsers)
+                    {
+                        <option value="@u.Identifiant">@u.NomComplet</option>
+                    }
+                </select>
+            </div>
+            <span class="form-error">@_editError</span>
+        </ChildContent>
+        <FooterContent>
+            <button type="button" class="btn btn-secondary" @onclick="() => _editing = null">Annuler</button>
+            <button type="button" class="btn btn-primary" @onclick="SaveEdit">Enregistrer</button>
+        </FooterContent>
+    </Modal>
+
+    <Modal Show="_moveOpen" Title="Déplacer vers…" OnClose="() => _moveOpen = false">
+        <div class="move-list">
+            <label class="form-check">
+                <input type="radio" name="doc-move" checked="@(_moveTarget == "")" @onchange='() => _moveTarget = ""' />
+                🏠 Racine
+            </label>
+            @foreach (var f in Store.Folders.OrderBy(f => FolderPath(f.Id)))
+            {
+                var folder = f;
+                <label class="form-check">
+                    <input type="radio" name="doc-move" checked="@(_moveTarget == folder.Id)" @onchange="() => _moveTarget = folder.Id" />
+                    📁 @FolderPath(folder.Id)
+                </label>
+            }
+        </div>
+        <div class="form-actions filter-actions">
+            <button type="button" class="btn btn-secondary" @onclick="() => _moveOpen = false">Annuler</button>
+            <button type="button" class="btn btn-primary" @onclick="DoMove">Déplacer (@_moveIds.Count)</button>
+        </div>
+    </Modal>
+
+    <Modal Show="_filtersOpen" Title="Filtrer et trier" OnClose="() => _filtersOpen = false">
+        <div class="cal-filter-section">
+            <div class="divider-section">Catégories</div>
+            <div class="check-group">
+                @foreach (var c in DocumentCategories.Toutes)
+                {
+                    var cat = c;
+                    <label class="form-check">
+                        <input type="checkbox" checked="@_catFilter.Contains(cat)" @onchange="() => ToggleCat(cat)" />
+                        <span style="color:@DocumentCategories.Color(cat)">@DocumentCategories.Icon(cat)</span> @DocumentCategories.Label(cat)
+                    </label>
+                }
+            </div>
+            <div class="divider-section">Type de fichier</div>
+            <div class="radio-row">
+                @foreach (var (key, label) in TypeChoices)
+                {
+                    var k = key;
+                    <label class="radio-option">
+                        <input type="radio" name="doc-kind" checked="@(_kindFilter == k)" @onchange="() => _kindFilter = k" />
+                        @label
+                    </label>
+                }
+            </div>
+            <div class="divider-section">Options</div>
+            <div class="check-group">
+                <label class="form-check">
+                    <input type="checkbox" checked="@_favOnly" @onchange="ToggleFavOnly" />
+                    ⭐ Favoris uniquement
+                </label>
+            </div>
+            <div class="divider-section">Utilisateur associé</div>
+            <div class="radio-row">
+                <label class="radio-option">
+                    <input type="radio" name="doc-user" checked="@(_userFilter == null)" @onchange="() => _userFilter = null" />
+                    Tous
+                </label>
+                @foreach (var u in ActiveUsers)
+                {
+                    var user = u;
+                    <label class="radio-option">
+                        <input type="radio" name="doc-user" checked="@(_userFilter == user.Identifiant)" @onchange="() => _userFilter = user.Identifiant" />
+                        @user.NomComplet
+                    </label>
+                }
+            </div>
+            <div class="divider-section">Tri</div>
+            <div class="radio-row">
+                @foreach (var (key, label) in SortChoices)
+                {
+                    var k = key;
+                    <label class="radio-option">
+                        <input type="radio" name="doc-sort" checked="@(_sort == k)" @onchange="() => _sort = k" />
+                        @label
+                    </label>
+                }
+            </div>
+        </div>
+        <div class="form-actions filter-actions">
+            <button type="button" class="btn btn-secondary" @onclick="ResetFilters">Réinitialiser</button>
+            <button type="button" class="btn btn-primary" @onclick="() => _filtersOpen = false">Appliquer les filtres</button>
+        </div>
+    </Modal>
+
+    <ConfirmDialog Show="_confirmTrash" Title="Placer dans la corbeille"
+                   Message="@("Placer " + _pendingIds.Count + " document(s) dans la corbeille ? Vous pourrez les restaurer.")"
+                   ConfirmLabel="Mettre à la corbeille" Danger="true" OnConfirm="DoTrash" OnCancel="() => _confirmTrash = false" />
+
+    <ConfirmDialog Show="_confirmPurge" Title="Supprimer définitivement"
+                   Message="@(_purgeTarget == null ? "" : "Supprimer définitivement « " + _purgeTarget.Titre + " » ? Action irréversible.")"
+                   ConfirmLabel="Supprimer" Danger="true" OnConfirm="DoPurge" OnCancel="() => _confirmPurge = false" />
+
+    <ConfirmDialog Show="_confirmEmptyTrash" Title="Vider la corbeille"
+                   Message="Supprimer définitivement tous les documents de la corbeille ? Action irréversible."
+                   ConfirmLabel="Tout supprimer" Danger="true" OnConfirm="DoEmptyTrash" OnCancel="() => _confirmEmptyTrash = false" />
+
+    <ConfirmDialog Show="_confirmDeleteFolder" Title="Supprimer le dossier"
+                   Message="@(_folderMenu == null ? "" : "Supprimer le dossier « " + _folderMenu.Nom + " » ? Son contenu sera conservé et remonté au dossier parent.")"
+                   ConfirmLabel="Supprimer" Danger="true" OnConfirm="DoDeleteFolder" OnCancel="() => _confirmDeleteFolder = false" />
+}
+
+@code {
+    private static readonly string[] FolderColors =
+    {
+        "#4f46e5", "#0891b2", "#059669", "#d97706", "#dc2626", "#7c3aed", "#0ea5e9", "#64748b"
+    };
+
+    private static readonly (string, string)[] TypeChoices = new[]
+    {
+        ("tous", "Tous"), ("pdf", "PDF"), ("image", "Images"), ("autre", "Autres")
+    };
+
+    private static readonly (string, string)[] SortChoices = new[]
+    {
+        ("recent", "Récents"), ("nom", "Nom A-Z"), ("taille", "Taille")
+    };
+
+    private const long QuotaBytes = DataStore.StorageQuotaBytes;
+
+    private string _error = "";
+    private string _view = "docs";
+    private string? _currentFolderId;
+    private string _search = "";
+    private string _sort = "recent";
+    private readonly HashSet<string> _catFilter = new();
+    private string _kindFilter = "tous";
+    private bool _favOnly;
+    private string? _userFilter;
+    private bool _filtersOpen;
+    private bool _saving;
+
+    private bool _selectionMode;
+    private readonly HashSet<string> _selected = new();
+
+    private bool _fabOpen;
+    private bool _folderModal;
+    private DocumentFolder? _editingFolder;
+    private string _folderName = "";
+    private string _folderColor = FolderColors[0];
+    private string _folderError = "";
+    private DocumentFolder? _folderMenu;
+    private bool _confirmDeleteFolder;
+
+    private DocImport? _staged;
+    private string _iTitre = "";
+    private string _iDesc = "";
+    private string _iCat = DocumentCategories.Autre;
+    private string _iTags = "";
+    private string _iFolder = "";
+    private string _iUser = "";
+    private string _importError = "";
+
+    private bool _scanOpen;
+    private readonly List<DocImport> _scanPages = new();
+    private string _scanTitre = "";
+    private string _scanError = "";
+
+    private DocumentItem? _detail;
+    private DocumentItem? _editing;
+    private string _eTitre = "";
+    private string _eDesc = "";
+    private string _eCat = DocumentCategories.Autre;
+    private string _eTags = "";
+    private string _eFolder = "";
+    private string _eUser = "";
+    private string _editError = "";
+
+    private bool _moveOpen;
+    private List<string> _moveIds = new();
+    private string _moveTarget = "";
+
+    private bool _confirmTrash;
+    private bool _confirmPurge;
+    private bool _confirmEmptyTrash;
+    private List<string> _pendingIds = new();
+    private DocumentItem? _purgeTarget;
+
+    private List<DocumentItem> _filtered = new();
+    private List<DocumentItem> _trash = new();
+    private List<DocumentFolder> _visibleFolders = new();
+    private List<DocumentFolder> _breadcrumb = new();
+    private int _trashCount;
+    private bool _quotaAlmostFull;
+    private double _quotaPercent;
+
+    private IReadOnlyList<UserAccount> ActiveUsers =>
+        Store.Users.Where(u => u.Actif).OrderBy(u => u.NomComplet).ToList();
+
+    protected override void OnInitialized()
+    {
+        Store.DataChanged += OnChanged;
+        try
+        {
+            Recompute();
+        }
+        catch (Exception ex)
+        {
+            _error = ex.Message;
+        }
+    }
+
+    private void RetryLoad()
+    {
+        _error = "";
+        try { Recompute(); }
+        catch (Exception ex) { _error = ex.Message; }
+        StateHasChanged();
+    }
+
+    private void OnChanged() => _ = InvokeAsync(() => { Recompute(); StateHasChanged(); });
+
+    private void Recompute()
+    {
+        var q = _search.Trim();
+        IEnumerable<DocumentItem> query = Store.Documents.Where(d => !d.Supprime);
+
+        if (q.Length > 0)
+            query = query.Where(d =>
+                d.Titre.Contains(q, StringComparison.OrdinalIgnoreCase) ||
+                (d.Description ?? "").Contains(q, StringComparison.OrdinalIgnoreCase) ||
+                (d.FileName ?? "").Contains(q, StringComparison.OrdinalIgnoreCase) ||
+                d.Tags.Any(t => t.Contains(q, StringComparison.OrdinalIgnoreCase)));
+        else
+            query = query.Where(d => string.Equals(d.FolderId ?? "", _currentFolderId ?? "", StringComparison.Ordinal));
+
+        if (_catFilter.Count > 0)
+            query = query.Where(d => _catFilter.Contains(d.Categorie));
+        if (_kindFilter != "tous")
+            query = query.Where(d => DocumentKinds.KindOf(d.Mime) == _kindFilter);
+        if (_favOnly)
+            query = query.Where(d => d.Favori);
+        if (_userFilter != null)
+            query = query.Where(d => d.UtilisateurId == _userFilter);
+
+        _filtered = _sort switch
+        {
+            "nom" => query.OrderBy(d => d.Titre).ToList(),
+            "taille" => query.OrderByDescending(d => d.Taille).ToList(),
+            _ => query.OrderByDescending(d => d.DateModification).ThenByDescending(d => d.DateCreation).ToList()
+        };
+
+        _trash = Store.Documents.Where(d => d.Supprime).OrderByDescending(d => d.DateSuppression).ToList();
+        _trashCount = _trash.Count;
+
+        _visibleFolders = Store.Folders
+            .Where(f => string.Equals(f.ParentId ?? "", _currentFolderId ?? "", StringComparison.Ordinal))
+            .OrderBy(f => f.Nom).ToList();
+
+        _breadcrumb = new List<DocumentFolder>();
+        var cursor = _currentFolderId;
+        var guard = 0;
+        while (!string.IsNullOrEmpty(cursor) && guard++ < 20)
+        {
+            var f = Store.FindFolder(cursor);
+            if (f == null) break;
+            _breadcrumb.Insert(0, f);
+            cursor = f.ParentId;
+        }
+
+        var used = Store.StorageUsedBytes();
+        _quotaPercent = Math.Min((double)used / QuotaBytes * 100.0, 100.0);
+        _quotaAlmostFull = _quotaPercent >= 80.0;
+
+        _selected.RemoveWhere(id => Store.FindDocument(id) == null);
+    }
+
+    private string ViewCls(string v) => _view == v ? "active" : "";
+
+    private void SetView(string v)
+    {
+        _view = v;
+        _selected.Clear();
+        _selectionMode = false;
+        Recompute();
+    }
+
+    private void OpenFolder(string? id)
+    {
+        _currentFolderId = string.IsNullOrWhiteSpace(id) ? null : id;
+        _selected.Clear();
+        Recompute();
+    }
+
+    private void OnFolderKey(KeyboardEventArgs k, string id)
+    {
+        if (k.Key is "Enter" or " ") OpenFolder(id);
+    }
+
+    private void OnSearch(string value)
+    {
+        _search = value;
+        Recompute();
+    }
+
+    private void OnSort(ChangeEventArgs e)
+    {
+        _sort = e.Value?.ToString() ?? "recent";
+        Recompute();
+    }
+
+    private void ToggleSelectMode()
+    {
+        _selectionMode = !_selectionMode;
+        _selected.Clear();
+    }
+
+    private void ToggleSelected(string id)
+    {
+        if (!_selected.Add(id)) _selected.Remove(id);
+    }
+
+    private bool _hasActiveFilters => _catFilter.Count > 0 || _kindFilter != "tous" || _favOnly || _userFilter != null;
+
+    private int _activeFilterCount => _catFilter.Count + (_kindFilter != "tous" ? 1 : 0)
+        + (_favOnly ? 1 : 0) + (_userFilter != null ? 1 : 0);
+
+    private void ToggleCat(string cat)
+    {
+        if (!_catFilter.Add(cat)) _catFilter.Remove(cat);
+        Recompute();
+        StateHasChanged();
+    }
+
+    private void ToggleFavOnly(ChangeEventArgs e)
+    {
+        _favOnly = e.Value is bool b ? b : !_favOnly;
+        Recompute();
+        StateHasChanged();
+    }
+
+    private void ResetFilters()
+    {
+        _catFilter.Clear();
+        _kindFilter = "tous";
+        _favOnly = false;
+        _userFilter = null;
+        Recompute();
+    }
+
+    private void OpenDetail(DocumentItem doc) => _detail = Store.FindDocument(doc.Id) ?? doc;
+
+    private void ToggleFav(DocumentItem doc)
+    {
+        var res = Store.SetDocumentFavorite(doc.Id, !doc.Favori);
+        if (!res.Success) State.NotifyError(res.Error);
+    }
+
+    // ---------- Dossiers ----------
+
+    private void StartNewFolder()
+    {
+        _fabOpen = false;
+        _editingFolder = null;
+        _folderName = "";
+        _folderColor = FolderColors[0];
+        _folderError = "";
+        _folderModal = true;
+    }
+
+    private void StartRenameFolder(DocumentFolder folder)
+    {
+        _folderMenu = null;
+        _editingFolder = folder;
+        _folderName = folder.Nom;
+        _folderColor = folder.Couleur;
+        _folderError = "";
+        _folderModal = true;
+    }
+
+    private void CloseFolderModal()
+    {
+        _folderModal = false;
+        _editingFolder = null;
+        _folderError = "";
+    }
+
+    private void SaveFolder()
+    {
+        _folderError = "";
+        OperationResult res;
+        if (_editingFolder == null)
+            res = Store.AddFolder(new DocumentFolder { Nom = _folderName, ParentId = _currentFolderId, Couleur = _folderColor });
+        else
+            res = Store.RenameFolder(_editingFolder.Id, _folderName, _folderColor);
+        if (!res.Success) { _folderError = res.Error; return; }
+        State.NotifySuccess(_editingFolder == null ? "Dossier créé." : "Dossier renommé.");
+        CloseFolderModal();
+    }
+
+    private void OpenFolderMenu(DocumentFolder folder) => _folderMenu = folder;
+
+    private void AskDeleteFolder(DocumentFolder folder)
+    {
+        _folderMenu = folder;
+        _confirmDeleteFolder = true;
+    }
+
+    private void DoDeleteFolder()
+    {
+        _confirmDeleteFolder = false;
+        var folder = _folderMenu;
+        _folderMenu = null;
+        if (folder == null) return;
+        if (_currentFolderId == folder.Id) _currentFolderId = folder.ParentId;
+        var res = Store.DeleteFolder(folder.Id);
+        if (res.Success) State.NotifySuccess("Dossier supprimé, contenu conservé.");
+        else State.NotifyError(res.Error);
+    }
+
+    private string FolderName(string? folderId)
+    {
+        if (string.IsNullOrWhiteSpace(folderId)) return "Racine";
+        return Store.FindFolder(folderId)?.Nom ?? "Racine";
+    }
+
+    private string FolderPath(string? folderId)
+    {
+        if (string.IsNullOrWhiteSpace(folderId)) return "Racine";
+        var parts = new List<string>();
+        var cursor = folderId;
+        var guard = 0;
+        while (!string.IsNullOrWhiteSpace(cursor) && guard++ < 20)
+        {
+            var f = Store.FindFolder(cursor);
+            if (f == null) break;
+            parts.Insert(0, f.Nom);
+            cursor = f.ParentId;
+        }
+        return parts.Count == 0 ? "Racine" : string.Join(" / ", parts);
+    }
+
+    private string FolderCountLabel(string folderId)
+    {
+        var docs = Store.Documents.Count(d => !d.Supprime && d.FolderId == folderId);
+        var subs = Store.Folders.Count(f => f.ParentId == folderId);
+        return (docs + subs) + " élément(s)";
+    }
+
+    // ---------- Import ----------
+
+    private async Task ImportFile()
+    {
+        _fabOpen = false;
+        var picked = await Docs.PickDocumentAsync();
+        if (picked == null)
+        {
+            if (!string.IsNullOrEmpty(Docs.LastError)) State.NotifyError(Docs.LastError);
+            return;
+        }
+        StageImport(picked);
+    }
+
+    private async Task ImportImage()
+    {
+        _fabOpen = false;
+        var picked = await Docs.PickImageAsync();
+        if (picked == null)
+        {
+            if (!string.IsNullOrEmpty(Docs.LastError)) State.NotifyError(Docs.LastError);
+            return;
+        }
+        StageImport(picked);
+    }
+
+    private void StageImport(DocImport picked)
+    {
+        _staged = picked;
+        _iTitre = Path.GetFileNameWithoutExtension(picked.FileName);
+        if (string.IsNullOrWhiteSpace(_iTitre)) _iTitre = picked.FileName;
+        _iDesc = "";
+        _iCat = DocumentCategories.FromMime(picked.Mime);
+        _iTags = "";
+        _iFolder = _currentFolderId ?? "";
+        _iUser = "";
+        _importError = "";
+        StateHasChanged();
+    }
+
+    private void CancelImport()
+    {
+        _staged = null;
+        _importError = "";
+    }
+
+    private void SaveImport()
+    {
+        _importError = "";
+        if (_staged == null) return;
+        _saving = true;
+        StateHasChanged();
+        try
+        {
+            var res = Store.AddDocument(new DocumentItem
+            {
+                Titre = _iTitre.Trim(),
+                Description = _iDesc.Trim(),
+                FolderId = string.IsNullOrWhiteSpace(_iFolder) ? null : _iFolder,
+                Categorie = _iCat,
+                Tags = SplitTags(_iTags),
+                FileName = _staged.FileName,
+                Mime = _staged.Mime,
+                Taille = _staged.Size,
+                Data = "data:" + _staged.Mime + ";base64," + Convert.ToBase64String(_staged.Bytes),
+                UtilisateurId = string.IsNullOrWhiteSpace(_iUser) ? null : _iUser
+            });
+            if (!res.Success) { _importError = res.Error; return; }
+            State.NotifySuccess("✓ Document « " + _iTitre.Trim() + " » ajouté.");
+            _staged = null;
+        }
+        finally { _saving = false; }
+    }
+
+    // ---------- Scan ----------
+
+    private void OpenScan()
+    {
+        _fabOpen = false;
+        _scanOpen = true;
+        _scanError = "";
+    }
+
+    private async Task ScanCapture()
+    {
+        var page = await Docs.CapturePageAsync();
+        if (page == null)
+        {
+            _scanError = Docs.LastError ?? "";
+            if (_scanError.Length > 0) StateHasChanged();
+            return;
+        }
+        _scanPages.Add(page);
+        _scanError = "";
+        StateHasChanged();
+    }
+
+    private async Task ScanGallery()
+    {
+        var page = await Docs.PickImageAsync();
+        if (page == null)
+        {
+            _scanError = Docs.LastError ?? "";
+            if (_scanError.Length > 0) StateHasChanged();
+            return;
+        }
+        _scanPages.Add(page);
+        _scanError = "";
+        StateHasChanged();
+    }
+
+    private void CloseScan()
+    {
+        _scanOpen = false;
+        _scanPages.Clear();
+        _scanTitre = "";
+        _scanError = "";
+    }
+
+    private void ConvertScan()
+    {
+        _scanError = "";
+        if (string.IsNullOrWhiteSpace(_scanTitre)) { _scanError = "Le titre du PDF est obligatoire."; return; }
+        if (_scanPages.Count == 0) { _scanError = "Capturez au moins une page."; return; }
+        var nonJpeg = _scanPages.FirstOrDefault(p => !PdfWriter.IsJpeg(p.Bytes));
+        if (nonJpeg != null) { _scanError = "La page « " + nonJpeg.FileName + " » n'est pas au format JPEG : reprenez-la avec la caméra."; return; }
+        _saving = true;
+        StateHasChanged();
+        try
+        {
+            var pdf = PdfWriter.FromJpegs(_scanPages.Select(p => p.Bytes).ToList());
+            var title = _scanTitre.Trim();
+            var res = Store.AddDocument(new DocumentItem
+            {
+                Titre = title,
+                Description = "Scan de " + _scanPages.Count + " page(s)",
+                FolderId = _currentFolderId,
+                Categorie = DocumentCategories.Scans,
+                FileName = title + ".pdf",
+                Mime = "application/pdf",
+                Taille = pdf.Length,
+                Data = "data:application/pdf;base64," + Convert.ToBase64String(pdf)
+            });
+            if (!res.Success) { _scanError = res.Error; return; }
+            State.NotifySuccess("✓ PDF « " + title + " » créé (" + _scanPages.Count + " page(s)).");
+            CloseScan();
+        }
+        catch (Exception ex) { _scanError = ex.Message; }
+        finally { _saving = false; }
+    }
+
+    // ---------- Détail / édition / déplacement ----------
+
+    private void StartEdit(DocumentItem doc)
+    {
+        _detail = null;
+        _editing = doc;
+        _eTitre = doc.Titre;
+        _eDesc = doc.Description;
+        _eCat = doc.Categorie;
+        _eTags = string.Join(", ", doc.Tags);
+        _eFolder = doc.FolderId ?? "";
+        _eUser = doc.UtilisateurId ?? "";
+        _editError = "";
+    }
+
+    private void SaveEdit()
+    {
+        _editError = "";
+        if (_editing == null) return;
+        var res = Store.UpdateDocument(_editing.Id, new DocumentItem
+        {
+            Titre = _eTitre,
+            Description = _eDesc,
+            Categorie = _eCat,
+            Tags = SplitTags(_eTags),
+            FolderId = string.IsNullOrWhiteSpace(_eFolder) ? null : _eFolder,
+            UtilisateurId = string.IsNullOrWhiteSpace(_eUser) ? null : _eUser
+        });
+        if (!res.Success) { _editError = res.Error; return; }
+        State.NotifyInfo("Document modifié.");
+        _editing = null;
+    }
+
+    private void OpenMove(List<string> ids)
+    {
+        _moveIds = ids.Distinct().ToList();
+        _moveTarget = _currentFolderId ?? "";
+        _moveOpen = true;
+    }
+
+    private void DoMove()
+    {
+        var res = Store.MoveDocuments(_moveIds, string.IsNullOrWhiteSpace(_moveTarget) ? null : _moveTarget);
+        _moveOpen = false;
+        if (!res.Success) { State.NotifyError(res.Error); return; }
+        State.NotifySuccess("Document(s) déplacé(s).");
+        _selected.Clear();
+        _selectionMode = false;
+    }
+
+    private async Task OpenDoc(DocumentItem doc)
+    {
+        var bytes = DocBytes(doc);
+        if (bytes == null) { State.NotifyError("Contenu du fichier illisible."); return; }
+        var ok = await Docs.OpenAsync(doc.FileName, bytes, doc.Mime, Saver);
+        if (!ok) State.NotifyError((Docs.LastError ?? "Ouverture impossible.") + " Essayez « Enregistrer » puis ouvrez le fichier depuis Téléchargements.");
+    }
+
+    private async Task SaveDoc(DocumentItem doc)
+    {
+        var bytes = DocBytes(doc);
+        if (bytes == null) { State.NotifyError("Contenu du fichier illisible."); return; }
+        var path = await Saver.SaveAsync(doc.FileName, bytes, doc.Mime);
+        if (path == null) State.NotifyError("Échec de l'enregistrement. Réessayez.");
+        else State.NotifySuccess("Fichier enregistré : " + path);
+    }
+
+    private static bool IsTextPreviewable(DocumentItem doc)
+    {
+        if (string.IsNullOrWhiteSpace(doc.Data)) return false;
+        return (doc.Mime ?? "").StartsWith("text/", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static string TextPreview(DocumentItem doc)
+    {
+        try
+        {
+            var bytes = DocBytes(doc);
+            if (bytes == null) return "";
+            var text = System.Text.Encoding.UTF8.GetString(bytes);
+            return text.Length > 4000 ? text[..4000] + "…" : text;
+        }
+        catch { return ""; }
+    }
+
+    private async Task ShareDocs(IEnumerable<DocumentItem> docs)
+    {
+        var files = new List<DocImport>();
+        foreach (var doc in docs)
+        {
+            var bytes = DocBytes(doc);
+            if (bytes == null) continue;
+            files.Add(new DocImport(doc.FileName, doc.Mime, doc.Taille, bytes));
+        }
+        if (files.Count == 0) { State.NotifyError("Aucun fichier à partager."); return; }
+        var ok = await Docs.ShareAsync(files, files.Count == 1 ? files[0].FileName : files.Count + " documents", Saver);
+        if (ok)
+        {
+            Store.LogActivity(ActivityTypes.DocumentShare, "Partage de " + files.Count + " document(s)");
+            State.NotifySuccess("Partage ouvert.");
+        }
+        else State.NotifyError(Docs.LastError ?? "Le partage a échoué.");
+        _selected.Clear();
+        _selectionMode = false;
+    }
+
+    // ---------- Corbeille ----------
+
+    private void AskTrash(IEnumerable<string> ids)
+    {
+        _detail = null;
+        _pendingIds = ids.Distinct().ToList();
+        _confirmTrash = true;
+    }
+
+    private void AskTrashSelected() => AskTrash(_selected.ToList());
+
+    private void DoTrash()
+    {
+        _confirmTrash = false;
+        var res = Store.TrashDocuments(_pendingIds);
+        _pendingIds.Clear();
+        _selected.Clear();
+        _selectionMode = false;
+        if (res.Success) State.NotifySuccess("Document(s) placé(s) dans la corbeille.");
+        else State.NotifyError(res.Error);
+    }
+
+    private void DoRestore(string id)
+    {
+        var res = Store.RestoreDocuments(new[] { id });
+        if (res.Success) State.NotifySuccess("Document restauré.");
+        else State.NotifyError(res.Error);
+    }
+
+    private void BatchRestore()
+    {
+        var res = Store.RestoreDocuments(_selected.ToList());
+        _selected.Clear();
+        _selectionMode = false;
+        if (res.Success) State.NotifySuccess("Document(s) restauré(s).");
+        else State.NotifyError(res.Error);
+    }
+
+    private void BatchFav()
+    {
+        var count = 0;
+        foreach (var id in _selected.ToList())
+        {
+            var doc = Store.FindDocument(id);
+            if (doc == null || doc.Favori) continue;
+            if (Store.SetDocumentFavorite(id, true).Success) count++;
+        }
+        State.NotifySuccess(count + " document(s) ajouté(s) aux favoris.");
+        _selected.Clear();
+        _selectionMode = false;
+    }
+
+    private async Task BatchShare() => await ShareDocs(_selected.Select(id => Store.FindDocument(id)).Where(d => d != null).Cast<DocumentItem>().ToList());
+
+    private void AskPurge(DocumentItem doc)
+    {
+        _purgeTarget = doc;
+        _confirmPurge = true;
+    }
+
+    private void DoPurge()
+    {
+        _confirmPurge = false;
+        if (_purgeTarget == null) return;
+        var res = Store.PurgeDocument(_purgeTarget.Id);
+        _purgeTarget = null;
+        if (res.Success) State.NotifySuccess("Document définitivement supprimé.");
+        else State.NotifyError(res.Error);
+    }
+
+    private void AskEmptyTrash() => _confirmEmptyTrash = true;
+
+    private void DoEmptyTrash()
+    {
+        _confirmEmptyTrash = false;
+        var res = Store.EmptyTrash();
+        if (res.Success) State.NotifySuccess("Corbeille vidée.");
+        else State.NotifyError(res.Error);
+    }
+
+    // ---------- Helpers ----------
+
+    private static List<string> SplitTags(string raw) => (raw ?? "")
+        .Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries)
+        .Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+
+    private static byte[]? DocBytes(DocumentItem doc)
+    {
+        try
+        {
+            var data = doc.Data ?? "";
+            var comma = data.IndexOf(',');
+            var b64 = comma >= 0 ? data[(comma + 1)..] : data;
+            var bytes = Convert.FromBase64String(b64);
+            return bytes.Length == 0 ? null : bytes;
+        }
+        catch { return null; }
+    }
+
+    private string UserName(string? identifiant)
+        => Store.Users.FirstOrDefault(u => u.Identifiant == identifiant)?.NomComplet ?? (identifiant ?? "");
+
+    private static string DocIcon(DocumentItem doc) => DocumentKinds.KindOf(doc.Mime) switch
+    {
+        "pdf" => "📕",
+        "image" => "🖼️",
+        _ => doc.Mime.StartsWith("text/", StringComparison.OrdinalIgnoreCase) ? "📝"
+            : doc.Mime.StartsWith("audio/", StringComparison.OrdinalIgnoreCase) ? "🎵"
+            : doc.Mime.StartsWith("video/", StringComparison.OrdinalIgnoreCase) ? "🎬" : "📎"
+    };
+
+    private static string DocColor(DocumentItem doc) => DocumentKinds.KindOf(doc.Mime) switch
+    {
+        "pdf" => "#dc2626",
+        "image" => "#059669",
+        _ => DocumentCategories.Color(doc.Categorie)
+    };
+
+    private static string KindName(string? mime) => DocumentKinds.KindOf(mime) switch
+    {
+        "pdf" => "Document PDF",
+        "image" => "Image",
+        _ => string.IsNullOrWhiteSpace(mime) ? "Fichier" : mime
+    };
+
+    private static string SoftColor(string hex) => hex.Length == 7 ? hex + "24" : hex;
+
+    private static string FormatSize(long bytes)
+    {
+        if (bytes < 1024) return bytes + " o";
+        if (bytes < 1024 * 1024) return (bytes / 1024.0).ToString("0.0") + " Ko";
+        if (bytes < 1024L * 1024L * 1024L) return (bytes / (1024.0 * 1024)).ToString("0.0") + " Mo";
+        return (bytes / (1024.0 * 1024 * 1024)).ToString("0.0") + " Go";
+    }
+
+    private static string ShortDate(string? iso) => DataStore.FormatDateCourte(iso);
+
+    private static string ShortDateTime(string? iso) => DataStore.FormatDateCourte(iso);
+
+    public void Dispose() => Store.DataChanged -= OnChanged;
+}

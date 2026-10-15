@@ -1,0 +1,519 @@
+@inject DataStore Store
+@inject AppState State
+@inject JavascriptBridge Js
+@inject PhotoService Photos
+@inject NativeFileSaver Saver
+@inject SpreadsheetPicker Picker
+
+<div class="page-head">
+    <p>Personnalisez l'application et gérez vos données locales.</p>
+</div>
+
+@{
+    var self = Store.GetCurrentUser();
+}
+@if (self != null)
+{
+    <div class="settings-section-label">Compte connecté</div>
+    <div class="card settings-user-card settings-card settings-card-account" role="button" tabindex="0" @onclick="GoProfile" @onkeydown="OnAccountKeyDown">
+        <span class="card-corner" aria-hidden="true"></span>
+        <Avatar UserName="@self.NomComplet" Seed="@self.Identifiant" Size="lg" Photo="@self.Photo" />
+        <div class="settings-user-main">
+            <div class="user-card-name">@self.NomComplet</div>
+            <div class="user-card-sub">@@@self.Identifiant</div>
+            <Badge Text="@self.Role" Kind="role" />
+            <Badge Text="@self.Statut" Kind="@(self.Actif ? "active" : "inactive")" />
+        </div>
+    </div>
+}
+
+<div class="card settings-card settings-card-appearance">
+    <span class="card-corner" aria-hidden="true"></span>
+    <div class="settings-card-head">
+        <span class="settings-deco settings-deco-appearance" aria-hidden="true">🎨</span>
+        <h3>Apparence</h3>
+    </div>
+    <div class="form-group">
+        <label for="st-appname">Nom de l'application</label>
+        <input id="st-appname" type="text" value="@_name" disabled="@(!Store.IsAdmin)"
+               @oninput="e => _name = e.Value?.ToString() ?? string.Empty" />
+        @if (!Store.IsAdmin)
+        {
+            <span class="field-hint">Réservé à l'administrateur.</span>
+        }
+    </div>
+    @if (Store.IsAdmin)
+    {
+        <div class="form-group">
+            <label>Logo de l'application</label>
+            <div class="photo-control">
+                @if (!string.IsNullOrWhiteSpace(_logo))
+                {
+                    <button type="button" class="logo-btn" aria-label="Voir le logo en grand" @onclick="() => _logoPreview = true">
+                        <img class="settings-logo-preview" src="@_logo" alt="Logo de l'application" />
+                    </button>
+                }
+                else
+                {
+                    <div class="photo-placeholder">GU</div>
+                }
+                <div class="photo-actions">
+                    <button type="button" class="btn btn-secondary btn-sm" @onclick="CaptureLogo">📷 Prendre une photo</button>
+                    <button type="button" class="btn btn-secondary btn-sm" @onclick="PickLogo">🖼 Choisir une image</button>
+                    @if (!string.IsNullOrWhiteSpace(_logo))
+                    {
+                        <button type="button" class="btn btn-secondary btn-sm" @onclick="() => _logo = string.Empty">Retirer</button>
+                    }
+                </div>
+            </div>
+            <span class="field-hint">Touchez le logo pour l'agrandir.</span>
+        </div>
+    }
+    <div class="form-group">
+        <label for="st-theme">Thème</label>
+        <select id="st-theme" value="@_theme" @onchange="OnThemeChanged">
+            <option value="light">Clair</option>
+            <option value="dark">Sombre</option>
+        </select>
+    </div>
+    <div class="form-group">
+        <label>Couleur d'accent</label>
+        <div class="color-swatches">
+            @foreach (var c in AccentColors)
+            {
+                <button type="button" class="color-swatch @(c == _color ? "selected" : "")"
+                        style="background:@c" title="@c" @onclick="() => SelectAccentAsync(c)"></button>
+            }
+        </div>
+    </div>
+    <div class="appearance-preview @(_theme == "dark" ? "preview-dark" : "preview-light")" style="--preview-accent:@_color">
+        <span class="appearance-preview-dot"></span>
+        <div><strong>Aperçu instantané</strong><span>Thème @_theme · couleur d'accent</span></div>
+        <button type="button" class="appearance-preview-button">Bouton</button>
+    </div>
+    <div class="form-actions">
+        <button class="btn btn-primary" @onclick="SaveAppearance" disabled="@_saving">Enregistrer</button>
+    </div>
+</div>
+
+@if (Store.IsManager)
+{
+    <div class="card settings-card settings-card-pagesize">
+        <span class="card-corner" aria-hidden="true"></span>
+        <div class="settings-card-head">
+            <span class="settings-deco settings-deco-pagesize" aria-hidden="true">📄</span>
+            <h3>Nombre d'utilisateurs par page</h3>
+        </div>
+        <div class="form-group">
+            <label for="st-pagesize">Affichage de la liste des utilisateurs</label>
+            <select id="st-pagesize" value="@_pageSize" @onchange="e => _pageSize = int.TryParse(e.Value?.ToString(), out var p) ? Math.Clamp(p, 10, 100) : 10">
+                <option value="10">10</option>
+                <option value="25">25</option>
+                <option value="50">50</option>
+            </select>
+        </div>
+    </div>
+
+    <div class="card settings-card settings-card-security">
+        <span class="card-corner" aria-hidden="true"></span>
+        <div class="settings-card-head">
+            <span class="settings-deco settings-deco-security" aria-hidden="true">🔒</span>
+            <h3>Sécurité</h3>
+        </div>
+        <div class="form-group">
+            <label for="st-session">Déconnexion automatique après inactivité</label>
+            <select id="st-session" value="@_sessionTimeout" @onchange="OnSessionTimeoutChanged">
+                <option value="5">5 minutes</option>
+                <option value="15">15 minutes</option>
+                <option value="30">30 minutes</option>
+                <option value="60">1 heure</option>
+                <option value="120">2 heures</option>
+                <option value="0">Jamais</option>
+            </select>
+            <span class="field-hint">Seule l'inactivité prolongée déconnecte. Ouvrir une autre application ne déconnecte pas.</span>
+        </div>
+        <div class="form-actions">
+            <button class="btn btn-primary" @onclick="SaveAppearance" disabled="@_saving">Enregistrer</button>
+        </div>
+    </div>
+}
+
+@if (Store.IsAdmin)
+{
+    <div class="card settings-card settings-card-fields">
+        <span class="card-corner" aria-hidden="true"></span>
+        <div class="settings-card-head">
+            <span class="settings-deco settings-deco-fields" aria-hidden="true">🧩</span>
+            <h3>Champs personnalisés</h3>
+        </div>
+        <p class="muted">Personnalisez le formulaire utilisateur : texte, nombre, liste, choix, pièce jointe, image…</p>
+        <div class="form-actions">
+            <button class="btn btn-secondary" @onclick="GoFields">🧩 Gérer les champs</button>
+        </div>
+    </div>
+}
+
+@if (Store.IsManager)
+{
+    <div class="card settings-card settings-card-actions">
+        <span class="card-corner" aria-hidden="true"></span>
+        <div class="settings-card-head">
+            <span class="settings-deco settings-deco-actions" aria-hidden="true">⇄</span>
+            <h3>Actions</h3>
+        </div>
+        <p class="muted">L'export et l'import des utilisateurs sont accessibles à l'administrateur et au gestionnaire.</p>
+        <div class="form-group">
+            <label class="form-check" for="st-autoexport">
+                <input id="st-autoexport" type="checkbox" checked="@_autoExport" @onchange="OnAutoExportChanged" />
+                Export automatique mensuel de toutes les données
+            </label>
+            <span class="field-hint">Chaque mois, la sauvegarde complète (JSON) + la liste des utilisateurs (Excel) sont enregistrées dans Téléchargements. Dernier export : @LastAutoExportLabel.</span>
+        </div>
+        <div class="form-actions">
+            <button class="btn btn-secondary" @onclick="ExportExcel">⇩ Exporter Excel</button>
+            @if (Store.IsManager)
+            {
+                <button class="btn btn-secondary" @onclick="OpenRestore">⇪ Importer Excel</button>
+            }
+            <button class="btn btn-secondary" @onclick="ExportNowAsync" disabled="@_exporting">@(_exporting ? "Export…" : "⤓ Exporter maintenant")</button>
+        </div>
+    </div>
+}
+
+@if (Store.IsAdmin)
+{
+    @if (_dangerUnlocked)
+    {
+        <div class="card settings-card settings-card-danger" style="border-color:var(--danger)">
+            <span class="card-corner" aria-hidden="true"></span>
+            <div class="inline-actions" style="justify-content:space-between">
+                <div class="settings-card-head" style="margin:0">
+                    <span class="settings-deco settings-deco-danger" aria-hidden="true">⚠</span>
+                    <h3 style="color:var(--danger)">Zone dangereuse</h3>
+                </div>
+                <button type="button" class="btn btn-secondary btn-sm" @onclick="LockDangerZone">Masquer</button>
+            </div>
+            <p class="muted">Réinitialise les données locales. Les comptes de départ seront « admin » et « dba ».</p>
+            <div class="form-actions">
+                <button class="btn btn-danger" @onclick="() => _confirmReset = true">Réinitialiser toutes les données</button>
+            </div>
+        </div>
+    }
+    else
+    {
+        <div class="card danger-unlock settings-card settings-card-danger">
+            <span class="card-corner" aria-hidden="true"></span>
+            <div class="settings-card-head">
+                <span class="settings-deco settings-deco-danger" aria-hidden="true">🛡</span>
+                <h3 style="color:var(--danger)">Zone dangereuse masquée</h3>
+            </div>
+            <p class="muted">Saisissez le mot de passe de l'administrateur connecté pour afficher les actions sensibles.</p>
+            <button class="btn btn-danger-outline" @onclick="OpenDangerUnlock">Afficher la zone dangereuse</button>
+        </div>
+    }
+}
+
+<div class="card logout-card">
+    <button class="btn btn-danger-outline btn-block" @onclick="AskLogout">
+        <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M18.36 6.64a9 9 0 1 1-12.73 0"/><line x1="12" y1="2" x2="12" y2="12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+        Se déconnecter
+    </button>
+</div>
+
+<Modal Title="Importer Excel" Show="_showRestore" OnClose="() => _showRestore = false">
+    <ChildContent>
+        <p class="muted" style="margin-top:0">Choisissez un fichier <strong>.xlsx</strong> exporté par l'application. Les utilisateurs absents sont ajoutés, les identifiants existants sont conservés.</p>
+        <div class="import-format">
+            <div class="import-format-title">📋 Format attendu du fichier</div>
+            <ul class="import-format-list">
+                <li><strong>Classeur Excel (.xlsx)</strong> — 1ère ligne = en-têtes.</li>
+                <li><strong>Colonnes :</strong> Nom*, Prénom*, Identifiant, Email, Téléphone (+261…), Rôle (Administrateur / Gestionnaire / Utilisateur), Statut (Actif / Inactif), Date de création (JJ/MM/AAAA), Dernière connexion, Notes + champs personnalisés.</li>
+                <li><strong>Dates :</strong> JJ/MM/AAAA (ex. 05/09/2026).</li>
+                <li><strong>Exemple :</strong> NOM | Prénom | prenom.nom | mail@domaine.fr | +261321234567 | Utilisateur | Actif | 05/09/2026 | …</li>
+                <li>Astuce : exportez d'abord avec « Exporter Excel » pour obtenir un modèle valide.</li>
+            </ul>
+        </div>
+        <div class="form-actions" style="margin:4px 0 8px">
+            <button class="btn btn-secondary" @onclick="PickRestore">📂 Choisir un fichier Excel</button>
+        </div>
+        @if (_pendingImport != null)
+        {
+            <p class="muted">@(_pendingImport.Count + " utilisateur(s) détecté(s), " + _pendingImport.Count(u => Store.FindUserByIdentifier(u.Identifiant) != null) + " déjà présent(s).")</p>
+        }
+        <span class="form-error">@_restoreError</span>
+    </ChildContent>
+    <FooterContent>
+        <button class="btn btn-secondary" @onclick="() => _showRestore = false">Annuler</button>
+        <button class="btn btn-primary" disabled="@(_pendingImport == null || (_pendingImport != null && _pendingImport.All(u => Store.FindUserByIdentifier(u.Identifiant) != null)))" @onclick="ApplyRestore">Ajouter les nouveaux utilisateurs</button>
+    </FooterContent>
+</Modal>
+
+<ConfirmDialog Show="_confirmReset" Title="Réinitialiser l'application"
+               Message="Toutes les données locales seront supprimées puis les comptes admin et dba seront recréés. Continuer ?"
+               ConfirmLabel="Réinitialiser" Danger="true" OnConfirm="DoReset" OnCancel="() => _confirmReset = false" />
+
+<ConfirmDialog Show="_confirmLogout" Title="Déconnexion"
+               Message="Voulez-vous vraiment vous déconnecter ?"
+               ConfirmLabel="Se déconnecter" Danger="true" OnConfirm="ConfirmLogout" OnCancel="() => _confirmLogout = false" />
+
+<Modal Title="Déverrouiller la zone dangereuse" Show="_showDangerUnlock" OnClose="CloseDangerUnlock">
+    <ChildContent>
+        <div class="form-group">
+            <label for="danger-password">Mot de passe administrateur</label>
+            <input id="danger-password" type="password" value="@_dangerPassword" @oninput="e => _dangerPassword = e.Value?.ToString() ?? string.Empty" @onkeydown="OnDangerPasswordKeyDown" />
+            <span class="form-error">@_dangerError</span>
+        </div>
+    </ChildContent>
+    <FooterContent>
+        <button type="button" class="btn btn-secondary" @onclick="CloseDangerUnlock">Annuler</button>
+        <button type="button" class="btn btn-danger" @onclick="UnlockDangerZone">Afficher</button>
+    </FooterContent>
+</Modal>
+
+<Modal Title="" Show="_logoPreview" OnClose="() => _logoPreview = false">
+    <ChildContent>
+        <div class="logo-preview-wrap">
+            @if (!string.IsNullOrWhiteSpace(_logo))
+            {
+                <img class="logo-preview-img" src="@_logo" alt="" />
+            }
+            else
+            {
+                <div class="login-logo-mark" aria-hidden="true">GU</div>
+            }
+        </div>
+    </ChildContent>
+</Modal>
+
+@code {
+    private static readonly string[] AccentColors =
+    {
+        "#4f46e5", "#0891b2", "#059669", "#d97706", "#dc2626", "#7c3aed", "#0ea5e9"
+    };
+
+    private string _name = "Gestion des utilisateurs";    private string _theme = "light";
+    private string _color = "#4f46e5";
+    private int _pageSize = 10;
+    private int _sessionTimeout = 30;
+    private string _logo = "";
+    private bool _saving;
+    private bool _confirmLogout;
+    private bool _logoPreview;
+    private bool _autoExport = true;
+    private bool _exporting;
+
+    private string LastAutoExportLabel =>
+        string.IsNullOrWhiteSpace(Store.Settings.DernierExportAuto) ? "jamais" : Store.Settings.DernierExportAuto;
+
+    private void OnAutoExportChanged(ChangeEventArgs e)
+    {
+        _autoExport = e.Value is bool b ? b : !(_autoExport);
+    }
+
+    private bool _confirmReset;
+    private bool _dangerUnlocked;
+    private bool _showDangerUnlock;
+    private string _dangerPassword = "";
+    private string _dangerError = "";
+    private bool _showRestore;
+    private string _restoreError = "";
+    private List<UserAccount>? _pendingImport;
+
+    protected override void OnParametersSet()
+    {
+        var s = Store.Settings;
+        _name = s.AppName;
+        _theme = s.Theme;
+        _color = s.Color;
+        _pageSize = s.PageSize;
+        _logo = s.Logo;
+        _sessionTimeout = s.SessionTimeoutMinutes;
+        _autoExport = s.ExportAutoMensuel;
+    }
+
+    private void AskLogout() => _confirmLogout = true;
+
+    private void ConfirmLogout()
+    {
+        _confirmLogout = false;
+        State.ResetNavigation();
+        Store.Logout();
+    }
+
+    private void OnThemeChanged(ChangeEventArgs e)
+    {
+        _theme = e.Value?.ToString() ?? "light";
+    }
+
+    private void OnSessionTimeoutChanged(ChangeEventArgs e)
+    {
+        _sessionTimeout = int.TryParse(e.Value?.ToString(), out var m) ? Math.Max(m, 0) : 30;
+    }
+
+    private void SelectAccentAsync(string color)
+    {
+        _color = color;
+    }
+
+    private async Task PickLogo()
+    {
+        var data = await Photos.PickPhotoAsync();
+        if (data != null) _logo = data;
+        else if (!string.IsNullOrEmpty(Photos.LastError)) State.NotifyError(Photos.LastError);
+    }
+
+    private async Task CaptureLogo()
+    {
+        var data = await Photos.CapturePhotoAsync();
+        if (data != null) _logo = data;
+        else if (!string.IsNullOrEmpty(Photos.LastError)) State.NotifyError(Photos.LastError);
+    }
+
+    private void GoProfile() => State.Navigate("profile");
+
+    private void GoFields() => State.Navigate("fields");
+
+    private void OnAccountKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key is "Enter" or " ") GoProfile();
+    }
+
+    private void OpenDangerUnlock()
+    {
+        _dangerError = "";
+        _dangerPassword = "";
+        _showDangerUnlock = true;
+    }
+
+    private void CloseDangerUnlock()
+    {
+        _showDangerUnlock = false;
+        _dangerPassword = "";
+        _dangerError = "";
+    }
+
+    private void UnlockDangerZone()
+    {
+        if (!Store.VerifyPassword(_dangerPassword))
+        {
+            _dangerError = "Mot de passe incorrect.";
+            return;
+        }
+        _dangerUnlocked = true;
+        CloseDangerUnlock();
+    }
+
+    private void LockDangerZone() => _dangerUnlocked = false;
+
+    private void OnDangerPasswordKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter") UnlockDangerZone();
+    }
+
+    private async Task SaveAppearance()
+    {
+        _saving = true;
+        try
+        {
+            Store.SaveSettings(new AppSettings
+            {
+                AppName = string.IsNullOrWhiteSpace(_name) ? "Gestion des utilisateurs" : _name.Trim(),
+                Theme = _theme,
+                Color = _color,
+                PageSize = _pageSize,
+                Logo = _logo,
+                SessionTimeoutMinutes = _sessionTimeout,
+                ExportAutoMensuel = _autoExport,
+                DernierExportAuto = Store.Settings.DernierExportAuto
+            });
+            await Js.ApplySettingsAsync(Store.Settings);
+            State.NotifySuccess("Paramètres enregistrés.");
+        }
+        finally
+        {
+            _saving = false;
+        }
+    }
+
+    [Inject] private GestionUtilisateurs.Online.Web.Services.AutoExportService AutoExport { get; set; } = default!;
+
+    private async Task ExportNowAsync()
+    {
+        _exporting = true;
+        try { await AutoExport.ExportNowAsync(); }
+        finally { _exporting = false; StateHasChanged(); }
+    }
+
+    private async Task ExportExcel()
+    {
+        var bytes = Store.ExportUsersExcel();
+        var path = await Saver.SaveAsync(ExportFileName("utilisateurs"), bytes, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+        if (path != null)
+        {
+            Store.LogActivity(ActivityTypes.Export, "Export Excel des utilisateurs (" + Store.Users.Count + ")");
+            State.NotifySuccess("Export réussi : " + path);
+        }
+        else
+        {
+            State.NotifyError("L'export a échoué. Réessayez.");
+        }
+    }
+
+    private void OpenRestore()
+    {
+        _restoreError = "";
+        _pendingImport = null;
+        _showRestore = true;
+    }
+
+    private async Task PickRestore()
+    {
+        _restoreError = "";
+        _pendingImport = null;
+        var bytes = await Picker.PickXlsxAsync();
+        if (bytes == null)
+        {
+            _restoreError = "Fichier annulé ou illisible.";
+            return;
+        }
+
+        var result = Store.ParseExcelImport(bytes);
+        if (!result.Success)
+        {
+            _restoreError = "Sauvegarde refusée : " + (result.Error ?? "fichier invalide.");
+            return;
+        }
+        _pendingImport = result.Users;
+    }
+
+    private void ApplyRestore()
+    {
+        _restoreError = "";
+        if (_pendingImport == null || _pendingImport.Count == 0)
+        {
+            _restoreError = "Veuillez d'abord choisir un fichier Excel.";
+            return;
+        }
+
+        var (res, count) = Store.ApplyImport(_pendingImport!);
+        if (!res.Success)
+        {
+            _restoreError = res.Error;
+            return;
+        }
+
+        _showRestore = false;
+        _pendingImport = null;
+        State.NotifySuccess(count + " utilisateur(s) ajouté(s) à l'annuaire.");
+    }
+
+    private void DoReset()
+    {
+        _confirmReset = false;
+        Store.ResetAll();
+        _ = Js.ApplySettingsAsync(Store.Settings);
+        State.NotifySuccess("Les données ont été réinitialisées.");
+    }
+
+    private static string ExportFileName(string stem) => stem + "-" + DateTime.Now.ToString("dd-MM-yyyy_HH-mm-ss") + ".xlsx";
+}

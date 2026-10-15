@@ -1,0 +1,36 @@
+# Publie le site sur Azure Static Web Apps (offre gratuite) à chaque
+# modification de la branche main. Voir docs/MISE-EN-LIGNE.md.
+name: Déploiement Azure
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    if: ${{ vars.SUPABASE_URL != '' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 9.0.x
+      - name: Configurer l'adresse Supabase
+        env:
+          SUPABASE_URL: ${{ vars.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ vars.SUPABASE_ANON_KEY }}
+        run: |
+          jq -n --arg url "$SUPABASE_URL" --arg key "$SUPABASE_ANON_KEY" \
+            '{Supabase: {Url: $url, AnonKey: $key}}' \
+            > src/GestionUtilisateurs.Online.Web/wwwroot/appsettings.json
+      - name: Publier
+        run: dotnet publish src/GestionUtilisateurs.Online.Web -c Release -o publish
+      - name: Envoyer sur Azure Static Web Apps
+        uses: Azure/static-web-apps-deploy@v1
+        with:
+          azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN }}
+          action: upload
+          app_location: publish/wwwroot
+          skip_app_build: true
+          skip_api_build: true

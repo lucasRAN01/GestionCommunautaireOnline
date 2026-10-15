@@ -1,0 +1,159 @@
+@inject OnlineSession Session
+
+<div class="online-auth">
+    <aside class="online-auth-hero" aria-hidden="true">
+        <div class="online-auth-hero-inner">
+            <div class="online-auth-brand">GU</div>
+            <h2>Votre communauté, en ligne</h2>
+            <p>Membres, calendrier, documents, finances, votes et messagerie, partagés en toute sécurité.</p>
+            <ul>
+                <li>Un compte personnel pour chaque membre</li>
+                <li>Des droits selon votre rôle</li>
+                <li>Des comptes validés par l'administrateur</li>
+            </ul>
+        </div>
+    </aside>
+
+    <div class="login-view online-auth-main">
+        <div class="login-logo">
+            <div class="login-logo-mark">GU</div>
+            <h1>Gestion communautaire</h1>
+            <p class="login-subtitle">@(_signup ? "Créez votre compte membre" : "Connectez-vous à votre espace membre")</p>
+        </div>
+
+        <div class="login-card">
+            <div class="online-auth-tabs" role="tablist">
+                <button type="button" role="tab" aria-selected="@(!_signup)" class="@(!_signup ? "active" : "")" @onclick="() => Switch(false)">Connexion</button>
+                <button type="button" role="tab" aria-selected="@_signup" class="@(_signup ? "active" : "")" @onclick="() => Switch(true)">Inscription</button>
+            </div>
+
+            @if (!string.IsNullOrEmpty(_error))
+            {
+                <div class="login-global-error" role="alert">@_error</div>
+            }
+
+            @if (_signup)
+            {
+                <div class="online-auth-row">
+                    <div class="form-group">
+                        <label for="su-prenom">Prénom</label>
+                        <input id="su-prenom" type="text" autocomplete="given-name" @bind="_prenom" />
+                    </div>
+                    <div class="form-group">
+                        <label for="su-nom">Nom</label>
+                        <input id="su-nom" type="text" autocomplete="family-name" @bind="_nom" />
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="su-tel">Téléphone (facultatif)</label>
+                    <input id="su-tel" type="tel" autocomplete="tel" @bind="_telephone" />
+                </div>
+            }
+
+            <div class="form-group">
+                <label for="auth-email">E-mail</label>
+                <input id="auth-email" type="email" autocomplete="email" placeholder="vous@exemple.fr" @bind="_email" />
+            </div>
+
+            <div class="form-group">
+                <label for="auth-password">Mot de passe</label>
+                <div class="password-input-wrapper">
+                    <input id="auth-password" type="@(_showPwd ? "text" : "password")"
+                           autocomplete="@(_signup ? "new-password" : "current-password")"
+                           placeholder="@(_signup ? "8 caractères minimum" : "Votre mot de passe")"
+                           value="@_password" @oninput="e => _password = e.Value?.ToString() ?? string.Empty"
+                           @onkeydown="OnKeyDown" />
+                    <button type="button" class="password-toggle" @onclick="() => _showPwd = !_showPwd"
+                            aria-label="@(_showPwd ? "Masquer le mot de passe" : "Afficher le mot de passe")">@(_showPwd ? "🙈" : "👁")</button>
+                </div>
+            </div>
+
+            @if (_signup)
+            {
+                <div class="form-group">
+                    <label for="su-confirm">Confirmer le mot de passe</label>
+                    <input id="su-confirm" type="@(_showPwd ? "text" : "password")" autocomplete="new-password" @bind="_confirm" />
+                </div>
+            }
+
+            <button type="button" class="btn btn-primary btn-block" disabled="@_busy" @onclick="SubmitAsync">
+                @(_busy ? "Veuillez patienter…" : _signup ? "Créer mon compte" : "Se connecter")
+            </button>
+
+            @if (!_signup)
+            {
+                <button type="button" class="login-forgot" @onclick="() => _forgot = !_forgot">Mot de passe oublié ?</button>
+                @if (_forgot)
+                {
+                    <div class="login-info">
+                        <p>Contactez un administrateur de la communauté : il vous donnera un nouveau mot de passe, que vous pourrez changer ensuite depuis « Mes informations ».</p>
+                    </div>
+                }
+            }
+            else
+            {
+                <div class="login-info">
+                    <p>Après l'inscription, un administrateur valide votre compte et vous attribue un rôle. Vous aurez accès à l'application dès la validation.</p>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+@code {
+    private bool _signup;
+    private bool _busy;
+    private bool _showPwd;
+    private bool _forgot;
+    private string _email = "";
+    private string _password = "";
+    private string _confirm = "";
+    private string _prenom = "";
+    private string _nom = "";
+    private string _telephone = "";
+    private string? _error;
+
+    private void Switch(bool signup)
+    {
+        _signup = signup;
+        _error = null;
+    }
+
+    private async Task OnKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter" && !_signup) await SubmitAsync();
+    }
+
+    private async Task SubmitAsync()
+    {
+        if (_busy) return;
+        _error = Validate();
+        if (_error != null) return;
+        _busy = true;
+        try
+        {
+            _error = _signup
+                ? await Session.SignUpAsync(_email, _password, _prenom, _nom, _telephone)
+                : await Session.SignInAsync(_email, _password);
+        }
+        catch (Exception ex)
+        {
+            _error = "Erreur : " + ex.Message;
+        }
+        finally
+        {
+            _busy = false;
+        }
+    }
+
+    private string? Validate()
+    {
+        if (string.IsNullOrWhiteSpace(_email) || !_email.Contains('@')) return "Saisissez une adresse e-mail valide.";
+        if (string.IsNullOrEmpty(_password)) return "Saisissez votre mot de passe.";
+        if (!_signup) return null;
+        if (string.IsNullOrWhiteSpace(_prenom) || string.IsNullOrWhiteSpace(_nom)) return "Le prénom et le nom sont obligatoires.";
+        if (_password.Length < 8) return "Le mot de passe doit contenir au moins 8 caractères.";
+        if (_password != _confirm) return "Les deux mots de passe ne correspondent pas.";
+        return null;
+    }
+}

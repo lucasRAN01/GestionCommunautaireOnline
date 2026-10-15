@@ -1,0 +1,28 @@
+<div class="chart-list">
+    @foreach (var item in Items)
+    {
+        <div class="chart-row">
+            <span class="chart-label">@item.Label</span>
+            <div class="chart-track">
+                <div class="chart-fill" style="width:@WidthPercent(item.Value);background-color:@item.Color">
+                    @if (item.Value > 0) { <span class="chart-value">@item.Value</span> }
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    public record ChartItem(string Label, int Value, string Color);
+
+    [Parameter] public IReadOnlyList<ChartItem> Items { get; set; } = Array.Empty<ChartItem>();
+    [Parameter] public int Max { get; set; }
+
+    private string WidthPercent(int value)
+    {
+        var max = Max > 0 ? Max : Items.Count == 0 ? 1 : Items.Max(i => i.Value);
+        if (max <= 0) max = 1;
+        var pct = (int)Math.Round(value * 100.0 / max);
+        return Math.Clamp(pct, 2, 100) + "%";
+    }
+}

@@ -1,0 +1,36 @@
+<Modal Show="Show" Title="@Title" OnClose="OnCancel">
+    <ChildContent>
+        <p class="confirm-message">@Message</p>
+        <span class="form-error">@Error</span>
+    </ChildContent>
+    <FooterContent>
+        <button type="button" class="btn btn-secondary" @onclick="OnCancel">@CancelLabel</button>
+        @if (ShowSecondary)
+        {
+            <button type="button" class="btn btn-primary" @onclick="OnSecondary">@SecondaryLabel</button>
+        }
+        <button type="button" class="btn @(Danger ? "btn-danger" : "btn-primary")" @onclick="ConfirmClick">@ConfirmLabel</button>
+    </FooterContent>
+</Modal>
+
+@code {
+    [Parameter] public bool Show { get; set; }
+    [Parameter] public string Title { get; set; } = "Confirmation";
+    [Parameter] public string? Message { get; set; }
+    [Parameter] public string ConfirmLabel { get; set; } = "Confirmer";
+    [Parameter] public string CancelLabel { get; set; } = "Annuler";
+    [Parameter] public bool Danger { get; set; }
+    [Parameter] public bool ShowSecondary { get; set; }
+    [Parameter] public string SecondaryLabel { get; set; } = "Option";
+    [Parameter] public EventCallback OnConfirm { get; set; }
+    [Parameter] public EventCallback OnSecondary { get; set; }
+    [Parameter] public EventCallback OnCancel { get; set; }
+
+    [Parameter] public string? Error { get; set; }
+
+    private async Task ConfirmClick()
+    {
+        await OnConfirm.InvokeAsync();
+        await OnCancel.InvokeAsync();
+    }
+}

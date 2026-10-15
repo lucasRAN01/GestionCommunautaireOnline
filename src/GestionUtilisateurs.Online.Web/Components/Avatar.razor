@@ -1,0 +1,48 @@
+@if (!string.IsNullOrWhiteSpace(Photo))
+{
+    <span class="avatar @SizeClass avatar-photo" aria-hidden="true"><img class="avatar-img" src="@Photo" alt="" /></span>
+}
+else
+{
+    <span class="avatar @SizeClass" style="background-color:@Color" aria-hidden="true">@Initials</span>
+}
+
+@code {
+    [Parameter] public string? UserName { get; set; }
+    [Parameter] public string? Seed { get; set; }
+    [Parameter] public string Size { get; set; } = "";
+    [Parameter] public string? Photo { get; set; }
+
+    private static readonly string[] Palette = { "#4f46e5", "#0891b2", "#059669", "#d97706", "#dc2626", "#7c3aed", "#0ea5e9" };
+
+    private string Initials
+    {
+        get
+        {
+            var name = (UserName ?? "").Trim();
+            if (string.IsNullOrEmpty(name)) return "?";
+            var parts = name.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+            if (parts.Length == 0) return "?";
+            return (parts[0].Substring(0, 1) + (parts.Length > 1 ? parts[^1].Substring(0, 1) : "")).ToUpperInvariant();
+        }
+    }
+
+    private string Color
+    {
+        get
+        {
+            var seed = (Seed ?? UserName ?? "?").ToLowerInvariant();
+            var hash = 0;
+            foreach (var c in seed) hash = (hash * 31 + c) % int.MaxValue;
+            return Palette[Math.Abs(hash) % Palette.Length];
+        }
+    }
+
+    private string SizeClass => Size switch
+    {
+        "sm" => "avatar-sm",
+        "lg" => "avatar-lg",
+        "xl" => "avatar-xl",
+        _ => ""
+    };
+}

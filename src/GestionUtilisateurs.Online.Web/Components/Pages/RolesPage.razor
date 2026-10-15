@@ -1,0 +1,135 @@
+@implements IDisposable
+@inject DataStore Store
+@inject AppState State
+
+@if (!Store.IsAdmin)
+{
+    <EmptyState Icon="🔒" Title="Accès réservé" Message="La gestion des rôles et permissions est réservée aux administrateurs." />
+}
+else
+{
+    <div class="page-head">
+        <p>Définissez ce que chaque rôle peut faire. Le compte technique « Administrateur de la base » possède tout (verrouillé). Modifiable uniquement ici, dans le menu « … ».</p>
+    </div>
+
+    <div class="search-box cal-search">
+        <span class="search-icon" aria-hidden="true">⌕</span>
+        <input type="search" placeholder="Rechercher une permission (libellé, groupe)…" aria-label="Rechercher une permission"
+               value="@_search" @oninput="OnSearch" />
+    </div>
+    @if (!string.IsNullOrWhiteSpace(_search))
+    {
+        <div class="search-summary">@SearchCount permission(s) trouvée(s) pour « @_search.Trim() »</div>
+    }
+
+    @foreach (var group in Permissions.Toutes.GroupBy(d => d.Groupe))
+    {
+        var defs = group.Where(Matches).ToList();
+        if (defs.Count == 0) continue;
+        <div class="card" style="margin-bottom:12px">
+            <h3>@group.Key</h3>
+            <div class="perm-matrix" role="table" aria-label="Permissions @group.Key">
+                <div class="perm-row perm-head" role="row">
+                    <span class="perm-label"></span>
+                    @foreach (var role in Roles.MatrixRoles)
+                    {
+                        <span class="perm-cell perm-role">@role</span>
+                    }
+                </div>
+                @foreach (var def in defs)
+                {
+                    <div class="perm-row" role="row">
+                        <span class="perm-label">@def.Label</span>
+                        @foreach (var role in Roles.MatrixRoles)
+                        {
+                            var r = role; var k = def.Key;
+                            <span class="perm-cell">
+                                <input type="checkbox" aria-label="@def.Label — @role"
+                                       checked="@IsAllowed(r, k)" @onchange="() => Toggle(r, k)" />
+                            </span>
+                        }
+                    </div>
+                }
+            </div>
+        </div>
+    }
+
+    <div class="card">
+        <span class="field-hint">Le droit « Gérer les rôles et permissions » ne peut pas être retiré aux administrateurs (verrou anti-blocage).</span>
+        <div class="form-actions" style="margin-top:10px">
+            <button class="btn btn-secondary" @onclick="ResetDefaults">Réinitialiser les défauts</button>
+            <button class="btn btn-primary" @onclick="Save" disabled="@_saving">@(_saving ? "Enregistrement…" : "Enregistrer")</button>
+        </div>
+    </div>
+
+    <ConfirmDialog Show="_confirmReset" Title="Réinitialiser les permissions"
+                   Message="Restaurer la matrice par défaut ? Vos personnalisations seront perdues."
+                   ConfirmLabel="Réinitialiser" Danger="true" OnConfirm="DoReset" OnCancel="() => _confirmReset = false" />
+}
+
+@code {
+    private Dictionary<string, Dictionary<string, bool>> _matrix = new();
+    private bool _saving;
+    private bool _confirmReset;
+    private string _search = "";
+
+    private bool Matches(Permissions.Definition def)
+    {
+        var q = _search.Trim();
+        if (q.Length == 0) return true;
+        return (def.Label + " " + def.Key + " " + def.Groupe)
+            .Contains(q, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private int SearchCount => Permissions.Toutes.Count(Matches);
+
+    private void OnSearch(ChangeEventArgs e) => _search = e.Value?.ToString() ?? string.Empty;
+
+    protected override void OnInitialized()
+    {
+        Store.DataChanged += Refresh;
+        Load();
+    }
+
+    private void Load()
+    {
+        _matrix = Store.RolePermissions
+            .ToDictionary(p => p.Role, p => new Dictionary<string, bool>(p.Allowed));
+    }
+
+    private void Refresh() => _ = InvokeAsync(() => { Load(); StateHasChanged(); });
+
+    private bool IsAllowed(string role, string key)
+        => _matrix.TryGetValue(role, out var m) && m.TryGetValue(key, out var v) && v;
+
+    private void Toggle(string role, string key)
+    {
+        if (!_matrix.TryGetValue(role, out var m)) return;
+        m[key] = !m.GetValueOrDefault(key);
+    }
+
+    private void ResetDefaults() => _confirmReset = true;
+
+    private void DoReset()
+    {
+        _confirmReset = false;
+        _matrix = DataStore.DefaultPermissions()
+            .ToDictionary(p => p.Role, p => new Dictionary<string, bool>(p.Allowed));
+        Save();
+    }
+
+    private void Save()
+    {
+        _saving = true;
+        try
+        {
+            var sets = _matrix.Select(kv => new RolePermissionSet { Role = kv.Key, Allowed = new Dictionary<string, bool>(kv.Value) }).ToList();
+            var res = Store.SaveRolePermissions(sets);
+            if (res.Success) State.NotifySuccess("Permissions enregistrées.");
+            else State.NotifyError(res.Error);
+        }
+        finally { _saving = false; }
+    }
+
+    public void Dispose() => Store.DataChanged -= Refresh;
+}

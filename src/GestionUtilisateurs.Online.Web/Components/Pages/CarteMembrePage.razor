@@ -1,0 +1,167 @@
+@implements IDisposable
+@inject DataStore Store
+@inject AppState State
+@inject NativeFileSaver Saver
+@inject IJSRuntime JS
+
+@if (!Store.Can(Permissions.CarteMembreView))
+{
+    <EmptyState Icon="🔒" Title="Accès réservé" Message="La carte de membre n'est pas autorisée pour votre rôle." />
+}
+else
+{
+    <div class="page-head">
+        <p>Carte de visite du membre avec QR code, imprimable ou exportable.</p>
+    </div>
+
+    <div class="form-group no-print">
+        <label>Membre</label>
+        <MemberPicker Value="@_selectedIdent" ValueChanged="@((string v) => _selectedIdent = v)" ActiveOnly="false" Placeholder="Écrire pour chercher un membre…" />
+    </div>
+
+    @if (Current != null)
+    {
+        var user = Current;
+        var memberCode = MemberCode(user);
+        <div class="member-card" id="member-card-print">
+            <div class="member-card-top">
+                <div class="member-card-app">@Store.Settings.AppName</div>
+                <div class="member-card-code">@memberCode</div>
+            </div>
+            <div class="member-card-body">
+                <div class="member-card-id">
+                    <Avatar UserName="@user.NomComplet" Seed="@user.Identifiant" Size="lg" Photo="@user.Photo" />
+                    <div class="member-card-main">
+                        <div class="member-card-name">@user.NomComplet</div>
+                        <div class="member-card-sub">@@@user.Identifiant · @user.Role</div>
+                        @if (!string.IsNullOrWhiteSpace(user.Telephone))
+                        {
+                            <div class="member-card-sub">@user.Telephone</div>
+                        }
+                    </div>
+                </div>
+                <div class="member-qr" aria-label="QR code de la carte">
+                    @((MarkupString)QrSvg(user, memberCode))
+                </div>
+            </div>
+            <div class="member-card-lines">
+                <div class="storage-line"><span>Membre depuis</span><strong>@DataStore.FormatDateCourte(user.DateCreation)</strong></div>
+                <div class="storage-line storage-total"><span>Validité</span><strong>@(user.Actif ? "✓ Carte valide" : "⛔ Compte inactif — carte suspendue")</strong></div>
+            </div>
+        </div>
+        <div class="form-actions no-print" style="margin-top:10px">
+            <button class="btn btn-secondary" @onclick="PrintAsync">🖨 Imprimer</button>
+            <button class="btn btn-secondary" @onclick="ExportHtmlAsync" disabled="@_exporting">@(_exporting ? "Export…" : "⇩ Carte HTML")</button>
+        </div>
+        <p class="muted no-print" style="font-size:12.5px">Le QR code contient la fiche contact (vCard) lisible par tout lecteur. « Carte HTML » enregistre une version imprimable depuis un navigateur.</p>
+    }
+    else
+    {
+        <EmptyState Icon="🪪" Title="Aucun membre" Message="Ajoutez d'abord un utilisateur." />
+    }
+}
+
+@code {
+    private string _selectedIdent = "";
+    private bool _exporting;
+
+    private UserAccount? Current
+    {
+        get
+        {
+            if (!string.IsNullOrWhiteSpace(_selectedIdent))
+            {
+                var direct = Store.FindUserByIdentifier(_selectedIdent);
+                if (direct != null) return direct;
+            }
+            var me = Store.GetCurrentUser();
+            if (me != null) return me;
+            return Store.Users.FirstOrDefault();
+        }
+    }
+
+    protected override void OnInitialized()
+    {
+        Store.DataChanged += Refresh;
+        _selectedIdent = Store.GetCurrentUser()?.Identifiant ?? Store.Users.FirstOrDefault()?.Identifiant ?? "";
+    }
+
+    private void Refresh() => _ = InvokeAsync(StateHasChanged);
+
+    /// <summary>Matricule s'il existe, sinon code automatique.</summary>
+    private static string MemberCode(UserAccount user)
+        => string.IsNullOrWhiteSpace(user.Matricule) ? DataStore.CodeMembre(user) : user.Matricule.Trim();
+
+    private string QrSvg(UserAccount user, string code)
+    {
+        try
+        {
+            using var gen = new QRCoder.QRCodeGenerator();
+            var data = gen.CreateQrCode(BuildVCard(user, code), QRCoder.QRCodeGenerator.ECCLevel.M);
+            return new QRCoder.SvgQRCode(data).GetGraphic(4);
+        }
+        catch { return ""; }
+    }
+
+    private string BuildVCard(UserAccount user, string code)
+    {
+        var sb = new System.Text.StringBuilder();
+        sb.AppendLine("BEGIN:VCARD");
+        sb.AppendLine("VERSION:3.0");
+        sb.AppendLine("N:" + Vcf(user.Nom) + ";" + Vcf(user.Prenom) + ";;;");
+        sb.AppendLine("FN:" + Vcf(user.NomComplet));
+        sb.AppendLine("ORG:" + Vcf(Store.Settings.AppName));
+        if (!string.IsNullOrWhiteSpace(user.Telephone)) sb.AppendLine("TEL;TYPE=CELL:" + Vcf(user.Telephone));
+        if (!string.IsNullOrWhiteSpace(user.Email)) sb.AppendLine("EMAIL:" + Vcf(user.Email));
+        sb.AppendLine("NOTE:Membre " + Vcf(code) + " — " + Vcf(user.Role));
+        sb.AppendLine("END:VCARD");
+        return sb.ToString();
+    }
+
+    private static string Vcf(string? s)
+        => (s ?? "").Replace("\\", "\\\\").Replace(";", "\\;").Replace(",", "\\,").Replace("\n", "\\n").Trim();
+
+    private async Task PrintAsync()
+    {
+        try { await JS.InvokeVoidAsync("window.print"); }
+        catch { State.NotifyInfo("Impression indisponible ici : utilisez « Carte HTML » puis imprimez depuis un navigateur."); }
+    }
+
+    private async Task ExportHtmlAsync()
+    {
+        if (Current == null) return;
+        _exporting = true;
+        try
+        {
+            var user = Current;
+            var memberCode = MemberCode(user);
+            var html = "<!DOCTYPE html><html lang=\"fr\"><head><meta charset=\"utf-8\" />"
+                + "<title>Carte de membre — " + H(user.NomComplet) + "</title>"
+                + "<style>body{font-family:sans-serif;background:#eee;display:flex;justify-content:center;padding:24px;}"
+                + ".card{background:linear-gradient(135deg,#4f46e5,#1e1b4b);color:#fff;border-radius:18px;padding:22px;max-width:520px;width:100%}"
+                + ".top{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px}"
+                + ".code{font-weight:800;letter-spacing:1px;background:rgba(255,255,255,.18);border-radius:8px;padding:4px 10px}"
+                + ".id{display:flex;gap:14px;align-items:center}.name{font-size:22px;font-weight:800}"
+                + ".sub{opacity:.85;font-size:14px}.qr{background:#fff;border-radius:12px;padding:10px;margin-top:14px;text-align:center}"
+                + ".qr svg{width:180px;height:180px}.lines{background:#fff;color:#111;border-radius:10px;margin-top:14px;padding:6px 14px;font-size:14px}"
+                + ".lines div{display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid #eee}"
+                + "@media print{body{background:#fff;padding:0}.card{box-shadow:none}}</style></head><body><div class=\"card\">"
+                + "<div class=\"top\"><div>" + H(Store.Settings.AppName) + "</div><div class=\"code\">" + H(memberCode) + "</div></div>"
+                + "<div class=\"id\"><div><div class=\"name\">" + H(user.NomComplet) + "</div>"
+                + "<div class=\"sub\">@" + H(user.Identifiant) + " · " + H(user.Role) + "</div></div></div>"
+                + "<div class=\"qr\">" + QrSvg(user, memberCode) + "</div>"
+                + "<div class=\"lines\"><div><span>Membre depuis</span><strong>" + H(DataStore.FormatDateCourte(user.DateCreation)) + "</strong></div>"
+                + "<div><span>Validité</span><strong>" + (user.Actif ? "Carte valide" : "Compte inactif") + "</strong></div></div>"
+                + "</div></body></html>";
+            var path = await Saver.SaveAsync("carte-membre-" + user.Identifiant + ".html",
+                System.Text.Encoding.UTF8.GetBytes(html), "text/html");
+            if (path == null) State.NotifyError("Échec de l'export de la carte.");
+            else State.NotifySuccess("Carte enregistrée : " + path);
+        }
+        finally { _exporting = false; }
+    }
+
+    private static string H(string? s) => System.Net.WebUtility.HtmlEncode(s ?? "");
+
+    public void Dispose() => Store.DataChanged -= Refresh;
+}
