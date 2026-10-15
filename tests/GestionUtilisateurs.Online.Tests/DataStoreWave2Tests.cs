@@ -55,7 +55,36 @@ public class DataStoreWave2Tests
         Assert.False(loggedOut.DeleteMessage(id).Success);
 
         Assert.True(store.DeleteMessage(id).Success);
-        Assert.Empty(store.Messages);
+        // Suppression douce : le journal reste visible dans la conversation.
+        var deleted = Assert.Single(store.Messages);
+        Assert.True(deleted.Supprime);
+        Assert.Equal("admin", deleted.SupprimePar);
+        Assert.Equal(0, store.UnreadCount("dba"));
+    }
+
+    [Fact]
+    public void Messagerie_Modification_LimiteeA5Min()
+    {
+        var store = NewStore();
+        LoginAdmin(store);
+        Assert.True(store.SendMessage(new List<string>(), "Bonjour").Success);
+        var id = store.Messages[0].Id;
+
+        Assert.True(store.CanEditMessage(id));
+        Assert.True(store.UpdateMessage(id, "Bonjour !").Success);
+        Assert.Equal("Bonjour !", store.Messages[0].Texte);
+        Assert.False(string.IsNullOrWhiteSpace(store.Messages[0].DateModification));
+
+        // Après 6 minutes : refusé.
+        store.Messages[0].Date = DateTimeOffset.Now.AddMinutes(-6).ToString("O");
+        Assert.False(store.CanEditMessage(id));
+        Assert.False(store.UpdateMessage(id, "Trop tard").Success);
+
+        // Message supprimé : ni modification ni re-suppression.
+        store.Messages[0].Date = DateTimeOffset.Now.ToString("O");
+        Assert.True(store.DeleteMessage(id).Success);
+        Assert.False(store.UpdateMessage(id, "Encore").Success);
+        Assert.False(store.DeleteMessage(id).Success);
     }
 
     [Fact]
@@ -108,15 +137,16 @@ public class DataStoreWave2Tests
         var user = store.FindUserByIdentifier("jpaul")!;
         Assert.Equal("1990-05-17", user.DateNaissance);
 
-        Assert.Empty(store.GetBirthdayEventsForUser(user.Identifiant, user.NomComplet));
-        Assert.True(store.EnsureBirthdayEvent(user.Id).Success);
-        var linked = store.GetBirthdayEventsForUser(user.Identifiant, user.NomComplet);
-        var evt = Assert.Single(linked);
+        // Création automatique à l'ajout du membre (anniversaire -> calendrier).
+        var auto = store.GetBirthdayEventsForUser(user.Identifiant, user.NomComplet);
+        var evt = Assert.Single(auto);
         Assert.Equal(CalendarEventTypes.Anniversaire, evt.Type);
         Assert.Contains(user.Identifiant, evt.PersonnesConcernees);
 
-        // Une seule fois : doublon refusé.
+        // Une seule fois : doublon refusé (manuel ou auto).
         Assert.False(store.EnsureBirthdayEvent(user.Id).Success);
+        var linked = store.GetBirthdayEventsForUser(user.Identifiant, user.NomComplet);
+        Assert.Single(linked);
     }
 
     [Fact]

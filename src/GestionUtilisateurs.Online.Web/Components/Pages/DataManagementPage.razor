@@ -11,6 +11,10 @@ else
 {
     <div class="page-head">
         <p>Consultez, ajoutez ou modifiez simplement vos données locales, sans JSON.</p>
+        @if (_demoEnabled)
+        {
+            <button type="button" class="btn btn-secondary btn-sm" style="margin-top:8px" @onclick="GenerateDemoData">🧪 Remplir avec des données de démonstration</button>
+        }
     </div>
 
     <div class="chips-row data-set-tabs" role="tablist" aria-label="Collections de données">
@@ -479,6 +483,7 @@ else
     };
 
     private string _selectedKey = "users";
+    private bool _demoEnabled;
     private List<UserAccount> _users = new();
     private List<FieldDefinition> _fields = new();
 
@@ -511,11 +516,24 @@ else
 
     protected override void OnInitialized()
     {
+#if DEBUG
+        _demoEnabled = !Store.OnlineMode; // jamais de fausses données sur le serveur partagé
+#else
+        _demoEnabled = false;
+#endif
         Store.DataChanged += OnChanged;
         Reload();
     }
 
     private void OnChanged() => _ = InvokeAsync(() => { Reload(); StateHasChanged(); });
+
+    private void GenerateDemoData()
+    {
+        Store.ResetWithDemoData();
+        State.ResetNavigation();
+        State.GoToInitial("dashboard");
+        State.NotifySuccess("Données de démonstration générées.");
+    }
 
     private void SelectDataSet(string key)
     {

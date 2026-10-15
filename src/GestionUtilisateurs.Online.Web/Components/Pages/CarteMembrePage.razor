@@ -2,7 +2,6 @@
 @inject DataStore Store
 @inject AppState State
 @inject NativeFileSaver Saver
-@inject IJSRuntime JS
 
 @if (!Store.Can(Permissions.CarteMembreView))
 {
@@ -23,47 +22,128 @@ else
     {
         var user = Current;
         var memberCode = MemberCode(user);
-        <div class="member-card" id="member-card-print">
-            <div class="member-card-top">
-                <div class="member-card-app">@Store.Settings.AppName</div>
-                <div class="member-card-code">@memberCode</div>
-            </div>
-            <div class="member-card-body">
-                <div class="member-card-id">
-                    <Avatar UserName="@user.NomComplet" Seed="@user.Identifiant" Size="lg" Photo="@user.Photo" />
-                    <div class="member-card-main">
-                        <div class="member-card-name">@user.NomComplet</div>
-                        <div class="member-card-sub">@@@user.Identifiant · @user.Role</div>
-                        @if (!string.IsNullOrWhiteSpace(user.Telephone))
-                        {
-                            <div class="member-card-sub">@user.Telephone</div>
-                        }
+        var isActive = user.Actif;
+        <div class="cmc-scene">
+            <div class="cmc @(_showBack ? "cmc-back-visible" : "")" id="member-card-print">
+                <div class="cmc-face cmc-front">
+                    <span class="cmc-wave" aria-hidden="true"></span>
+                    <div class="cmc-leaf" aria-hidden="true">
+                        <svg viewBox="0 0 120 120" fill="none" stroke="currentColor" stroke-width="1.6">
+                            <path d="M12 108C12 60 52 20 108 12c-4 56-44 96-96 96z" />
+                            <path d="M108 12C76 34 48 62 24 96" />
+                        </svg>
+                    </div>
+                    <div class="cmc-front-head">
+                        <div class="cmc-brand">
+                            @if (!string.IsNullOrWhiteSpace(Store.Settings.Logo))
+                            {
+                                <img class="cmc-logo" src="@Store.Settings.Logo" alt="Logo de la communauté" />
+                            }
+                            else
+                            {
+                                <div class="cmc-logo cmc-logo-fallback">GU</div>
+                            }
+                            <div class="cmc-brand-text">
+                                <strong>@Store.Settings.AppName</strong>
+                                @if (!string.IsNullOrWhiteSpace(Store.Settings.CarteSlogan))
+                                {
+                                    <span>@Store.Settings.CarteSlogan</span>
+                                }
+                            </div>
+                        </div>
+                    </div>
+                    <div class="cmc-front-body">
+                        <div class="cmc-id">
+                            <Avatar UserName="@user.NomComplet" Seed="@user.Identifiant" Size="card" Photo="@user.Photo" />
+                            <div class="cmc-id-text">
+                                <div class="cmc-name">@user.NomComplet</div>
+                                <div class="cmc-status @(isActive ? "is-active" : "is-suspended")">
+                                    <span class="cmc-dot" aria-hidden="true"></span>@(isActive ? "Membre actif" : "Carte suspendue")
+                                </div>
+                                @if (!string.IsNullOrWhiteSpace(memberCode))
+                                {
+                                    <div class="cmc-field"><span>Matricule</span><strong>@memberCode</strong></div>
+                                }
+                                <div class="cmc-field"><span>Adhésion</span><strong>@DataStore.FormatDateCourte(user.DateCreation)</strong></div>
+                            </div>
+                        </div>
+                        <div class="cmc-qr" role="button" tabindex="0" aria-label="Agrandir le QR code du membre" @onclick="() => OpenQrPreview(user, memberCode)" @onkeydown="OnQrKeyDown">
+                            <div class="cmc-qr-img"><img src="@QrPngCached(user, memberCode)" alt="QR code de la fiche contact du membre" /></div>
+                            <span>Scanner pour identifier le membre</span>
+                        </div>
                     </div>
                 </div>
-                <div class="member-qr" aria-label="QR code de la carte">
-                    @((MarkupString)QrSvg(user, memberCode))
+                <div class="cmc-face cmc-back">
+                    <span class="cmc-wave cmc-wave-back" aria-hidden="true"></span>
+                    <div class="cmc-back-head">
+                        @if (!string.IsNullOrWhiteSpace(Store.Settings.Logo))
+                        {
+                            <img class="cmc-logo" src="@Store.Settings.Logo" alt="" />
+                        }
+                        else
+                        {
+                            <div class="cmc-logo cmc-logo-fallback">GU</div>
+                        }
+                        <strong>@Store.Settings.AppName</strong>
+                    </div>
+                    @if (!string.IsNullOrWhiteSpace(Store.Settings.CarteCitation))
+                    {
+                        <blockquote class="cmc-quote">@Store.Settings.CarteCitation</blockquote>
+                    }
+                    <p class="cmc-usage">Carte personnelle et non transférable. Elle doit être présentée lors des activités de la communauté. En cas de perte ou de vol, veuillez en informer l'administration.</p>
+                    <div class="cmc-back-foot">
+                        @if (!string.IsNullOrWhiteSpace(memberCode))
+                        {
+                            <div class="cmc-field"><span>N° de membre</span><strong>@memberCode</strong></div>
+                        }
+                        <div class="cmc-sign">
+                            <span>Signature du membre</span>
+                            @if (!string.IsNullOrWhiteSpace(user.Signature))
+                            {
+                                <img src="@user.Signature" alt="Signature du membre" />
+                            }
+                            else
+                            {
+                                <div class="cmc-sign-line" aria-hidden="true"></div>
+                            }
+                        </div>
+                    </div>
                 </div>
             </div>
-            <div class="member-card-lines">
-                <div class="storage-line"><span>Membre depuis</span><strong>@DataStore.FormatDateCourte(user.DateCreation)</strong></div>
-                <div class="storage-line storage-total"><span>Validité</span><strong>@(user.Actif ? "✓ Carte valide" : "⛔ Compte inactif — carte suspendue")</strong></div>
-            </div>
         </div>
-        <div class="form-actions no-print" style="margin-top:10px">
-            <button class="btn btn-secondary" @onclick="PrintAsync">🖨 Imprimer</button>
-            <button class="btn btn-secondary" @onclick="ExportHtmlAsync" disabled="@_exporting">@(_exporting ? "Export…" : "⇩ Carte HTML")</button>
+        <div class="form-actions no-print" style="margin-top:12px">
+            <button class="btn btn-secondary" @onclick="() => _showBack = !_showBack">@(_showBack ? "↺ Face avant" : "↻ Voir le dos")</button>
+            <button class="btn btn-primary" @onclick="ExportPdfAsync" disabled="@_exporting">@(_exporting ? "Export…" : "⤓ Exporter en PDF")</button>
         </div>
-        <p class="muted no-print" style="font-size:12.5px">Le QR code contient la fiche contact (vCard) lisible par tout lecteur. « Carte HTML » enregistre une version imprimable depuis un navigateur.</p>
+        <p class="muted no-print" style="font-size:12.5px">Le QR code contient la fiche contact (vCard) lisible par tout lecteur. « Export PDF » enregistre les deux faces en PDF à la taille réelle configurée (@CardWidthMm × @CardHeightMm mm).</p>
     }
     else
     {
         <EmptyState Icon="🪪" Title="Aucun membre" Message="Ajoutez d'abord un utilisateur." />
     }
+
+    <Modal Title="QR code — fiche contact" Show="_qrPreview != null" OnClose="() => _qrPreview = null">
+        <ChildContent>
+            @if (_qrPreview != null)
+            {
+                <div class="qr-preview-wrap">
+                    <img class="qr-preview-img" src="@_qrPreview" alt="QR code agrandi de la fiche contact" />
+                    <p class="muted" style="text-align:center;margin-bottom:0">@_qrPreviewTitle</p>
+                </div>
+            }
+        </ChildContent>
+        <FooterContent>
+            <button type="button" class="btn btn-primary" @onclick="() => _qrPreview = null">Fermer</button>
+        </FooterContent>
+    </Modal>
 }
 
 @code {
     private string _selectedIdent = "";
     private bool _exporting;
+    private bool _showBack;
+    private string? _qrPreview;
+    private string _qrPreviewTitle = "";
 
     private UserAccount? Current
     {
@@ -83,27 +163,77 @@ else
     protected override void OnInitialized()
     {
         Store.DataChanged += Refresh;
-        _selectedIdent = Store.GetCurrentUser()?.Identifiant ?? Store.Users.FirstOrDefault()?.Identifiant ?? "";
+        var pending = State.PendingCarteIdent;
+        if (!string.IsNullOrWhiteSpace(pending) && Store.FindUserByIdentifier(pending) != null)
+        {
+            _selectedIdent = pending;
+            State.ConsumePendingCarte();
+        }
+        else
+        {
+            _selectedIdent = Store.GetCurrentUser()?.Identifiant ?? Store.Users.FirstOrDefault()?.Identifiant ?? "";
+        }
     }
 
     private void Refresh() => _ = InvokeAsync(StateHasChanged);
 
-    /// <summary>Matricule s'il existe, sinon code automatique.</summary>
-    private static string MemberCode(UserAccount user)
-        => string.IsNullOrWhiteSpace(user.Matricule) ? DataStore.CodeMembre(user) : user.Matricule.Trim();
+    /// <summary>Matricule du membre, ou null si non renseigné (aucun code généré).</summary>
+    private static string? MemberCode(UserAccount user)
+        => string.IsNullOrWhiteSpace(user.Matricule) ? null : user.Matricule.Trim();
 
-    private string QrSvg(UserAccount user, string code)
+    private static string Initials(UserAccount u)
+    {
+        var p = (u.Prenom ?? "").Trim();
+        var n = (u.Nom ?? "").Trim();
+        var s = (p.Length > 0 ? p[0].ToString() : "") + (n.Length > 0 ? n[0].ToString() : "");
+        return string.IsNullOrWhiteSpace(s) ? "?" : s.ToUpperInvariant();
+    }
+
+    /// <summary>
+    /// QR code en PNG (data URL) — plus fiable à scanner qu'un SVG : pixels nets,
+    /// correction d'erreur élevée (Q) et marge calme blanche (drawQuietZones).
+    /// </summary>
+    private string QrPng(UserAccount user, string? code, int pixelsPerModule = 8)
     {
         try
         {
             using var gen = new QRCoder.QRCodeGenerator();
-            var data = gen.CreateQrCode(BuildVCard(user, code), QRCoder.QRCodeGenerator.ECCLevel.M);
-            return new QRCoder.SvgQRCode(data).GetGraphic(4);
+            var data = gen.CreateQrCode(BuildVCard(user, code), QRCoder.QRCodeGenerator.ECCLevel.Q);
+            using var png = new QRCoder.PngByteQRCode(data);
+            return "data:image/png;base64," + Convert.ToBase64String(png.GetGraphic(pixelsPerModule));
         }
         catch { return ""; }
     }
 
-    private string BuildVCard(UserAccount user, string code)
+    private string _qrCacheKey = "";
+    private string _qrCacheValue = "";
+
+    /// <summary>QR mémoïsé pour le rendu : régénéré uniquement quand le membre affiché change,
+    /// au lieu d'être recalculé (QRCoder + base64) à chaque rendu.</summary>
+    private string QrPngCached(UserAccount user, string? code)
+    {
+        var key = user.Id + "|" + (code ?? "");
+        if (key != _qrCacheKey)
+        {
+            _qrCacheKey = key;
+            _qrCacheValue = QrPng(user, code);
+        }
+        return _qrCacheValue;
+    }
+
+    private void OpenQrPreview(UserAccount user, string? code)
+    {
+        _qrPreviewTitle = string.IsNullOrWhiteSpace(code) ? user.NomComplet : user.NomComplet + " — " + code;
+        _qrPreview = QrPng(user, code, 16);
+    }
+
+    private void OnQrKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key is "Enter" or " " && Current != null)
+            OpenQrPreview(Current, MemberCode(Current));
+    }
+
+    private string BuildVCard(UserAccount user, string? code)
     {
         var sb = new System.Text.StringBuilder();
         sb.AppendLine("BEGIN:VCARD");
@@ -113,7 +243,9 @@ else
         sb.AppendLine("ORG:" + Vcf(Store.Settings.AppName));
         if (!string.IsNullOrWhiteSpace(user.Telephone)) sb.AppendLine("TEL;TYPE=CELL:" + Vcf(user.Telephone));
         if (!string.IsNullOrWhiteSpace(user.Email)) sb.AppendLine("EMAIL:" + Vcf(user.Email));
-        sb.AppendLine("NOTE:Membre " + Vcf(code) + " — " + Vcf(user.Role));
+        sb.AppendLine(string.IsNullOrWhiteSpace(code)
+            ? "NOTE:" + Vcf(user.Role)
+            : "NOTE:Membre " + Vcf(code) + " — " + Vcf(user.Role));
         sb.AppendLine("END:VCARD");
         return sb.ToString();
     }
@@ -121,44 +253,120 @@ else
     private static string Vcf(string? s)
         => (s ?? "").Replace("\\", "\\\\").Replace(";", "\\;").Replace(",", "\\,").Replace("\n", "\\n").Trim();
 
-    private async Task PrintAsync()
-    {
-        try { await JS.InvokeVoidAsync("window.print"); }
-        catch { State.NotifyInfo("Impression indisponible ici : utilisez « Carte HTML » puis imprimez depuis un navigateur."); }
-    }
-
-    private async Task ExportHtmlAsync()
+    private async Task ExportPdfAsync()
     {
         if (Current == null) return;
         _exporting = true;
         try
         {
             var user = Current;
-            var memberCode = MemberCode(user);
-            var html = "<!DOCTYPE html><html lang=\"fr\"><head><meta charset=\"utf-8\" />"
-                + "<title>Carte de membre — " + H(user.NomComplet) + "</title>"
-                + "<style>body{font-family:sans-serif;background:#eee;display:flex;justify-content:center;padding:24px;}"
-                + ".card{background:linear-gradient(135deg,#4f46e5,#1e1b4b);color:#fff;border-radius:18px;padding:22px;max-width:520px;width:100%}"
-                + ".top{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px}"
-                + ".code{font-weight:800;letter-spacing:1px;background:rgba(255,255,255,.18);border-radius:8px;padding:4px 10px}"
-                + ".id{display:flex;gap:14px;align-items:center}.name{font-size:22px;font-weight:800}"
-                + ".sub{opacity:.85;font-size:14px}.qr{background:#fff;border-radius:12px;padding:10px;margin-top:14px;text-align:center}"
-                + ".qr svg{width:180px;height:180px}.lines{background:#fff;color:#111;border-radius:10px;margin-top:14px;padding:6px 14px;font-size:14px}"
-                + ".lines div{display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid #eee}"
-                + "@media print{body{background:#fff;padding:0}.card{box-shadow:none}}</style></head><body><div class=\"card\">"
-                + "<div class=\"top\"><div>" + H(Store.Settings.AppName) + "</div><div class=\"code\">" + H(memberCode) + "</div></div>"
-                + "<div class=\"id\"><div><div class=\"name\">" + H(user.NomComplet) + "</div>"
-                + "<div class=\"sub\">@" + H(user.Identifiant) + " · " + H(user.Role) + "</div></div></div>"
-                + "<div class=\"qr\">" + QrSvg(user, memberCode) + "</div>"
-                + "<div class=\"lines\"><div><span>Membre depuis</span><strong>" + H(DataStore.FormatDateCourte(user.DateCreation)) + "</strong></div>"
-                + "<div><span>Validité</span><strong>" + (user.Actif ? "Carte valide" : "Compte inactif") + "</strong></div></div>"
-                + "</div></body></html>";
-            var path = await Saver.SaveAsync("carte-membre-" + user.Identifiant + ".html",
-                System.Text.Encoding.UTF8.GetBytes(html), "text/html");
-            if (path == null) State.NotifyError("Échec de l'export de la carte.");
-            else State.NotifySuccess("Carte enregistrée : " + path);
+            var fileName = "carte-membre-" + user.Identifiant + ".pdf";
+            // Recto + verso : une page PDF par face, à la taille réelle réglée
+            // dans les paramètres (défaut 85 × 55 mm).
+            var pages = new[] { BuildCardFrontHtml(), BuildCardBackHtml() };
+            var path = await Saver.SaveHtmlAsPdfAsync(fileName, pages, MmToPt(CardWidthMm), MmToPt(CardHeightMm));
+            if (path == null)
+                State.NotifyError("Échec de l'export PDF de la carte.");
+            else
+                State.NotifySuccess("Carte prête : choisissez « Enregistrer au format PDF » dans la fenêtre d'impression.");
         }
         finally { _exporting = false; }
+    }
+
+    /// <summary>Taille réelle de la carte à l'impression (mm, réglable en paramètres).</summary>
+    private double CardWidthMm => Store.Settings.CarteLargeurMm > 0 ? Store.Settings.CarteLargeurMm : 85;
+    private double CardHeightMm => Store.Settings.CarteHauteurMm > 0 ? Store.Settings.CarteHauteurMm : 55;
+
+    private static double MmToPt(double mm) => mm * 72.0 / 25.4;
+
+    private string BuildCardFrontHtml() => CardDocHead() + CardFrontBody() + "</body></html>";
+
+    private string BuildCardBackHtml() => CardDocHead() + CardBackBody() + "</body></html>";
+
+    private string CardDocHead()
+    {
+        var user = Current!;
+        // Gabarit réservé au PDF : la carte remplit toute la largeur du rendu avec le
+        // ratio exact configuré (défaut 85 × 55 mm). Le bitmap a donc le même ratio que
+        // la page PDF et la carte y tient à taille réelle. Les dimensions internes sont
+        // en cqw (proportionnelles à la carte, repli px pour les moteurs anciens).
+        var ratio = CardWidthMm.ToString("0", System.Globalization.CultureInfo.InvariantCulture)
+            + "/" + CardHeightMm.ToString("0", System.Globalization.CultureInfo.InvariantCulture);
+        return "<!DOCTYPE html><html lang=\"fr\"><head><meta charset=\"utf-8\" />"
+            + "<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\" />"
+            + "<title>Carte de membre — " + H(user.NomComplet) + "</title>"
+            + "<style>"
+            + "*{box-sizing:border-box}"
+            + "html,body{margin:0;padding:0}"
+            + "body{font-family:'Segoe UI',system-ui,sans-serif;background:#fff}"
+            + ".card{position:relative;overflow:hidden;width:100%;margin:0;aspect-ratio:" + ratio + ";container-type:inline-size;"
+            + "padding:22px 24px;padding:4.2cqw 4.6cqw;border-radius:26px;border-radius:5cqw;color:#fff;"
+            + "background:linear-gradient(135deg,#0b2a6b 0%,#1e4fb0 55%,#4f9de0 100%)}"
+            + ".card.back{background:linear-gradient(135deg,#f6f9ff 0%,#e3edff 100%);color:#0b2a6b}"
+            + ".wave{position:absolute;right:-70px;top:-70px;right:-13.5cqw;top:-13.5cqw;width:240px;height:240px;width:46cqw;height:46cqw;border-radius:50%;background:rgba(255,255,255,.12)}"
+            + ".leaf{position:absolute;left:-20px;bottom:-26px;left:-3.8cqw;bottom:-5cqw;width:150px;height:150px;width:29cqw;height:29cqw;color:rgba(255,255,255,.18)}"
+            + ".head{display:flex;align-items:center;gap:12px;gap:2.3cqw;margin-bottom:16px;margin-bottom:3cqw;position:relative}"
+            + ".logo{width:46px;height:46px;width:8.8cqw;height:8.8cqw;border-radius:14px;border-radius:2.7cqw;background:rgba(255,255,255,.18);display:flex;align-items:center;justify-content:center;font-weight:800;overflow:hidden;flex:0 0 auto;aspect-ratio:1/1}"
+            + ".logo img{width:100%;height:100%;object-fit:cover;display:block}"
+            + ".brand strong{display:block;font-size:16px;font-size:3.1cqw;overflow-wrap:anywhere}.brand span{font-size:12px;font-size:2.3cqw;opacity:.85;overflow-wrap:anywhere}"
+            + ".body{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:18px;gap:3.5cqw;position:relative;align-items:center;max-width:100%}"
+            + ".id{display:flex;gap:14px;gap:2.7cqw;align-items:center;min-width:0;max-width:100%}"
+            + ".idtext{min-width:0;flex:1 1 auto;max-width:100%}"
+            + ".photo{width:104px;min-width:104px;width:20cqw;min-width:20cqw;height:104px;height:20cqw;aspect-ratio:1/1;border-radius:50%;overflow:hidden;background:#fff;border:3px solid rgba(255,255,255,.65);display:flex;align-items:center;justify-content:center;font-size:34px;font-size:6.5cqw;font-weight:800;color:#1e4fb0;flex:0 0 auto}"
+            + ".photo img{width:100%;height:100%;object-fit:cover;display:block;aspect-ratio:1/1}"
+            + ".name{font-size:20px;font-size:3.85cqw;font-weight:800;line-height:1.15;overflow-wrap:anywhere;max-width:100%}"
+            + ".status{display:inline-flex;align-items:center;gap:6px;gap:1.2cqw;font-size:11.5px;font-size:2.2cqw;font-weight:700;background:rgba(255,255,255,.2);border-radius:999px;padding:3px 10px;padding:.6cqw 1.9cqw;margin:6px 0;margin:1.2cqw 0;white-space:nowrap;max-width:100%;overflow:hidden;text-overflow:ellipsis}"
+            + ".dot{width:7px;height:7px;min-width:7px;width:1.35cqw;height:1.35cqw;min-width:1.35cqw;border-radius:50%;background:#7ef0a8;flex:0 0 auto}"
+            + ".field{font-size:12.5px;font-size:2.4cqw;margin-top:4px;margin-top:.8cqw;overflow-wrap:anywhere;max-width:100%}.field span{display:block;opacity:.75;font-size:10.5px;font-size:2cqw;text-transform:uppercase;letter-spacing:.06em}"
+            + ".qr{background:#fff;border-radius:16px;border-radius:3.1cqw;padding:10px;padding:1.9cqw;text-align:center;flex:0 0 auto}"
+            + ".qr svg,.qr img{width:120px;height:120px;width:23cqw;height:23cqw;aspect-ratio:1/1;display:block;object-fit:contain}"
+            + ".qr span{display:block;font-size:9.5px;font-size:1.8cqw;color:#0b2a6b;font-weight:600;margin-top:6px;margin-top:1.2cqw;max-width:120px;max-width:23cqw}"
+            + ".back .head{border-bottom:1px solid rgba(11,42,107,.12);padding-bottom:12px;padding-bottom:2.3cqw;margin-bottom:10px;margin-bottom:1.9cqw}"
+            + ".back .logo{background:#0b2a6b;color:#fff}"
+            + ".quote{font-style:italic;font-size:14px;font-size:2.7cqw;margin:8px 0 10px;margin:1.5cqw 0 1.9cqw;padding-left:14px;padding-left:2.7cqw;border-left:3px solid #4f9de0;color:#123a86;overflow-wrap:anywhere}"
+            + ".usage{font-size:11.5px;font-size:2.2cqw;line-height:1.5;color:#41506b;margin:0}"
+            + ".foot{display:flex;justify-content:space-between;align-items:flex-end;gap:18px;gap:3.5cqw;position:absolute;left:24px;right:24px;left:4.6cqw;right:4.6cqw;bottom:22px;bottom:4.2cqw}"
+            + ".sign span{display:block;font-size:10.5px;font-size:2cqw;text-transform:uppercase;letter-spacing:.06em;color:#41506b;margin-bottom:4px;margin-bottom:.8cqw}"
+            + ".sign img{max-width:150px;max-height:60px;max-width:29cqw;max-height:11.5cqw}"
+            + ".signline{border-bottom:1.5px solid #0b2a6b;width:150px;width:29cqw;height:38px;height:7.3cqw}"
+            + "</style></head><body>";
+    }
+
+    private string CardFrontBody()
+    {
+        var user = Current!;
+        var memberCode = MemberCode(user);
+        var logo = Store.Settings.Logo;
+        var appName = Store.Settings.AppName;
+        var slogan = Store.Settings.CarteSlogan;
+        var photo = user.Photo ?? "";
+        return "<div class=\"card\"><span class=\"wave\"></span>"
+            + "<svg class=\"leaf\" viewBox=\"0 0 120 120\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.6\"><path d=\"M12 108C12 60 52 20 108 12c-4 56-44 96-96 96z\"/><path d=\"M108 12C76 34 48 62 24 96\"/></svg>"
+            + "<div class=\"head\"><div class=\"logo\">" + (string.IsNullOrWhiteSpace(logo) ? "GU" : "<img src=\"" + logo + "\" alt=\"\" />") + "</div>"
+            + "<div class=\"brand\"><strong>" + H(appName) + "</strong><span>" + H(slogan) + "</span></div></div>"
+            + "<div class=\"body\"><div class=\"id\"><div class=\"photo\">" + (string.IsNullOrWhiteSpace(photo) ? H(Initials(user)) : "<img src=\"" + photo + "\" alt=\"\" />") + "</div>"
+            + "<div class=\"idtext\"><div class=\"name\">" + H(user.NomComplet) + "</div>"
+            + "<div class=\"status\"><span class=\"dot\"></span>" + (user.Actif ? "Membre actif" : "Carte suspendue") + "</div>"
+            + (string.IsNullOrWhiteSpace(memberCode) ? "" : "<div class=\"field\"><span>Matricule</span>" + H(memberCode) + "</div>")
+            + "<div class=\"field\"><span>Adhésion</span>" + H(DataStore.FormatDateCourte(user.DateCreation)) + "</div></div></div>"
+            + "<div class=\"qr\"><img src=\"" + QrPng(user, memberCode) + "\" alt=\"QR code de la fiche contact\" /><span>Scanner pour identifier le membre</span></div></div></div>";
+    }
+
+    private string CardBackBody()
+    {
+        var user = Current!;
+        var memberCode = MemberCode(user);
+        var logo = Store.Settings.Logo;
+        var appName = Store.Settings.AppName;
+        var citation = Store.Settings.CarteCitation;
+        var signature = user.Signature ?? "";
+        return "<div class=\"card back\"><span class=\"wave\" style=\"background:rgba(30,79,176,.08)\"></span>"
+            + "<div class=\"head\"><div class=\"logo\">" + (string.IsNullOrWhiteSpace(logo) ? "GU" : "<img src=\"" + logo + "\" alt=\"\" />") + "</div>"
+            + "<div class=\"brand\"><strong>" + H(appName) + "</strong></div></div>"
+            + (string.IsNullOrWhiteSpace(citation) ? "" : "<blockquote class=\"quote\">" + H(citation) + "</blockquote>")
+            + "<p class=\"usage\">Carte personnelle et non transférable. Elle doit être présentée lors des activités de la communauté. En cas de perte ou de vol, veuillez en informer l'administration.</p>"
+            + "<div class=\"foot\">" + (string.IsNullOrWhiteSpace(memberCode) ? "" : "<div class=\"field\"><span>N° de membre</span><strong>" + H(memberCode) + "</strong></div>")
+            + "<div class=\"sign\"><span>Signature du membre</span>" + (string.IsNullOrWhiteSpace(signature) ? "<div class=\"signline\"></div>" : "<img src=\"" + signature + "\" alt=\"\" />") + "</div></div></div>";
     }
 
     private static string H(string? s) => System.Net.WebUtility.HtmlEncode(s ?? "");

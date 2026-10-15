@@ -101,6 +101,8 @@ public class UserAccount
     public string DateNaissance { get; set; } = "";
     /// <summary>Matricule unique du membre (vide si non attribué), affiché sur la carte de membre.</summary>
     public string Matricule { get; set; } = "";
+    /// <summary>Signature électronique du membre (data URL d'image), affichée au dos de la carte de membre.</summary>
+    public string? Signature { get; set; }
     public string? Photo { get; set; }
     public Dictionary<string, FieldValue> Champs { get; set; } = new();
 
@@ -133,10 +135,61 @@ public class AppSettings
     public string Logo { get; set; } = "";
     /// <summary>Durée de session avant déconnexion automatique (minutes).</summary>
     public int SessionTimeoutMinutes { get; set; } = 30;
+    /// <summary>Slogan affiché sur la face avant de la carte de membre (modifiable côté admin).</summary>
+    public string CarteSlogan { get; set; } = "";
+    /// <summary>Citation affichée au dos de la carte de membre (modifiable côté admin).</summary>
+    public string CarteCitation { get; set; } = "";
+    /// <summary>Largeur réelle de la carte de membre à l'impression, en mm (défaut 85).</summary>
+    public int CarteLargeurMm { get; set; } = 85;
+    /// <summary>Hauteur réelle de la carte de membre à l'impression, en mm (défaut 55).</summary>
+    public int CarteHauteurMm { get; set; } = 55;
     /// <summary>Export automatique mensuel de toutes les données (activé par défaut).</summary>
     public bool ExportAutoMensuel { get; set; } = true;
     /// <summary>Dernier mois exporté automatiquement (format yyyy-MM).</summary>
     public string DernierExportAuto { get; set; } = "";
+    /// <summary>Quota de stockage surveillé par l'alerte de saturation, en Mo (données stockées sur le téléphone). Défaut : 5 Go.</summary>
+    public int StorageQuotaMb { get; set; } = 5120;
+    /// <summary>Ordre personnalisé des entrées du menu « … » (clés dans l'ordre d'affichage souhaité).</summary>
+    public List<string> MenuOrder { get; set; } = new();
+    /// <summary>Entrées du menu « … » masquées par l'administrateur (clés, réglage dans Paramètres › Ordre du menu).</summary>
+    public List<string> MenuHidden { get; set; } = new();
+    /// <summary>Si vrai, un conseil contextuel s'affiche la première fois qu'une fonctionnalité est ouverte.</summary>
+    public bool AidesContextuelles { get; set; } = true;
+    /// <summary>Choix individuel du conseil contextuel par identifiant (prioritaire sur le réglage global).</summary>
+    public Dictionary<string, bool> ConseilsUtilisateurs { get; set; } = new();
+    /// <summary>Thème individuel (« light » / « dark ») par identifiant (prioritaire sur le thème global).</summary>
+    public Dictionary<string, string> ThemesUtilisateurs { get; set; } = new();
+    /// <summary>Identifiants des comptes ayant déjà vu le mini-guide de démarrage.</summary>
+    public List<string> GuideVu { get; set; } = new();
+    /// <summary>Identifiants « compte|module » dont l'aide contextuelle a déjà été consultée.</summary>
+    public List<string> AideVu { get; set; } = new();
+}
+
+/// <summary>Catalogue des entrées du menu « … » (utilisé pour le réordonnancement).</summary>
+public static class AppMenus
+{
+    public sealed record MenuDef(string Key, string Label, string Icon);
+
+    public static IReadOnlyList<MenuDef> All { get; } = new[]
+    {
+        new MenuDef("archive", "Archives des utilisateurs", "🗃"),
+        new MenuDef("comptes", "Comptes en ligne", "👤"),
+        new MenuDef("capacite", "Capacité du serveur", "📊"),
+        new MenuDef("documents", "Gestion documentaire", "📄"),
+        new MenuDef("community", "Histoire de la communauté", "📖"),
+        new MenuDef("roles", "Rôles et permissions", "🛡"),
+        new MenuDef("messagerie", "Messagerie", "✉"),
+        new MenuDef("taches", "Tâches et suivi", "☑"),
+        new MenuDef("finances", "Finances", "💰"),
+        new MenuDef("materiel", "Matériel", "🧰"),
+        new MenuDef("reunions", "Présence et réunions", "👥"),
+        new MenuDef("rappels", "Rappels intelligents", "⏰"),
+        new MenuDef("situations", "Situations particulières", "🤝"),
+        new MenuDef("carte", "Carte de membre", "🪪"),
+        new MenuDef("votes", "Votes et décisions", "🗳"),
+        new MenuDef("journal", "Journal multimédia", "🎞"),
+        new MenuDef("guide", "Guide utilisateur", "🧭")
+    };
 }
 
 /// <summary>Histoire interactive de la communauté (chapitres modifiables).</summary>
@@ -167,6 +220,14 @@ public class Message
     public List<string> Destinataires { get; set; } = new();
     public string Texte { get; set; } = "";
     public string Date { get; set; } = "";
+    /// <summary>Date de dernière modification au format ISO (vide = jamais modifié).</summary>
+    public string DateModification { get; set; } = "";
+    /// <summary>Message supprimé : le contenu est masqué mais un journal reste visible dans la conversation.</summary>
+    public bool Supprime { get; set; }
+    /// <summary>Identifiant de celui qui a supprimé le message.</summary>
+    public string? SupprimePar { get; set; }
+    /// <summary>Date de suppression au format ISO.</summary>
+    public string? SupprimeLe { get; set; }
     /// <summary>Identifiants ayant lu le message.</summary>
     public List<string> LuPar { get; set; } = new();
 }
@@ -724,6 +785,7 @@ public static class ActivityTypes
     public const string RolesChange = "roles_change";
     public const string MessageSend = "message_send";
     public const string MessageDelete = "message_delete";
+    public const string MessageUpdate = "message_update";
     public const string TacheCreate = "tache_create";
     public const string TacheUpdate = "tache_update";
     public const string TacheDelete = "tache_delete";
@@ -767,6 +829,7 @@ public static class ActivityTypes
         RolesChange => "Rôles et permissions",
         MessageSend => "Envoi de message",
         MessageDelete => "Suppression de message",
+        MessageUpdate => "Modification de message",
         TacheCreate => "Création de tâche",
         TacheUpdate => "Suivi de tâche",
         TacheDelete => "Suppression de tâche",

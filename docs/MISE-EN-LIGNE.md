@@ -218,8 +218,11 @@ dépôt que vous avez créé).
 - **Parties collaboratives.** Le journal d'activité, la messagerie et les
   votes peuvent être modifiés par tout membre qui y a accès. Le serveur
   contrôle le droit d'écrire dans une partie, pas chaque ligne à l'intérieur.
-- **Paramètres communs.** Les réglages (nom de l'application, thème, couleur, logo…) sont ceux de la
-  communauté, pas de chaque membre.
+- **Paramètres communs.** Les réglages (nom de l'application, thème, couleur, logo,
+  ordre du menu…) sont ceux de la communauté, pas de chaque membre. Seuls
+  quelques choix restent personnels et sont gardés dans le navigateur de
+  chacun : le thème clair ou sombre, les conseils au premier usage et le
+  mini-guide déjà vu.
 - **Mise à jour toutes les 60 secondes.** Les modifications des autres
   membres apparaissent au plus tard une minute après.
 - **Export automatique mensuel désactivé** dans la version en ligne : il est

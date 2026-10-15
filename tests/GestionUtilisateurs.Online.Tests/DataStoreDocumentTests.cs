@@ -200,4 +200,22 @@ public class DataStoreDocumentTests
         Assert.True(store.SetDocumentFavorite(id, false).Success);
         Assert.False(store.Documents.Single().Favori);
     }
+
+    [Fact]
+    public void UpdateEtMove_RenseignentModifiePar()
+    {
+        var store = NewStore();
+        Assert.True(store.Login("admin", "admin123").Success);
+        store.AddDocument(SampleDoc());
+        var id = store.Documents.Single().Id;
+        Assert.Equal("admin", store.Documents.Single().CreatedBy);
+
+        Assert.True(store.UpdateDocument(id, new DocumentItem { Titre = "Facture février" }).Success);
+        Assert.Equal("admin", store.Documents.Single().ModifiePar);
+
+        store.AddFolder(new DocumentFolder { Nom = "C" });
+        var c = store.Folders.Single(f => f.Nom == "C");
+        Assert.True(store.MoveDocuments(new[] { id }, c.Id).Success);
+        Assert.Equal("admin", store.Documents.Single().ModifiePar);
+    }
 }

@@ -50,6 +50,39 @@
         </div>
     </div>
 
+    <div class="form-group">
+        <label for="uf-signature">Signature électronique (facultatif)</label>
+        <div class="photo-control">
+            @if (!string.IsNullOrWhiteSpace(_model.Signature))
+            {
+                <img class="signature-preview" src="@_model.Signature" alt="Signature de l'utilisateur" />
+            }
+            else
+            {
+                <div class="photo-placeholder">Aucune signature</div>
+            }
+            @if (CanEditPhoto)
+            {
+                <div class="photo-actions">
+                    <button type="button" class="btn btn-secondary btn-sm" @onclick="() => _showPad = true">✍ Dessiner</button>
+                    <button type="button" class="btn btn-secondary btn-sm" @onclick="PickSignature">📁 Choisir une image</button>
+                    @if (!string.IsNullOrWhiteSpace(_model.Signature))
+                    {
+                        <button type="button" class="btn btn-secondary btn-sm" @onclick="OpenSignaturePreview">🔍 Ouvrir</button>
+                        <button type="button" class="btn btn-secondary btn-sm" @onclick="() => _model.Signature = string.Empty">Retirer</button>
+                    }
+                </div>
+            }
+            else if (!string.IsNullOrWhiteSpace(_model.Signature))
+            {
+                <div class="photo-actions">
+                    <button type="button" class="btn btn-secondary btn-sm" @onclick="OpenSignaturePreview">🔍 Ouvrir</button>
+                </div>
+            }
+        </div>
+        <span class="field-hint">Affichée au dos de la carte de membre.</span>
+    </div>
+
     <div class="divider-section">Compte</div>
     @if (!IsSelfSimpleUser)
     {
@@ -82,8 +115,8 @@
     </div>
     <div class="form-group">
         <label for="uf-naissance">Date de naissance (facultatif)</label>
-        <input id="uf-naissance" type="date" value="@_model.DateNaissance" @oninput="e => _model.DateNaissance = e.Value?.ToString() ?? string.Empty" />
-        <span class="field-hint">Affichée JJ/MM/AAAA et liée aux anniversaires du calendrier.</span>
+        <DateInput Id="uf-naissance" Value="@_model.DateNaissance" ValueChanged="@(v => _model.DateNaissance = v)" MinYear="1900" MaxYear="@(DateTime.Now.Year)" />
+        <span class="field-hint">Liée aux anniversaires du calendrier.</span>
     </div>
     @if (!IsSelfSimpleUser)
     {
@@ -179,8 +212,7 @@
                                    @oninput="e => _model.SetFieldNumber(fid, e.Value?.ToString() ?? string.Empty)" />
                             break;
                         case FieldType.Date:
-                            <input id="cf-@fid" type="date" value="@_model.FieldText(fid)" @oninput="e => _model.SetFieldText(fid, e.Value?.ToString() ?? string.Empty)" />
-                            <span class="field-hint">Format JJ/MM/AAAA.</span>
+                            <DateInput Id="@("cf-" + fid)" Value="@_model.FieldText(fid)" ValueChanged="@(v => _model.SetFieldText(fid, v))" />
                             break;
                         case FieldType.Liste:
                             <select id="cf-@fid" value="@_model.FieldText(fid)" @onchange="e => _model.SetFieldText(fid, e.Value?.ToString() ?? string.Empty)">
@@ -261,6 +293,25 @@
 <div class="form-actions" style="margin-top:6px;margin-bottom:8px">
     <button class="btn btn-primary btn-block" @onclick="Save" disabled="@_saving">@(_saving ? "Enregistrement…" : "Enregistrer")</button>
 </div>
+
+<Modal Title="Signature" Show="_signaturePreview != null" OnClose="() => _signaturePreview = null">
+    @if (_signaturePreview != null)
+    {
+        <div class="image-viewer-wrap">
+            <img class="image-viewer-img" src="@_signaturePreview" alt="Signature de l'utilisateur" />
+        </div>
+    }
+</Modal>
+
+<Modal Title="Dessiner la signature" Show="_showPad" OnClose="() => _showPad = false">
+    <ChildContent>
+        <SignaturePad @ref="_sigPad" />
+    </ChildContent>
+    <FooterContent>
+        <button class="btn btn-secondary" @onclick="() => _showPad = false">Annuler</button>
+        <button class="btn btn-primary" @onclick="ValidateSignaturePad">✓ Valider la signature</button>
+    </FooterContent>
+</Modal>
 
 @code {
     [Parameter] public string? EditingId { get; set; }
@@ -407,6 +458,28 @@
         var data = await Photos.CapturePhotoAsync();
         if (data != null) _model.Photo = data;
         else if (!string.IsNullOrEmpty(Photos.LastError)) State.NotifyError(Photos.LastError);
+    }
+
+    private string? _signaturePreview;
+    private bool _showPad;
+    private SignaturePad? _sigPad;
+
+    private void OpenSignaturePreview() => _signaturePreview = _model.Signature;
+
+    private async Task PickSignature()
+    {
+        var data = await Photos.PickPhotoAsync();
+        if (data != null) _model.Signature = data;
+        else if (!string.IsNullOrEmpty(Photos.LastError)) State.NotifyError(Photos.LastError);
+    }
+
+    private async Task ValidateSignaturePad()
+    {
+        if (_sigPad is null) return;
+        var dataUrl = await _sigPad.GetDataUrlAsync();
+        if (dataUrl is null) return;
+        _model.Signature = dataUrl;
+        _showPad = false;
     }
 
     private async Task Save()

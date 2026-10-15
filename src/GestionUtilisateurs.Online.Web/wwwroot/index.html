@@ -13,15 +13,17 @@
     <link href="css/online.css" rel="stylesheet" />
 </head>
 <body>
-    <div id="app">
-        <div class="splash-loading" role="status" aria-live="polite">
-            <div class="splash-rings">
-                <div class="splash-ring splash-ring-outer"></div>
-                <div class="splash-ring splash-ring-inner"></div>
-                <div class="splash-brand">GU</div>
-            </div>
+    <div id="app-splash" class="splash-loading" role="status" aria-live="polite">
+        <div class="splash-rings">
+            <div class="splash-ring splash-ring-outer"></div>
+            <div class="splash-ring splash-ring-inner"></div>
+            <img id="splash-logo" class="splash-logo" alt="" />
         </div>
+        <div class="splash-title">GestionUtilisateurs</div>
+        <div class="splash-dots"><span></span><span></span><span></span></div>
     </div>
+
+    <div id="app"></div>
 
     <div id="blazor-error-ui">
         Une erreur est survenue pendant le chargement de l'application.

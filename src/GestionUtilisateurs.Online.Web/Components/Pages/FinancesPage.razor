@@ -1,4 +1,4 @@
-@implements IDisposable
+﻿@implements IDisposable
 @inject DataStore Store
 @inject AppState State
 
@@ -12,14 +12,14 @@ else
         <p>Cotisations des membres et trésorerie, montants en Ariary.</p>
     </div>
 
-    <div class="stats-grid" style="grid-template-columns:repeat(3, 1fr)">
+    <div class="stats-grid stats-grid-3">
         <StatCard Icon="💰" Value="@FormatSolde(Store.SoldeTresorerie())" Label="Solde" />
         <StatCard Icon="🧾" Value="@FormatSolde(Store.TotalCotisations(_periode))" Label="@("Cotisations " + _periode)" Kind="active" />
         <StatCard Icon="⏳" Value="@Store.ImpayesCotisations(_periode).Count.ToString()" Label="Impayés" Kind="inactive" />
     </div>
 
     <div class="search-box cal-search">
-        <span class="search-icon" aria-hidden="true">⌕</span>
+        <span class="search-icon" aria-hidden="true">&#128269;</span>
         <input type="search" placeholder="Rechercher (membre, motif, montant)…" aria-label="Rechercher dans les finances"
                value="@_search" @oninput="OnSearch" />
     </div>
@@ -54,7 +54,7 @@ else
                 @foreach (var c in FilteredCotisations)
                 {
                     var cot = c;
-                    <div class="user-card">
+                    <div class="user-card @(_selCotId == cot.Id ? "selected" : "")" role="button" tabindex="0" @onclick="() => ToggleCot(cot.Id)" @onkeydown="(k) => OnCotKey(k, cot.Id)">
                         <span class="field-type-icon" aria-hidden="true">🧾</span>
                         <div class="user-card-main">
                             <div class="user-card-name">@DataStore.FormatMontant(cot.Montant) — @MemberName(cot.MembreIdentifiant)</div>
@@ -67,6 +67,21 @@ else
                             <button class="btn-icon danger" aria-label="Supprimer" @onclick="() => AskDeleteCotisation(cot)">🗑</button>
                         </div>
                     </div>
+                    @if (_selCotId == cot.Id)
+                    {
+                        <div class="cal-detail-box">
+                            <div class="storage-line"><span>Membre</span><strong>@MemberName(cot.MembreIdentifiant)</strong></div>
+                            <div class="storage-line"><span>Montant</span><strong>@DataStore.FormatMontant(cot.Montant)</strong></div>
+                            <div class="storage-line"><span>Motif</span><strong>@cot.Motif</strong></div>
+                            <div class="storage-line"><span>Période</span><strong>@cot.Periode</strong></div>
+                            <div class="storage-line"><span>Date</span><strong>@DataStore.FormatDateCourte(cot.Date)</strong></div>
+                            <div class="storage-line"><span>Statut</span><strong>@CotisationStatuts.Label(cot.Statut)</strong></div>
+                            <div class="storage-line"><span>Enregistrée par</span><strong>@cot.CreatedBy</strong></div>
+                            <div class="form-actions" style="margin-top:10px">
+                                <button class="btn btn-secondary btn-sm" @onclick="() => _selCotId = null">Réduire</button>
+                            </div>
+                        </div>
+                    }
                 }
             </div>
         }
@@ -75,7 +90,7 @@ else
             <div class="card" style="margin-top:12px">
                 <h3>⏳ Impayés (@_periode) — @Impayes.Count</h3>
                 <div class="search-box cal-search cal-opt-search">
-                    <span class="search-icon" aria-hidden="true">⌕</span>
+                    <span class="search-icon" aria-hidden="true">&#128269;</span>
                     <input type="search" placeholder="Écrire pour chercher un membre…" aria-label="Chercher un membre"
                            value="@_impayeSearch" @oninput="e => _impayeSearch = e.Value?.ToString() ?? string.Empty" />
                 </div>
@@ -109,7 +124,7 @@ else
                 @foreach (var t in FilteredTresorerie)
                 {
                     var tr = t;
-                    <div class="user-card">
+                    <div class="user-card @(_selTrId == tr.Id ? "selected" : "")" role="button" tabindex="0" @onclick="() => ToggleTr(tr.Id)" @onkeydown="(k) => OnTrKey(k, tr.Id)">
                         <span class="field-type-icon" aria-hidden="true">@TresorerieTypes.Icon(tr.Type)</span>
                         <div class="user-card-main">
                             <div class="user-card-name">@((tr.Type == TresorerieTypes.Sortie ? "−" : "+") + DataStore.FormatMontant(tr.Montant)) — @tr.Motif</div>
@@ -119,10 +134,25 @@ else
                             <button class="btn-icon danger" aria-label="Supprimer" @onclick="() => AskDeleteTransaction(tr)">🗑</button>
                         </div>
                     </div>
+                    @if (_selTrId == tr.Id)
+                    {
+                        <div class="cal-detail-box">
+                            <div class="storage-line"><span>Type</span><strong>@TresorerieTypes.Label(tr.Type)</strong></div>
+                            <div class="storage-line"><span>Montant</span><strong>@((tr.Type == TresorerieTypes.Sortie ? "− " : "+ ") + DataStore.FormatMontant(tr.Montant))</strong></div>
+                            <div class="storage-line"><span>Motif</span><strong>@tr.Motif</strong></div>
+                            <div class="storage-line"><span>Date</span><strong>@DataStore.FormatDateCourte(tr.Date)</strong></div>
+                            <div class="storage-line"><span>Enregistré par</span><strong>@tr.CreatedBy</strong></div>
+                            <div class="form-actions" style="margin-top:10px">
+                                <button class="btn btn-secondary btn-sm" @onclick="() => _selTrId = null">Réduire</button>
+                            </div>
+                        </div>
+                    }
                 }
             </div>
         }
     }
+
+    <button class="fab" aria-label="Ajouter une cotisation ou un mouvement" @onclick="OnFabAdd">+</button>
 
     <Modal Title="Nouvelle cotisation" Show="_showCotisation" OnClose="() => _showCotisation = false">
         <ChildContent>
@@ -143,8 +173,8 @@ else
                 <input id="fi-periode" type="text" value="@_cPeriode" @oninput="e => _cPeriode = e.Value?.ToString() ?? string.Empty" />
             </div>
             <div class="form-group">
-                <label for="fi-date">Date (JJ/MM/AAAA)</label>
-                <input id="fi-date" type="date" value="@_cDateIso" @onchange="e => _cDateIso = e.Value?.ToString() ?? string.Empty" />
+                <label for="fi-date">Date</label>
+                <DateInput Id="fi-date" Value="@_cDateIso" ValueChanged="@(v => _cDateIso = v)" />
             </div>
             <div class="form-group">
                 <label for="fi-statut">Statut</label>
@@ -185,8 +215,8 @@ else
                 <input id="tr-motif" type="text" value="@_tMotif" @oninput="e => _tMotif = e.Value?.ToString() ?? string.Empty" />
             </div>
             <div class="form-group">
-                <label for="tr-date">Date (JJ/MM/AAAA)</label>
-                <input id="tr-date" type="date" value="@_tDateIso" @onchange="e => _tDateIso = e.Value?.ToString() ?? string.Empty" />
+                <label for="tr-date">Date</label>
+                <DateInput Id="tr-date" Value="@_tDateIso" ValueChanged="@(v => _tDateIso = v)" />
             </div>
             <span class="form-error">@_tError</span>
         </ChildContent>
@@ -209,6 +239,13 @@ else
     private string CurrentYear => DateTime.Today.Year.ToString();
     private string _periode = "";
     private string _search = "";
+    private string? _selCotId;
+    private string? _selTrId;
+
+    private void ToggleCot(string id) => _selCotId = _selCotId == id ? null : id;
+    private void ToggleTr(string id) => _selTrId = _selTrId == id ? null : id;
+    private void OnCotKey(KeyboardEventArgs e, string id) { if (e.Key is "Enter" or " ") ToggleCot(id); }
+    private void OnTrKey(KeyboardEventArgs e, string id) { if (e.Key is "Enter" or " ") ToggleTr(id); }
     private List<Cotisation> FilteredCotisations =>
         Store.Cotisations.Where(c => c.Periode == _periode).Where(MatchCotisation).OrderByDescending(c => c.Date).ToList();
 
@@ -308,6 +345,12 @@ else
                 System.Globalization.CultureInfo.InvariantCulture, out var n))
             return n;
         return null;
+    }
+
+    private void OnFabAdd()
+    {
+        if (_tab == "tresorerie") StartAddTransaction();
+        else StartAddCotisation();
     }
 
     private void StartAddCotisation()

@@ -70,6 +70,20 @@
         </div>
     }
 
+    @if (!string.IsNullOrWhiteSpace(_user.Signature))
+    {
+        <div class="section">
+            <h3>Signature électronique</h3>
+            <div class="kv-row">
+                <span class="kv-label">Signée</span>
+                <span class="kv-value">
+                    <img class="signature-preview" src="@_user.Signature" alt="Signature de @_user.NomComplet"
+                         @onclick="OpenSignature" />
+                </span>
+            </div>
+        </div>
+    }
+
     @if (ActiveFields.Count > 0)
     {
         <div class="section">
@@ -146,6 +160,10 @@
                     {
                         <button class="btn btn-secondary" @onclick="AskReset">🔑 Réinitialiser le mot de passe</button>
                     }
+                    @if (Store.Can(Permissions.CarteMembreView))
+                    {
+                        <button class="btn btn-secondary" @onclick="OpenCarte">🪪 Voir la carte de membre</button>
+                    }
                     @if (Store.IsAdmin)
                     {
                         <button class="btn btn-danger-outline" @onclick="AskDelete">🗑 Supprimer</button>
@@ -159,6 +177,10 @@
                 <h3>Actions</h3>
                 <div class="form-actions">
                     <button class="btn btn-primary btn-block" @onclick="() => OnEdit.InvokeAsync(_user.Id)">✎ Modifier mes informations</button>
+                    @if (Store.Can(Permissions.CarteMembreView))
+                    {
+                        <button class="btn btn-secondary btn-block" @onclick="OpenCarte">🪪 Voir ma carte de membre</button>
+                    }
                 </div>
             </div>
         }
@@ -256,6 +278,18 @@ else
     }
 
     private void OpenPhoto() => _viewer = _user;
+
+    private void OpenSignature()
+    {
+        if (_user == null || string.IsNullOrWhiteSpace(_user.Signature)) return;
+        OpenImage("Signature — " + _user.NomComplet, _user.Signature);
+    }
+
+    private void OpenCarte()
+    {
+        if (_user == null || string.IsNullOrWhiteSpace(_user.Identifiant)) return;
+        State.NavigateToCarte(_user.Identifiant);
+    }
 
     private void OpenImage(string title, string dataUrl)
     {

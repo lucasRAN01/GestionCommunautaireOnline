@@ -1,4 +1,4 @@
-@implements IDisposable
+﻿@implements IDisposable
 @inject DataStore Store
 @inject AppState State
 
@@ -13,7 +13,7 @@ else
     </div>
 
     <div class="search-box cal-search">
-        <span class="search-icon" aria-hidden="true">⌕</span>
+        <span class="search-icon" aria-hidden="true">&#128269;</span>
         <input type="search" placeholder="Rechercher un suivi (titre, description, membre, type)…" aria-label="Rechercher un suivi"
                value="@_search" @oninput="OnSearch" />
     </div>
@@ -43,7 +43,7 @@ else
             @foreach (var s in Filtered)
             {
                 var sit = s;
-                <div class="user-card">
+                <div class="user-card @(_selectedId == sit.Id ? "selected" : "")" role="button" tabindex="0" @onclick="() => SelectSituation(sit.Id)" @onkeydown="(k) => OnSelectKey(k, sit.Id)">
                     <span class="field-type-icon" aria-hidden="true">@SituationTypes.Icon(sit.Type)</span>
                     <div class="user-card-main">
                         <div class="user-card-name">@sit.Titre</div>
@@ -69,6 +69,30 @@ else
                         <button class="btn-icon danger" aria-label="Supprimer" @onclick="() => AskDelete(sit)">🗑</button>
                     </div>
                 </div>
+            }
+        </div>
+    }
+
+    @if (SelectedSituation != null)
+    {
+        var sit = SelectedSituation;
+        <div class="card" style="margin-top:12px">
+            <div class="inline-actions" style="justify-content:space-between">
+                <h3 style="margin:0">@sit.Titre</h3>
+                <button class="btn btn-secondary btn-sm" @onclick="() => _selectedId = null">Réduire</button>
+            </div>
+            @if (!string.IsNullOrWhiteSpace(sit.Description))
+            {
+                <div class="cal-detail-notes">@sit.Description</div>
+            }
+            <div class="storage-line"><span>Membre</span><strong>@MemberName(sit.MembreIdentifiant)</strong></div>
+            <div class="storage-line"><span>Type</span><strong>@SituationTypes.Label(sit.Type)</strong></div>
+            <div class="storage-line"><span>Statut</span><strong>@SituationStatuts.Label(sit.Statut)</strong></div>
+            <div class="storage-line"><span>Priorité</span><strong>@PriorityLabel(sit.Priorite)</strong></div>
+            <div class="storage-line"><span>Ouverte le</span><strong>@DataStore.FormatDateCourte(sit.DateCreation)</strong></div>
+            @if (!string.IsNullOrWhiteSpace(sit.DateResolution))
+            {
+                <div class="storage-line"><span>Résolue le</span><strong>@DataStore.FormatDateCourte(sit.DateResolution)</strong></div>
             }
         </div>
     }
@@ -137,6 +161,7 @@ else
     private string _priorite = CalendarEventTypes.PrioriteNormale;
     private string _error = "";
     private Situation? _deleteTarget;
+    private string? _selectedId;
 
     private IReadOnlyList<UserAccount> ActiveUsers =>
         Store.Users.Where(u => u.Actif).OrderBy(u => u.NomComplet).ToList();
@@ -158,6 +183,15 @@ else
     }
 
     private void OnSearch(ChangeEventArgs e) => _search = e.Value?.ToString() ?? string.Empty;
+
+    private Situation? SelectedSituation => string.IsNullOrWhiteSpace(_selectedId) ? null : Store.Situations.FirstOrDefault(s => s.Id == _selectedId);
+
+    private void SelectSituation(string id) => _selectedId = _selectedId == id ? null : id;
+
+    private void OnSelectKey(KeyboardEventArgs e, string id)
+    {
+        if (e.Key is "Enter" or " ") SelectSituation(id);
+    }
 
     protected override void OnInitialized()
     {

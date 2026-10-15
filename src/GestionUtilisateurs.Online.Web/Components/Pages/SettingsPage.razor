@@ -1,9 +1,11 @@
-@inject DataStore Store
+﻿@inject DataStore Store
 @inject AppState State
 @inject JavascriptBridge Js
 @inject PhotoService Photos
 @inject NativeFileSaver Saver
 @inject SpreadsheetPicker Picker
+@inject IJSRuntime JSRuntime
+@implements IDisposable
 
 <div class="page-head">
     <p>Personnalisez l'application et gérez vos données locales.</p>
@@ -27,11 +29,12 @@
     </div>
 }
 
-<div class="card settings-card settings-card-appearance">
+<div class="card settings-card settings-card-appearance @(IsCollapsed("appearance") ? "collapsed" : "")">
     <span class="card-corner" aria-hidden="true"></span>
     <div class="settings-card-head">
         <span class="settings-deco settings-deco-appearance" aria-hidden="true">🎨</span>
         <h3>Apparence</h3>
+        <button type="button" class="section-toggle" aria-label="Réduire ou agrandir la section Apparence" aria-expanded="@(!IsCollapsed("appearance"))" @onclick='() => ToggleSection("appearance")'>@(IsCollapsed("appearance") ? "▸" : "▾")</button>
     </div>
     <div class="form-group">
         <label for="st-appname">Nom de l'application</label>
@@ -68,41 +71,164 @@
             </div>
             <span class="field-hint">Touchez le logo pour l'agrandir.</span>
         </div>
-    }
-    <div class="form-group">
-        <label for="st-theme">Thème</label>
-        <select id="st-theme" value="@_theme" @onchange="OnThemeChanged">
-            <option value="light">Clair</option>
-            <option value="dark">Sombre</option>
-        </select>
-    </div>
-    <div class="form-group">
-        <label>Couleur d'accent</label>
-        <div class="color-swatches">
-            @foreach (var c in AccentColors)
-            {
-                <button type="button" class="color-swatch @(c == _color ? "selected" : "")"
-                        style="background:@c" title="@c" @onclick="() => SelectAccentAsync(c)"></button>
-            }
+        <div class="form-group">
+            <label for="st-theme">Thème (pour tous)</label>
+            <select id="st-theme" value="@_theme" @onchange="OnThemeChanged">
+                <option value="light">Clair</option>
+                <option value="dark">Sombre</option>
+            </select>
         </div>
-    </div>
+        <div class="form-group">
+            <label>Couleur d'accent</label>
+            <div class="color-swatches">
+                @foreach (var c in AccentColors)
+                {
+                    <button type="button" class="color-swatch @(c == _color ? "selected" : "")"
+                            style="background:@c" title="@c" @onclick="() => SelectAccentAsync(c)"></button>
+                }
+            </div>
+        </div>
+    }
+    else
+    {
+        <div class="form-group">
+            <label for="st-theme-perso">Mon thème (personnel)</label>
+            <select id="st-theme-perso" value="@_theme" @onchange="OnPersonalThemeChanged">
+                <option value="light">Clair</option>
+                <option value="dark">Sombre</option>
+            </select>
+            <span class="field-hint">Votre choix uniquement : il ne change pas le thème des autres utilisateurs.</span>
+        </div>
+    }
     <div class="appearance-preview @(_theme == "dark" ? "preview-dark" : "preview-light")" style="--preview-accent:@_color">
         <span class="appearance-preview-dot"></span>
         <div><strong>Aperçu instantané</strong><span>Thème @_theme · couleur d'accent</span></div>
         <button type="button" class="appearance-preview-button">Bouton</button>
     </div>
-    <div class="form-actions">
-        <button class="btn btn-primary" @onclick="SaveAppearance" disabled="@_saving">Enregistrer</button>
-    </div>
+    @if (Store.IsAdmin)
+    {
+        <div class="form-actions">
+            <button class="btn btn-primary" @onclick="SaveAppearance" disabled="@_saving">Enregistrer</button>
+        </div>
+    }
 </div>
 
 @if (Store.IsManager)
 {
-    <div class="card settings-card settings-card-pagesize">
+<div class="card settings-card settings-card-menu @(IsCollapsed("menu") ? "collapsed" : "")">
+    <span class="card-corner" aria-hidden="true"></span>
+    <div class="settings-card-head">
+        <span class="settings-deco settings-deco-menu" aria-hidden="true">☰</span>
+        <h3>Ordre du menu</h3>
+        <button type="button" class="section-toggle" aria-label="Réduire ou agrandir la section Ordre du menu" aria-expanded="@(!IsCollapsed("menu"))" @onclick='() => ToggleSection("menu")'>@(IsCollapsed("menu") ? "▸" : "▾")</button>
+    </div>
+    <p class="muted">Glissez-déposez la poignée <span aria-hidden="true">⋮⋮</span> pour réordonner les entrées du menu « ⋮ » (souris, tactile, stylet). Les boutons ▲ ▼ restent disponibles. Touchez 👁 / 🙈 pour masquer ou ré-afficher une entrée. Seules vos entrées accessibles sont listées.</p>
+    @{
+        var menuDefs = new Dictionary<string, AppMenus.MenuDef>();
+        foreach (var d in AppMenus.All) menuDefs[d.Key] = d;
+        var visibleMenu = _menuOrder.Where(k => menuDefs.ContainsKey(k) && MenuVisible(k)).ToList();
+    }
+    <div class="menu-order-list" id="menu-order-list" @ref="_menuOrderListRef">
+        @for (var i = 0; i < visibleMenu.Count; i++)
+        {
+            var def = menuDefs[visibleMenu[i]];
+            var idx = i;
+            var key = visibleMenu[i];
+            var hidden = IsMenuHidden(key);
+            var hideLabel = (hidden ? "Afficher " : "Masquer ") + def.Label;
+            var hideTitle = hidden ? "Afficher" : "Masquer";
+            var hideIcon = hidden ? "🙈" : "👁";
+            <div class="menu-order-item @(hidden ? "menu-hidden" : "")" data-rkey="@key" style="@(hidden ? "opacity:.55" : "")">
+                <span class="reorder-handle" aria-hidden="true" title="Glisser pour réordonner">⋮⋮</span>
+                <span class="menu-order-icon" aria-hidden="true">@def.Icon</span>
+                <span class="menu-order-label">@def.Label @(hidden ? "(masqué)" : "")</span>
+                <div class="menu-order-actions">
+                    <button type="button" class="btn btn-secondary btn-sm menu-order-btn" disabled="@(idx == 0)" aria-label="Monter @def.Label" @onclick="() => MoveMenuVisible(idx, -1)">▲</button>
+                    <button type="button" class="btn btn-secondary btn-sm menu-order-btn" disabled="@(idx >= visibleMenu.Count - 1)" aria-label="Descendre @def.Label" @onclick="() => MoveMenuVisible(idx, 1)">▼</button>
+                    <button type="button" class="btn btn-secondary btn-sm menu-order-btn" aria-label="@hideLabel" title="@hideTitle" @onclick="() => ToggleMenuHidden(key)">@hideIcon</button>
+                </div>
+            </div>
+        }
+    </div>
+    <div class="form-actions">
+        <button type="button" class="btn btn-secondary" @onclick="ResetMenuOrder">↺ Réinitialiser l'ordre d'origine</button>
+    </div>
+</div>
+}
+
+<div class="card settings-card settings-card-guide @(IsCollapsed("guide") ? "collapsed" : "")">
+    <span class="card-corner" aria-hidden="true"></span>
+    <div class="settings-card-head">
+        <span class="settings-deco settings-deco-guide" aria-hidden="true">🧭</span>
+        <h3>Guide et aide</h3>
+        <button type="button" class="section-toggle" aria-label="Réduire ou agrandir la section Guide et aide" aria-expanded="@(!IsCollapsed("guide"))" @onclick='() => ToggleSection("guide")'>@(IsCollapsed("guide") ? "▸" : "▾")</button>
+    </div>
+    <div class="form-actions" style="gap:10px">
+        <button type="button" class="btn btn-primary" @onclick="OpenGuide">📖 Ouvrir le guide utilisateur</button>
+        <button type="button" class="btn btn-secondary" @onclick="ReplayTour">▶ Revoir le mini-guide de démarrage</button>
+    </div>
+    <div class="form-group" style="margin-top:12px">
+        <label class="form-check" for="st-aides-contextuelles">
+            <input id="st-aides-contextuelles" type="checkbox" checked="@ConseilsActifs"
+                   @onchange="ToggleContextualHelp" />
+            Afficher un conseil la première fois que j'ouvre une fonctionnalité
+        </label>
+        <span class="field-hint">Votre choix personnel : il ne change pas celui des autres utilisateurs. Le bouton « ⓘ » reste disponible en haut de chaque écran.</span>
+    </div>
+</div>
+
+@if (Store.IsAdmin)
+{
+    <div class="card settings-card settings-card-cardemembre @(IsCollapsed("cartemembre") ? "collapsed" : "")">
+        <span class="card-corner" aria-hidden="true"></span>
+        <div class="settings-card-head">
+            <span class="settings-deco settings-deco-cardemembre" aria-hidden="true">🪪</span>
+            <h3>Configuration carte de membre</h3>
+            <button type="button" class="section-toggle" aria-label="Réduire ou agrandir la section Carte de membre" aria-expanded="@(!IsCollapsed("cartemembre"))" @onclick='() => ToggleSection("cartemembre")'>@(IsCollapsed("cartemembre") ? "▸" : "▾")</button>
+        </div>
+        <div class="form-group">
+            <label for="st-carte-slogan">Slogan de la carte de membre</label>
+            <input id="st-carte-slogan" type="text" value="@_carteSlogan" maxlength="80"
+                   placeholder="Votre communauté, notre force"
+                   @oninput="e => _carteSlogan = e.Value?.ToString() ?? string.Empty" />
+            <span class="field-hint">Affiché en face avant de la carte de membre.</span>
+        </div>
+        <div class="form-group">
+            <label for="st-carte-citation">Citation de la carte de membre</label>
+            <textarea id="st-carte-citation" rows="2" maxlength="180"
+                      placeholder="Ensemble, nous allons plus loin."
+                      value="@_carteCitation"
+                      @oninput="e => _carteCitation = e.Value?.ToString() ?? string.Empty"></textarea>
+            <span class="field-hint">Affichée au dos de la carte de membre.</span>
+        </div>
+        <div class="form-group">
+            <label for="st-carte-largeur">Taille réelle à l'impression (mm)</label>
+            <div class="quota-input-row">
+                <input id="st-carte-largeur" type="number" min="50" max="150" value="@_carteLargeurMm"
+                       @oninput="e => _carteLargeurMm = int.TryParse(e.Value?.ToString(), out var w) ? w : 85"
+                       aria-label="Largeur de la carte en millimètres" style="max-width:90px" />
+                <span class="quota-input-unit">×</span>
+                <input id="st-carte-hauteur" type="number" min="30" max="100" value="@_carteHauteurMm"
+                       @oninput="e => _carteHauteurMm = int.TryParse(e.Value?.ToString(), out var h) ? h : 55"
+                       aria-label="Hauteur de la carte en millimètres" style="max-width:90px" />
+                <span class="quota-input-unit">mm</span>
+            </div>
+            <span class="field-hint">Format standard : 85 × 55 mm. Appliqué au PDF et à l'impression.</span>
+        </div>
+        <div class="form-actions">
+            <button class="btn btn-primary" @onclick="SaveAppearance" disabled="@_saving">Enregistrer</button>
+        </div>
+    </div>
+}
+
+@if (Store.IsManager)
+{
+    <div class="card settings-card settings-card-pagesize @(IsCollapsed("pagesize") ? "collapsed" : "")">
         <span class="card-corner" aria-hidden="true"></span>
         <div class="settings-card-head">
             <span class="settings-deco settings-deco-pagesize" aria-hidden="true">📄</span>
             <h3>Nombre d'utilisateurs par page</h3>
+            <button type="button" class="section-toggle" aria-label="Réduire ou agrandir la section" aria-expanded="@(!IsCollapsed("pagesize"))" @onclick='() => ToggleSection("pagesize")'>@(IsCollapsed("pagesize") ? "▸" : "▾")</button>
         </div>
         <div class="form-group">
             <label for="st-pagesize">Affichage de la liste des utilisateurs</label>
@@ -114,11 +240,12 @@
         </div>
     </div>
 
-    <div class="card settings-card settings-card-security">
+    <div class="card settings-card settings-card-security @(IsCollapsed("security") ? "collapsed" : "")">
         <span class="card-corner" aria-hidden="true"></span>
         <div class="settings-card-head">
             <span class="settings-deco settings-deco-security" aria-hidden="true">🔒</span>
             <h3>Sécurité</h3>
+            <button type="button" class="section-toggle" aria-label="Réduire ou agrandir la section Sécurité" aria-expanded="@(!IsCollapsed("security"))" @onclick='() => ToggleSection("security")'>@(IsCollapsed("security") ? "▸" : "▾")</button>
         </div>
         <div class="form-group">
             <label for="st-session">Déconnexion automatique après inactivité</label>
@@ -140,11 +267,12 @@
 
 @if (Store.IsAdmin)
 {
-    <div class="card settings-card settings-card-fields">
+    <div class="card settings-card settings-card-fields @(IsCollapsed("fields") ? "collapsed" : "")">
         <span class="card-corner" aria-hidden="true"></span>
         <div class="settings-card-head">
             <span class="settings-deco settings-deco-fields" aria-hidden="true">🧩</span>
             <h3>Champs personnalisés</h3>
+            <button type="button" class="section-toggle" aria-label="Réduire ou agrandir la section Champs" aria-expanded="@(!IsCollapsed("fields"))" @onclick='() => ToggleSection("fields")'>@(IsCollapsed("fields") ? "▸" : "▾")</button>
         </div>
         <p class="muted">Personnalisez le formulaire utilisateur : texte, nombre, liste, choix, pièce jointe, image…</p>
         <div class="form-actions">
@@ -155,11 +283,12 @@
 
 @if (Store.IsManager)
 {
-    <div class="card settings-card settings-card-actions">
+    <div class="card settings-card settings-card-actions @(IsCollapsed("actions") ? "collapsed" : "")">
         <span class="card-corner" aria-hidden="true"></span>
         <div class="settings-card-head">
             <span class="settings-deco settings-deco-actions" aria-hidden="true">⇄</span>
             <h3>Actions</h3>
+            <button type="button" class="section-toggle" aria-label="Réduire ou agrandir la section Actions" aria-expanded="@(!IsCollapsed("actions"))" @onclick='() => ToggleSection("actions")'>@(IsCollapsed("actions") ? "▸" : "▾")</button>
         </div>
         <p class="muted">L'export et l'import des utilisateurs sont accessibles à l'administrateur et au gestionnaire.</p>
         <div class="form-group">
@@ -295,7 +424,15 @@
     private string _color = "#4f46e5";
     private int _pageSize = 10;
     private int _sessionTimeout = 30;
+    private int _storageQuotaMb = 5120;
+    private bool _quotaDirty;
+    private List<string> _menuOrder = new();
+    private HashSet<string> _menuHidden = new(StringComparer.Ordinal);
     private string _logo = "";
+    private string _carteSlogan = "";
+    private string _carteCitation = "";
+    private int _carteLargeurMm = 85;
+    private int _carteHauteurMm = 55;
     private bool _saving;
     private bool _confirmLogout;
     private bool _logoPreview;
@@ -310,6 +447,190 @@
         _autoExport = e.Value is bool b ? b : !(_autoExport);
     }
 
+    private void OnQuotaInput(ChangeEventArgs e)
+    {
+        // Saisie libre : la valeur tapée est conservée telle quelle (plafond
+        // appliqué uniquement à l'enregistrement). Sans le drapeau _quotaDirty,
+        // chaque ré-affichage réécrasait la saisie par la valeur enregistrée.
+        _quotaDirty = true;
+        _storageQuotaMb = int.TryParse(e.Value?.ToString(), out var q) ? Math.Max(0, q) : 5120;
+    }
+
+    /// <summary>
+    /// Plafond du champ quota : la place libre réelle de l'appareil (en Mo).
+    /// Le champ reste libre en dessous de ce plafond ; la valeur enregistrée
+    /// n'est jamais réduite automatiquement (seule la saisie est bornée).
+    /// </summary>
+    private static int QuotaMaxMb
+    {
+        get
+        {
+            var freeMb = DeviceStorage.GetFreeBytes() / (1024L * 1024L);
+            if (freeMb <= 0) return 10240; // espace inconnu : plafond large, sans bloquer.
+            if (freeMb < DataStore.StorageQuotaMbMin) return DataStore.StorageQuotaMbMin;
+            return freeMb > int.MaxValue ? int.MaxValue : (int)freeMb;
+        }
+    }
+
+    private string FreeSpaceLabel => StorageSettingsFormat(DeviceStorage.GetFreeBytes());
+
+    // Sections minimisables, repliées par défaut (mémoire de session uniquement).
+    private readonly HashSet<string> _collapsed = new(
+        new[] { "appearance", "menu", "guide", "cartemembre", "pagesize", "storage", "security", "fields", "actions" },
+        StringComparer.Ordinal);
+
+    private bool IsCollapsed(string key) => _collapsed.Contains(key);
+
+    private void ToggleSection(string key)
+    {
+        if (!_collapsed.Add(key)) _collapsed.Remove(key);
+    }
+
+    private string StorageUsageLabel =>
+        StorageSettingsFormat(Store.StorageUsedBytes()) + " utilisés / " + StorageSettingsFormat(Store.CurrentStorageQuotaBytes);
+
+    private static string StorageSettingsFormat(long bytes)
+    {
+        if (bytes < 1024) return bytes + " o";
+        if (bytes < 1024 * 1024) return (bytes / 1024.0).ToString("0.0") + " Ko";
+        if (bytes < 1024L * 1024L * 1024L) return (bytes / (1024.0 * 1024)).ToString("0.0") + " Mo";
+        return (bytes / (1024.0 * 1024 * 1024)).ToString("0.0") + " Go";
+    }
+
+    private void MoveMenu(int index, int delta)
+    {
+        if (index < 0 || index >= _menuOrder.Count) return;
+        var target = index + delta;
+        if (target < 0 || target >= _menuOrder.Count) return;
+        (_menuOrder[target], _menuOrder[index]) = (_menuOrder[index], _menuOrder[target]);
+        Store.ReorderMenu(_menuOrder);
+    }
+
+    /// <summary>Entrée visible pour le compte connecté (mêmes règles que le menu « … ») ?</summary>
+    private bool MenuVisible(string key) => key switch
+    {
+        "archive" => Store.IsAdmin,
+        "comptes" => Store.Can(Permissions.UsersManage),
+        "capacite" => Store.IsAdmin,
+        "documents" => !Store.IsBaseAdmin,
+        "roles" => Store.Can(Permissions.RolesManage),
+        "messagerie" => Store.Can(Permissions.MessagerieUse),
+        "taches" => Store.Can(Permissions.TachesUse),
+        "finances" => Store.Can(Permissions.FinancesManage),
+        "materiel" => Store.Can(Permissions.MaterielManage),
+        "reunions" => Store.Can(Permissions.PresenceManage),
+        "rappels" => Store.Can(Permissions.RappelsUse),
+        "situations" => Store.Can(Permissions.SituationsManage),
+        "carte" => Store.Can(Permissions.CarteMembreView),
+        "journal" => Store.Can(Permissions.JournalMediaUse),
+        _ => true // community, votes, guide
+    };
+
+    /// <summary>Déplace une entrée dans l'ordre visible (les entrées masquées gardent leur place).</summary>
+    private void MoveMenuVisible(int visibleIndex, int delta)
+    {
+        var visible = _menuOrder.Where(MenuVisible).ToList();
+        var target = visibleIndex + delta;
+        if (visibleIndex < 0 || visibleIndex >= visible.Count || target < 0 || target >= visible.Count) return;
+        var a = _menuOrder.IndexOf(visible[visibleIndex]);
+        var b = _menuOrder.IndexOf(visible[target]);
+        if (a < 0 || b < 0) return;
+        (_menuOrder[a], _menuOrder[b]) = (_menuOrder[b], _menuOrder[a]);
+        Store.ReorderMenu(_menuOrder);
+    }
+
+    private bool IsMenuHidden(string key)
+        => _menuHidden.Contains(key);
+
+    private void ToggleMenuHidden(string key)
+    {
+        var hidden = !_menuHidden.Contains(key);
+        if (hidden) _menuHidden.Add(key);
+        else _menuHidden.Remove(key);
+        Store.SetMenuHidden(key, hidden);
+        StateHasChanged();
+    }
+
+    private void ResetMenuOrder()
+    {
+        _menuOrder = AppMenus.All.Select(m => m.Key).ToList();
+        _menuHidden.Clear();
+        Store.ResetMenu();
+        Store.ReorderMenu(_menuOrder);
+    }
+
+    private ElementReference _menuOrderListRef;
+    private DotNetObjectReference<SettingsPage>? _reorderRef;
+    private bool _reorderEnabled;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && !_reorderEnabled)
+        {
+            _reorderEnabled = true;
+            try
+            {
+                _reorderRef ??= DotNetObjectReference.Create(this);
+                await JSRuntime.InvokeVoidAsync("guDragReorder.enable", "menu-order-list", _reorderRef, nameof(OnMenuReordered));
+            }
+            catch { }
+        }
+    }
+
+    /// <summary>Ordre final après un glisser-déposer : fusionne l'ordre visible
+    /// reçu dans _menuOrder en conservant la place exacte des entrées masquées
+    /// (autres rôles), puis persiste via ReorderMenu.</summary>
+    [JSInvokable]
+    public void OnMenuReordered(string[] keys)
+    {
+        try
+        {
+            if (keys == null || keys.Length == 0) return;
+            var wanted = keys.Where(k => !string.IsNullOrWhiteSpace(k)).ToList();
+            if (wanted.Count == 0) return;
+            var wantedSet = new HashSet<string>(wanted, StringComparer.Ordinal);
+            var slots = new List<int>();
+            for (var i = 0; i < _menuOrder.Count; i++)
+                if (wantedSet.Contains(_menuOrder[i])) slots.Add(i);
+            var n = Math.Min(slots.Count, wanted.Count);
+            for (var s = 0; s < n; s++) _menuOrder[slots[s]] = wanted[s];
+            // Clés inconnues (nouveau module) : ajoutées à la fin.
+            foreach (var k in wanted)
+                if (!_menuOrder.Contains(k)) _menuOrder.Add(k);
+            Store.ReorderMenu(_menuOrder);
+        }
+        catch { }
+        _ = InvokeAsync(StateHasChanged);
+    }
+
+    public void Dispose()
+    {
+        try { _ = JSRuntime.InvokeVoidAsync("guDragReorder.disable", "menu-order-list"); } catch { }
+        try { _reorderRef?.Dispose(); } catch { }
+    }
+
+    private void OpenGuide()
+    {
+        State.Navigate("guide");
+    }
+
+    private void ReplayTour()
+    {
+        if (Store.IsBaseAdmin) return;
+        State.RequestTour();
+    }
+
+    private void ToggleContextualHelp(ChangeEventArgs e)
+    {
+        // Choix individuel : n'affecte que le compte connecté.
+        var on = e.Value is bool b ? b : e.Value?.ToString() == "true";
+        var me = Store.GetCurrentUser()?.Identifiant ?? "";
+        if (string.IsNullOrEmpty(me)) return;
+        Store.SetUserConseils(me, on);
+    }
+
+    private bool ConseilsActifs => Store.GetEffectiveConseils(Store.GetCurrentUser()?.Identifiant);
+
     private bool _confirmReset;
     private bool _dangerUnlocked;
     private bool _showDangerUnlock;
@@ -323,12 +644,24 @@
     {
         var s = Store.Settings;
         _name = s.AppName;
-        _theme = s.Theme;
+        // Thème affiché : choix individuel, sinon thème global.
+        _theme = Store.GetEffectiveTheme(Store.GetCurrentUser()?.Identifiant);
         _color = s.Color;
         _pageSize = s.PageSize;
         _logo = s.Logo;
+        _carteSlogan = s.CarteSlogan;
+        _carteCitation = s.CarteCitation;
+        _carteLargeurMm = s.CarteLargeurMm > 0 ? s.CarteLargeurMm : 85;
+        _carteHauteurMm = s.CarteHauteurMm > 0 ? s.CarteHauteurMm : 55;
         _sessionTimeout = s.SessionTimeoutMinutes;
         _autoExport = s.ExportAutoMensuel;
+        _storageQuotaMb = _quotaDirty ? _storageQuotaMb
+            : (s.StorageQuotaMb > 0 ? s.StorageQuotaMb : 5120);
+        _menuOrder = new List<string>(s.MenuOrder ?? new List<string>());
+        foreach (var def in AppMenus.All)
+            if (!_menuOrder.Contains(def.Key)) _menuOrder.Add(def.Key);
+        _menuOrder.RemoveAll(k => !AppMenus.All.Any(m => m.Key == k));
+        _menuHidden = new HashSet<string>(s.MenuHidden ?? new List<string>(), StringComparer.Ordinal);
     }
 
     private void AskLogout() => _confirmLogout = true;
@@ -343,6 +676,27 @@
     private void OnThemeChanged(ChangeEventArgs e)
     {
         _theme = e.Value?.ToString() ?? "light";
+    }
+
+    /// <summary>Thème individuel : appliqué aussitôt, sans toucher aux autres comptes.</summary>
+    private async Task OnPersonalThemeChanged(ChangeEventArgs e)
+    {
+        _theme = e.Value?.ToString() ?? "light";
+        var me = Store.GetCurrentUser()?.Identifiant ?? "";
+        if (string.IsNullOrEmpty(me)) return;
+        Store.SetUserTheme(me, _theme);
+        try
+        {
+            var s = Store.Settings;
+            await Js.ApplySettingsAsync(new AppSettings
+            {
+                AppName = s.AppName,
+                Theme = _theme,
+                Color = s.Color,
+                Logo = s.Logo
+            });
+        }
+        catch { }
     }
 
     private void OnSessionTimeoutChanged(ChangeEventArgs e)
@@ -415,6 +769,9 @@
         _saving = true;
         try
         {
+            // Préserve les choix individuels (guide vu, aides vues, conseil contextuel) :
+            // l'enregistrement par un utilisateur n'écrase jamais ceux des autres.
+            var prev = Store.Settings;
             Store.SaveSettings(new AppSettings
             {
                 AppName = string.IsNullOrWhiteSpace(_name) ? "Gestion des utilisateurs" : _name.Trim(),
@@ -422,11 +779,24 @@
                 Color = _color,
                 PageSize = _pageSize,
                 Logo = _logo,
+                CarteSlogan = _carteSlogan.Trim(),
+                CarteCitation = _carteCitation.Trim(),
+                CarteLargeurMm = Math.Clamp(_carteLargeurMm, 50, 150),
+                CarteHauteurMm = Math.Clamp(_carteHauteurMm, 30, 100),
                 SessionTimeoutMinutes = _sessionTimeout,
                 ExportAutoMensuel = _autoExport,
-                DernierExportAuto = Store.Settings.DernierExportAuto
+                DernierExportAuto = prev.DernierExportAuto,
+                StorageQuotaMb = Math.Clamp(_storageQuotaMb, DataStore.StorageQuotaMbMin, QuotaMaxMb),
+                MenuOrder = new List<string>(_menuOrder),
+                MenuHidden = new List<string>(_menuHidden),
+                AidesContextuelles = prev.AidesContextuelles,
+                GuideVu = new List<string>(prev.GuideVu ?? new List<string>()),
+                AideVu = new List<string>(prev.AideVu ?? new List<string>()),
+                ThemesUtilisateurs = new Dictionary<string, string>(prev.ThemesUtilisateurs ?? new Dictionary<string, string>()),
+                ConseilsUtilisateurs = new Dictionary<string, bool>(prev.ConseilsUtilisateurs ?? new Dictionary<string, bool>())
             });
             await Js.ApplySettingsAsync(Store.Settings);
+            _quotaDirty = false;
             State.NotifySuccess("Paramètres enregistrés.");
         }
         finally

@@ -54,7 +54,7 @@ else
     else
     {
         <div class="user-list">
-            @foreach (var u in _filtered)
+            @foreach (var u in PagedUsers)
             {
                 <div class="user-card" @onclick="() => OpenDetail(u.Id)">
                     <button class="avatar-btn" type="button" @onclick:stopPropagation="true" @onclick="() => OpenPhoto(u)" aria-label="Agrandir la photo">
@@ -80,6 +80,7 @@ else
                 </div>
             }
         </div>
+        <PaginationBar Page="_page" PageCount="PageCount" Total="_filtered.Count" OnPrev="PrevPage" OnNext="NextPage" />
     }
 
     @if (CanManage)
@@ -242,6 +243,41 @@ else
     };
     private List<UserAccount> _filtered = new();
     private System.Timers.Timer? _searchTimer;
+    private int _page = 1;
+
+    /// <summary>Nombre d'utilisateurs par page (réglable dans les Paramètres).</summary>
+    private int PageSize
+    {
+        get
+        {
+            var p = Store.Settings.PageSize;
+            return p <= 0 ? 10 : p;
+        }
+    }
+
+    private int PageCount => Math.Max(1, (_filtered.Count + PageSize - 1) / PageSize);
+
+    /// <summary>Seule la page courante est rendue : les photos base64 des autres
+    /// pages ne sont ni comparées ni affichées (liste fluide même avec 500+ comptes).</summary>
+    private IEnumerable<UserAccount> PagedUsers
+    {
+        get
+        {
+            if (_page > PageCount) _page = PageCount;
+            if (_page < 1) _page = 1;
+            return _filtered.Skip((_page - 1) * PageSize).Take(PageSize);
+        }
+    }
+
+    private void PrevPage()
+    {
+        if (_page > 1) _page--;
+    }
+
+    private void NextPage()
+    {
+        if (_page < PageCount) _page++;
+    }
 
     protected override void OnInitialized()
     {
@@ -265,6 +301,20 @@ else
                 _viewMode = ViewMode.Detail;
             }
         }
+        else
+        {
+            var pendingIdent = State.PendingUserIdent;
+            if (!string.IsNullOrEmpty(pendingIdent))
+            {
+                State.ConsumePendingUserIdent();
+                var found = Store.FindUserByIdentifier(pendingIdent);
+                if (found != null)
+                {
+                    _detailUserId = found.Id;
+                    _viewMode = ViewMode.Detail;
+                }
+            }
+        }
     }
 
     private void OnChanged() => _ = InvokeAsync(() => { Recompute(); StateHasChanged(); });
@@ -272,6 +322,7 @@ else
     private void OnSearchChange(string value)
     {
         _search = value;
+        _page = 1;
         _searchTimer?.Dispose();
         _searchTimer = new System.Timers.Timer(250) { AutoReset = false };
         _searchTimer.Elapsed += (_, _) => InvokeAsync(() => { _searchTimer!.Dispose(); Recompute(); StateHasChanged(); });

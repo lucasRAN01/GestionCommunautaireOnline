@@ -144,3 +144,33 @@ window.guWebFiles = (function () {
 
     return { pick: pick, save: save, open: open, share: share };
 })();
+
+// Impression en PDF (carte de membre) : @page à la taille exacte de la carte,
+// marges à 0, pour éviter les en-têtes et pieds de page du navigateur.
+window.guWebPrint = {
+    printHtml: function (pagesHtml, fileName, pageWidthPt, pageHeightPt) {
+        try {
+            var w = window.open('', '_blank', 'width=900,height=700');
+            if (!w) return false;
+            var hasSize = pageWidthPt > 0 && pageHeightPt > 0;
+            var pageRule = hasSize
+                ? '@page{size:' + Math.round(pageWidthPt) + 'pt ' + Math.round(pageHeightPt) + 'pt;margin:0}'
+                : '@page{size:auto;margin:0}';
+            var css = '<style>' + pageRule +
+                'html,body{margin:0 !important;padding:0 !important;background:#fff}' +
+                'body{font-family:Segoe UI,system-ui,sans-serif;-webkit-print-color-adjust:exact;print-color-adjust:exact}' +
+                '.print-page{margin:0;padding:0;page-break-after:always;overflow:hidden}' +
+                '.print-page:last-child{page-break-after:auto}' +
+                'img{max-width:100%}</style>';
+            var body = '';
+            for (var i = 0; i < pagesHtml.length; i++) body += '<div class="print-page">' + pagesHtml[i] + '</div>';
+            var title = String(fileName || 'document').replace(/[<>&"]/g, '');
+            w.document.write('<!DOCTYPE html><html lang="fr"><head><meta charset="utf-8"><title>' +
+                title + '</title>' + css + '</head><body>' + body + '</body></html>');
+            w.document.close();
+            w.focus();
+            setTimeout(function () { try { w.print(); } catch (e) { } }, 600);
+            return true;
+        } catch (e) { return false; }
+    }
+};

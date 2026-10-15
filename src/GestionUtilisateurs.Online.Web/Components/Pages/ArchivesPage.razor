@@ -1,4 +1,4 @@
-@implements IDisposable
+﻿@implements IDisposable
 @inject DataStore Store
 @inject AppState State
 
@@ -7,7 +7,7 @@
 </div>
 
 <div class="search-box cal-search">
-    <span class="search-icon" aria-hidden="true">⌕</span>
+    <span class="search-icon" aria-hidden="true">&#128269;</span>
     <input type="search" placeholder="Rechercher dans les archives (nom, identifiant, e-mail, rôle)…" aria-label="Rechercher dans les archives"
            value="@_search" @oninput="OnSearch" />
 </div>

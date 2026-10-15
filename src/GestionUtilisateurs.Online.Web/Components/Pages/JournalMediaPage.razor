@@ -1,7 +1,8 @@
-@implements IDisposable
+﻿@implements IDisposable
 @inject DataStore Store
 @inject AppState State
 @inject PhotoService Photos
+@inject NativeFileSaver Saver
 
 @if (!Store.Can(Permissions.JournalMediaUse))
 {
@@ -14,7 +15,7 @@ else
     </div>
 
     <div class="search-box cal-search">
-        <span class="search-icon" aria-hidden="true">⌕</span>
+        <span class="search-icon" aria-hidden="true">&#128269;</span>
         <input type="search" placeholder="Rechercher un média (titre, description, type)…" aria-label="Rechercher un média"
                value="@_search" @oninput="OnSearch" />
     </div>
@@ -40,19 +41,50 @@ else
             @foreach (var m in Filtered)
             {
                 var item = m;
-                <div class="media-card" @onclick="() => OpenViewer(item)" role="button" tabindex="0" @onkeydown="(k) => OnCardKey(k, item)">
-                    @if (item.Type == MediaTypes.Photo && !string.IsNullOrWhiteSpace(item.Data))
+                var expanded = _expanded == item.Id;
+                <div class="media-card @(expanded ? "media-card-expanded selected" : "")" @onclick="() => Toggle(item.Id)" role="button" tabindex="0" @onkeydown="(k) => OnCardKey(k, item.Id)">
+                    @if (expanded)
                     {
-                        <img class="media-thumb" src="@item.Data" alt="@item.Titre" loading="lazy" />
+                        @if (item.Type == MediaTypes.Photo && !string.IsNullOrWhiteSpace(item.Data))
+                        {
+                            <img class="media-thumb media-thumb-expanded" src="@item.Data" alt="@item.Titre" />
+                        }
+                        else
+                        {
+                            <span class="media-thumb media-thumb-icon" aria-hidden="true">@MediaTypes.Icon(item.Type)</span>
+                        }
+                        <div class="media-main">
+                            <div class="media-title">@item.Titre</div>
+                            <div class="media-sub">@MediaTypes.Label(item.Type) · @DataStore.FormatDateCourte(item.Date)</div>
+                            @if (!string.IsNullOrWhiteSpace(item.Description))
+                            {
+                                <div class="cal-detail-notes" style="margin-top:8px">@item.Description</div>
+                            }
+                            <div class="form-actions" style="margin-top:10px">
+                                <button class="btn btn-secondary btn-sm" @onclick="() => OpenViewer(item)">Agrandir</button>
+                                @if (item.Type == MediaTypes.Video || item.Type == MediaTypes.Audio)
+                                {
+                                    <button type="button" class="btn btn-primary btn-sm" @onclick="() => PlayMedia(item)" @onclick:stopPropagation="true">▶ @(item.Type == MediaTypes.Video ? "Lire" : "Écouter")</button>
+                                }
+                                <button class="btn btn-secondary btn-sm" @onclick="() => Toggle(item.Id)">Réduire</button>
+                            </div>
+                        </div>
                     }
                     else
                     {
-                        <span class="media-thumb media-thumb-icon" aria-hidden="true">@MediaTypes.Icon(item.Type)</span>
+                        @if (item.Type == MediaTypes.Photo && !string.IsNullOrWhiteSpace(item.Data))
+                        {
+                            <img class="media-thumb" src="@item.Data" alt="@item.Titre" loading="lazy" />
+                        }
+                        else
+                        {
+                            <span class="media-thumb media-thumb-icon" aria-hidden="true">@MediaTypes.Icon(item.Type)</span>
+                        }
+                        <div class="media-main">
+                            <div class="media-title">@item.Titre</div>
+                            <div class="media-sub">@MediaTypes.Label(item.Type) · @DataStore.FormatDateCourte(item.Date)</div>
+                        </div>
                     }
-                    <div class="media-main">
-                        <div class="media-title">@item.Titre</div>
-                        <div class="media-sub">@MediaTypes.Label(item.Type) · @DataStore.FormatDateCourte(item.Date)</div>
-                    </div>
                     <button type="button" class="btn-icon danger" aria-label="Supprimer" @onclick:stopPropagation="true" @onclick="() => AskDelete(item)">🗑</button>
                 </div>
             }
@@ -106,8 +138,8 @@ else
                     <textarea id="jm-desc" rows="2" value="@_desc" @oninput="e => _desc = e.Value?.ToString() ?? string.Empty"></textarea>
                 </div>
                 <div class="form-group">
-                    <label for="jm-date">Date (JJ/MM/AAAA)</label>
-                    <input id="jm-date" type="date" value="@_dateIso" @onchange="e => _dateIso = e.Value?.ToString() ?? string.Empty" />
+                    <label for="jm-date">Date</label>
+                    <DateInput Id="jm-date" Value="@_dateIso" ValueChanged="@(v => _dateIso = v)" />
                 </div>
                 <span class="form-error">@_stagedError</span>
             }
@@ -119,27 +151,33 @@ else
     </Modal>
 
     <Modal Show="_viewer != null" Title="@(_viewer?.Titre ?? "")" OnClose="() => _viewer = null">
-        @if (_viewer != null)
+        @if (_viewer is { } viewer)
         {
-            @if (_viewer.Type == MediaTypes.Photo && !string.IsNullOrWhiteSpace(_viewer.Data))
+            @if (viewer.Type == MediaTypes.Photo && !string.IsNullOrWhiteSpace(viewer.Data))
             {
                 <div class="image-viewer-wrap">
-                    <img class="image-viewer-img" src="@_viewer.Data" alt="@_viewer.Titre" />
+                    <img class="image-viewer-img" src="@viewer.Data" alt="@viewer.Titre" />
                 </div>
             }
-            else if (_viewer.Type == MediaTypes.Video && !string.IsNullOrWhiteSpace(_viewer.Data))
+            else if (viewer.Type == MediaTypes.Video && !string.IsNullOrWhiteSpace(viewer.Data))
             {
-                <video class="media-player" controls playsinline src="@_viewer.Data"></video>
+                <video class="media-player" controls playsinline src="@viewer.Data"></video>
             }
-            else if (_viewer.Type == MediaTypes.Audio && !string.IsNullOrWhiteSpace(_viewer.Data))
+            else if (viewer.Type == MediaTypes.Audio && !string.IsNullOrWhiteSpace(viewer.Data))
             {
-                <audio class="media-player-audio" controls src="@_viewer.Data"></audio>
+                <audio class="media-player-audio" controls src="@viewer.Data"></audio>
             }
-            @if (!string.IsNullOrWhiteSpace(_viewer.Description))
+            @if (viewer.Type == MediaTypes.Video || viewer.Type == MediaTypes.Audio)
             {
-                <div class="cal-detail-notes" style="margin-top:10px">@_viewer.Description</div>
+                <div class="form-actions" style="margin-top:12px">
+                    <button type="button" class="btn btn-primary btn-block" @onclick="() => PlayMedia(viewer)">▶ Lire avec le lecteur du téléphone</button>
+                </div>
             }
-            <div class="storage-line" style="margin-top:8px"><span>Date</span><strong>@DataStore.FormatDateCourte(_viewer.Date)</strong></div>
+            @if (!string.IsNullOrWhiteSpace(viewer.Description))
+            {
+                <div class="cal-detail-notes" style="margin-top:10px">@viewer.Description</div>
+            }
+            <div class="storage-line" style="margin-top:8px"><span>Date</span><strong>@DataStore.FormatDateCourte(viewer.Date)</strong></div>
         }
     </Modal>
 
@@ -151,6 +189,7 @@ else
 @code {
     private string _type = "";
     private string _search = "";
+    private string? _expanded;
     private bool _showAdd;
     private PhotoService.PickResult? _staged;
     private string _stagedType = MediaTypes.Photo;
@@ -183,12 +222,21 @@ else
 
     private void Refresh() => _ = InvokeAsync(StateHasChanged);
 
-    private void OnCardKey(KeyboardEventArgs k, MediaItem item)
+    private void OnCardKey(KeyboardEventArgs k, string id)
     {
-        if (k.Key is "Enter" or " ") OpenViewer(item);
+        if (k.Key is "Enter" or " ") Toggle(id);
     }
 
+    private void Toggle(string id) => _expanded = _expanded == id ? null : id;
+
     private void OpenViewer(MediaItem item) => _viewer = item;
+
+    private async Task PlayMedia(MediaItem m)
+    {
+        var fileName = (m.Titre == null ? "media" : m.Titre.Trim()) + (m.Type == MediaTypes.Video ? ".mp4" : m.Type == MediaTypes.Audio ? ".m4a" : ".bin");
+        var ok = await Saver.OpenMediaFromDataUrlAsync(m.Data, m.Mime, fileName);
+        if (!ok) State.NotifyError("Impossible d'ouvrir le média : aucune application de lecture trouvée.");
+    }
 
     private async Task AddPhotoGallery()
     {

@@ -1,4 +1,4 @@
-@implements IDisposable
+﻿@implements IDisposable
 @inject DataStore Store
 @inject AppState State
 
@@ -16,7 +16,7 @@ else if (_conversation == null)
         <button class="btn btn-secondary btn-sm" @onclick="ShowAnnonce">📢 Annonce</button>
     </div>
     <div class="search-box cal-search">
-        <span class="search-icon" aria-hidden="true">⌕</span>
+        <span class="search-icon" aria-hidden="true">&#128269;</span>
         <input type="search" placeholder="Rechercher une conversation (membre, annonce, texte)…" aria-label="Rechercher une conversation"
                value="@_search" @oninput="OnSearch" />
     </div>
@@ -44,9 +44,9 @@ else if (_conversation == null)
                     <span class="field-type-icon" aria-hidden="true">@(cid == DataStore.ConversationAnnonces ? "📢" : "💬")</span>
                     <div class="user-card-main">
                         <div class="user-card-name">@ConversationTitle(cid)</div>
-                        <div class="user-card-sub">@Truncate(dernier.Texte, 80)</div>
+                        <div class="user-card-sub">@(dernier.Supprime ? "🗑 Message supprimé" : Truncate(dernier.Texte, 80))</div>
                         <div class="user-card-meta">
-                            <span class="text-muted" style="font-size:12px">@dernier.Expediteur · @DataStore.FormatDateCourte(dernier.Date)</span>
+                            <span class="text-muted" style="font-size:12px">@dernier.Expediteur · @DataStore.FormatDateHeure(dernier.Date)</span>
                             @if (nonLus > 0) { <Badge Text="@nonLus.ToString()" Kind="role" /> }
                         </div>
                     </div>
@@ -54,6 +54,7 @@ else if (_conversation == null)
             }
         </div>
     }
+    <button class="fab" aria-label="Écrire un nouveau message" @onclick="ShowNewMessage">+</button>
 }
 else
 {
@@ -65,14 +66,30 @@ else
         @foreach (var m in _messages)
         {
             var mine = m.Expediteur.Equals(Me, StringComparison.OrdinalIgnoreCase);
-            <div class="msg-bubble @(mine ? "msg-mine" : "msg-theirs")">
-                <div class="msg-meta"><strong>@m.Expediteur</strong> · @DataStore.FormatDateCourte(m.Date)</div>
-                <div class="msg-text">@m.Texte</div>
-                @if (mine || Store.IsAdmin)
-                {
-                    <button type="button" class="btn-icon danger msg-del" aria-label="Supprimer" @onclick="() => AskDelete(m)">🗑</button>
-                }
-            </div>
+            @if (m.Supprime)
+            {
+                <div class="msg-bubble msg-deleted">
+                    <div class="msg-meta"><strong>@(m.SupprimePar ?? m.Expediteur)</strong> · @(string.IsNullOrWhiteSpace(m.SupprimeLe) ? DataStore.FormatDateHeure(m.Date) : DataStore.FormatDateHeure(m.SupprimeLe))</div>
+                    <div class="msg-text msg-text-deleted">🗑 Message supprimé</div>
+                </div>
+            }
+            else
+            {
+                <div class="msg-bubble @(mine ? "msg-mine" : "msg-theirs")">
+                    <div class="msg-meta"><strong>@m.Expediteur</strong> · @DataStore.FormatDateHeure(m.Date)@(string.IsNullOrWhiteSpace(m.DateModification) ? "" : " · modifié")</div>
+                    <div class="msg-text">@m.Texte</div>
+                    <div class="msg-actions">
+                        @if (Store.CanEditMessage(m.Id))
+                        {
+                            <button type="button" class="btn-icon msg-edit" aria-label="Modifier" @onclick="() => AskEdit(m)">✏️</button>
+                        }
+                        @if (mine || Store.IsAdmin)
+                        {
+                            <button type="button" class="btn-icon danger msg-del" aria-label="Supprimer" @onclick="() => AskDelete(m)">🗑</button>
+                        }
+                    </div>
+                </div>
+            }
         }
     </div>
     <div class="msg-reply">
@@ -89,7 +106,7 @@ else
             <div class="form-group">
                 <label>Destinataires</label>
                 <div class="search-box cal-search cal-opt-search">
-                    <span class="search-icon" aria-hidden="true">⌕</span>
+                    <span class="search-icon" aria-hidden="true">&#128269;</span>
                     <input type="search" placeholder="Écrire pour chercher un membre…" aria-label="Chercher un membre"
                            value="@_destSearch" @oninput="e => _destSearch = e.Value?.ToString() ?? string.Empty" />
                 </div>
@@ -126,8 +143,23 @@ else
 </Modal>
 
 <ConfirmDialog Show="_deleteTarget != null" Title="Supprimer le message"
-               Message="Supprimer définitivement ce message ?"
+               Message="Le message sera masqué, mais un journal « Message supprimé » restera visible dans la conversation."
                ConfirmLabel="Supprimer" Danger="true" OnConfirm="ConfirmDelete" OnCancel="() => _deleteTarget = null" />
+
+<Modal Title="Modifier le message" Show="_editTarget != null" OnClose="() => _editTarget = null">
+    <ChildContent>
+        <div class="form-group">
+            <label for="msg-edit-text">Message *</label>
+            <textarea id="msg-edit-text" rows="3" value="@_editTexte" @oninput="e => _editTexte = e.Value?.ToString() ?? string.Empty"></textarea>
+        </div>
+        <span class="field-hint">Modifiable pendant 5 minutes après l'envoi.</span>
+        <span class="form-error">@_editError</span>
+    </ChildContent>
+    <FooterContent>
+        <button class="btn btn-secondary" @onclick="() => _editTarget = null">Annuler</button>
+        <button class="btn btn-primary" @onclick="ConfirmEdit">Enregistrer</button>
+    </FooterContent>
+</Modal>
 
 @code {
     private string Me => Store.GetCurrentUser()?.Identifiant ?? "";
@@ -142,6 +174,9 @@ else
     private string _newTexte = "";
     private string _newError = "";
     private Message? _deleteTarget;
+    private Message? _editTarget;
+    private string _editTexte = "";
+    private string _editError = "";
 
     private IReadOnlyList<UserAccount> ActiveUsers =>
         Store.Users.Where(u => u.Actif).OrderBy(u => u.NomComplet).ToList();
@@ -299,6 +334,25 @@ else
         var res = Store.DeleteMessage(t.Id);
         if (res.Success) { State.NotifySuccess("Message supprimé."); LoadThread(); RefreshList(); }
         else State.NotifyError(res.Error);
+    }
+
+    private void AskEdit(Message m)
+    {
+        _editTarget = m;
+        _editTexte = m.Texte;
+        _editError = "";
+    }
+
+    private void ConfirmEdit()
+    {
+        var t = _editTarget;
+        if (t == null) return;
+        var res = Store.UpdateMessage(t.Id, _editTexte);
+        if (!res.Success) { _editError = res.Error; return; }
+        _editTarget = null;
+        State.NotifySuccess("Message modifié.");
+        LoadThread();
+        RefreshList();
     }
 
     public void Dispose() => Store.DataChanged -= Refresh;

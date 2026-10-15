@@ -4,41 +4,77 @@
 <div class="notifications-container">
     @foreach (var t in _toasts)
     {
-        <div class="notification @t.Type">
-            <span>@t.Message</span>
+        <div class="notification @t.Type @(t.HasAction ? "has-action" : "")">
+            <span class="notification-message">@t.Message</span>
+            @if (t.HasAction)
+            {
+                <button type="button" class="notification-action"
+                        @onclick="() => FireAction(t)">
+                    @t.ActionLabel
+                </button>
+            }
             <button type="button" class="notification-close" aria-label="Fermer" @onclick="() => Dismiss(t.Id)">&times;</button>
         </div>
     }
 </div>
 
 @code {
-    private sealed record ToastItem(Guid Id, string Message, string Type);
+    private sealed record ToastItem(Guid Id, string Message, string Type, string? ActionLabel, Func<Task>? Action)
+    {
+        public bool HasAction => Action != null;
+    }
 
     private readonly List<ToastItem> _toasts = new();
+    private readonly List<Guid> _executingActions = new();
 
     protected override void OnInitialized()
     {
         State.Toast += OnToast;
+        State.ToastAction += OnToastAction;
     }
 
     private void OnToast(string message, string type) => InvokeAsync(() =>
     {
-        var item = new ToastItem(Guid.NewGuid(), message, type);
+        AddToast(new ToastItem(Guid.NewGuid(), message, type, null, null));
+    });
+
+    private void OnToastAction(string message, string type, string? label, Func<Task>? action) => InvokeAsync(() =>
+    {
+        AddToast(new ToastItem(Guid.NewGuid(), message, type, label, action));
+    });
+
+    private void AddToast(ToastItem item)
+    {
         _toasts.Add(item);
         StateHasChanged();
 
-        var t = new System.Threading.CancellationTokenSource(3500);
-        _ = Task.Delay(3500, t.Token).ContinueWith(_ => InvokeAsync(() => Dismiss(item.Id)));
-    });
+        var t = new System.Threading.CancellationTokenSource(item.HasAction ? 8000 : 3500);
+        _ = Task.Delay(item.HasAction ? 8000 : 3500, t.Token).ContinueWith(_ => InvokeAsync(() => Dismiss(item.Id)));
+    }
+
+    private void FireAction(ToastItem item)
+    {
+        if (item.Action == null) return;
+        if (_executingActions.Contains(item.Id)) return;
+        _executingActions.Add(item.Id);
+        _ = InvokeAsync(async () =>
+        {
+            try { await item.Action(); }
+            catch { }
+            Dismiss(item.Id);
+        });
+    }
 
     private void Dismiss(Guid id)
     {
         _toasts.RemoveAll(t => t.Id == id);
+        _executingActions.Remove(id);
         StateHasChanged();
     }
 
     public void Dispose()
     {
         State.Toast -= OnToast;
+        State.ToastAction -= OnToastAction;
     }
 }

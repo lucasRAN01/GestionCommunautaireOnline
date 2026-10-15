@@ -1,3 +1,4 @@
+using System.Text.Json;
 using GestionUtilisateurs.Shared.Models;
 
 namespace GestionUtilisateurs.Shared.Services;
@@ -14,6 +15,38 @@ public partial class DataStore
     /// Supabase et rechargement des données modifiées par les autres membres.
     /// </summary>
     public bool OnlineMode { get; set; }
+
+    /// <summary>
+    /// Préfixe des préférences personnelles (thème, conseils, guide déjà vu).
+    /// En ligne, elles restent dans le navigateur du membre : les Paramètres
+    /// partagés ne sont modifiables que par les gestionnaires.
+    /// </summary>
+    public const string K_PREFS_PREFIX = "gu2:prefs:";
+
+    private sealed class OnlinePrefs
+    {
+        public bool GuideVu { get; set; }
+        public List<string> AideVu { get; set; } = new();
+        public string? Theme { get; set; }
+        public bool? Conseils { get; set; }
+    }
+
+    private static string PrefsKey(string identifiant) => K_PREFS_PREFIX + identifiant.Trim().ToLowerInvariant();
+
+    private OnlinePrefs LoadPrefs(string identifiant)
+    {
+        var prefs = Deserialize<OnlinePrefs>(_storage.Get(PrefsKey(identifiant))) ?? new OnlinePrefs();
+        prefs.AideVu ??= new List<string>();
+        return prefs;
+    }
+
+    private void UpdatePrefs(string identifiant, Action<OnlinePrefs> change)
+    {
+        var prefs = LoadPrefs(identifiant);
+        change(prefs);
+        _storage.Set(PrefsKey(identifiant), JsonSerializer.Serialize(prefs, JsonOpts));
+        DataChanged?.Invoke();
+    }
 
     /// <summary>Base en ligne vierge : aucun compte local, le premier compte inscrit devient administrateur.</summary>
     private void InitializeEmptyOnline()

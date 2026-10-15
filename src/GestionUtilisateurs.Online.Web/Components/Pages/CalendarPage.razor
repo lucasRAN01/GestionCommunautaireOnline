@@ -1,4 +1,4 @@
-@implements IDisposable
+﻿@implements IDisposable
 @inject DataStore Store
 @inject AppState State
 
@@ -11,7 +11,7 @@
 
 <div class="cal-toolbar">
     <div class="search-box cal-search">
-        <span class="search-icon" aria-hidden="true">⌕</span>
+        <span class="search-icon" aria-hidden="true">&#128269;</span>
         <input type="text" placeholder="Rechercher un événement…" value="@_search" @oninput="OnSearch" />
     </div>
     <button class="btn btn-secondary btn-sm cal-filter-btn @(_HasActiveFilters ? "active" : "")" @onclick="OpenFilters">
@@ -113,6 +113,9 @@ else
 
 @if (_view == "mois")
 {
+    // « Événement ce jour » : tous les types d'événements du jour sélectionné,
+    // y compris les récurrents (anniversaires chaque année…), même si un filtre masque certains types.
+    var _dayAll = DayEventsAll(_selectedDay ?? DateTime.Today);
     <div class="cal-day-section">
         <div class="cal-day-title">
             <span>@SelectedDayTitle</span>
@@ -120,19 +123,26 @@ else
             {
                 <span class="cal-holiday-label">🎌 @SelectedDayHoliday</span>
             }
+            @if (_dayAll.Count > 0)
+            {
+                <span class="cal-list-count">@_dayAll.Count événement(s) ce jour</span>
+            }
         </div>
-        @if (FilteredEvents.Count == 0)
+        @if (_dayAll.Count == 0)
         {
-            <EmptyState Icon="📅" Title="Aucun événement" Message="Votre calendrier est vide pour le moment. Ajoutez un anniversaire, une réunion ou un rappel." />
-        }
-        else if (DayEvents(_selectedDay ?? DateTime.Today).Count == 0)
-        {
-            <div class="cal-no-events">Aucun événement ce jour.</div>
+            @if (Store.Events.Count == 0)
+            {
+                <EmptyState Icon="📅" Title="Aucun événement" Message="Votre calendrier est vide pour le moment. Ajoutez un anniversaire, une réunion ou un rappel." />
+            }
+            else
+            {
+                <div class="cal-no-events">Aucun événement ce jour.</div>
+            }
         }
         else
         {
             <div class="cal-events">
-                @foreach (var evt in DayEvents(_selectedDay ?? DateTime.Today))
+                @foreach (var evt in _dayAll)
                 {
                     @RenderEventCard(evt)
                 }
@@ -228,7 +238,7 @@ else
                 </div>
             }
             <div class="search-box cal-search cal-opt-search">
-                <span class="search-icon" aria-hidden="true">⌕</span>
+                <span class="search-icon" aria-hidden="true">&#128269;</span>
                 <input type="search" placeholder="Rechercher une personne puis l'ajouter…" aria-label="Rechercher une personne"
                        value="@_personSearch" @oninput="OnPersonSearch" />
             </div>
@@ -735,7 +745,7 @@ else
         {
             var date = start.AddDays(i);
             var thisMonth = date.Year == _month.Year && date.Month == _month.Month;
-            var events = FilteredEvents.Where(e => TryDate(e.Date, out var d) && d == date).ToList();
+            var events = FilteredEvents.Where(e => OccursOn(e, date)).ToList();
             var dots = events.Select(e => CalendarEventTypes.Color(e.Type))
                 .Distinct()
                 .Take(3)
@@ -749,6 +759,39 @@ else
         FilteredEvents.Where(e => TryDate(e.Date, out var d) && d == day)
             .OrderBy(e => e.TouteLaJournee ? 0 : 1)
             .ThenBy(e => e.HeureDebut ?? "00:00")
+            .ToList();
+
+    /// <summary>Dit si un événement a lieu un jour donné (date exacte ou répétition).</summary>
+    private static bool OccursOn(CalendarEvent e, DateTime day)
+    {
+        if (!TryDate(e.Date, out var d)) return false;
+        if (d.Date == day.Date) return true;
+        var rep = e.Repetition ?? CalendarEventTypes.RepetitionAucune;
+        if (rep == CalendarEventTypes.RepetitionAucune) return false;
+        if (day.Date < d.Date)
+        {
+            // Anniversaire : revient chaque année même pour les naissances passées.
+            if (rep != CalendarEventTypes.RepetitionAnnuelle) return false;
+        }
+        return rep switch
+        {
+            CalendarEventTypes.RepetitionQuotidienne => day.Date >= d.Date,
+            CalendarEventTypes.RepetitionHebdomadaire => day.Date >= d.Date && (day.Date - d.Date).Days % 7 == 0,
+            CalendarEventTypes.RepetitionMensuelle => day.Date >= d.Date && day.Day == d.Day,
+            CalendarEventTypes.RepetitionAnnuelle => day.Month == d.Month && day.Day == d.Day,
+            _ => false
+        };
+    }
+
+    /// <summary>
+    /// Tous les événements du jour (tous types, récurrences incluses, sans filtre) :
+    /// alimente automatiquement « Événement ce jour » dès qu'il y en a.
+    /// </summary>
+    private List<CalendarEvent> DayEventsAll(DateTime day) =>
+        Store.Events.Where(e => OccursOn(e, day))
+            .OrderBy(e => e.TouteLaJournee ? 0 : 1)
+            .ThenBy(e => e.HeureDebut ?? "00:00")
+            .ThenBy(e => e.Titre)
             .ToList();
 
     private void GoToday()

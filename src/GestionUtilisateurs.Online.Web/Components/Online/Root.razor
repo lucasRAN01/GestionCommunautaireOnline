@@ -1,5 +1,6 @@
 @implements IDisposable
 @inject OnlineSession Session
+@inject JavascriptBridge Js
 
 @switch (Session.State)
 {
@@ -38,6 +39,16 @@
     }
 
     private void OnChanged() => _ = InvokeAsync(StateHasChanged);
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        // L'écran de démarrage de index.html s'efface dès que la session est connue
+        // (connexion, compte en attente…), sans attendre l'application complète.
+        if (Session.State != OnlineSessionState.Starting)
+        {
+            try { await Js.NotifySplashReadyAsync(); } catch { }
+        }
+    }
 
     public void Dispose() => Session.Changed -= OnChanged;
 }
