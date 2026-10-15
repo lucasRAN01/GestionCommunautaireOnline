@@ -5,14 +5,19 @@
 #     administrateurs si un seuil est franchi ;
 #  3. ouvre (ou met à jour) un ticket GitHub « Alerte capacité Supabase »
 #     pour prévenir aussi par e-mail GitHub ;
-#  4. modifie un petit fichier du dépôt si rien n'a changé depuis 50 jours :
+#  4. ouvre un ticket « Comptes en attente de validation » tant que des
+#     inscriptions attendent un administrateur, et le ferme ensuite ;
+#  5. modifie un petit fichier du dépôt si rien n'a changé depuis 50 jours :
 #     GitHub suspend les tâches programmées d'un dépôt public après 60 jours
 #     sans activité, ce qui arrêterait la veille et les sauvegardes.
 name: Veille Supabase
 
+# Et le 1er janvier, avril, juillet et octobre : ouvre un ticket
+# « Vérification trimestrielle » avec la liste des contrôles à faire à la main.
 on:
   schedule:
     - cron: "17 6 * * *"
+    - cron: "0 7 1 1,4,7,10 *"
   workflow_dispatch:
 
 permissions:
@@ -21,7 +26,7 @@ permissions:
 jobs:
   veille:
     runs-on: ubuntu-latest
-    if: ${{ vars.SUPABASE_URL != '' }}
+    if: ${{ vars.SUPABASE_URL != '' && github.event.schedule != '0 7 1 1,4,7,10 *' }}
     steps:
       - name: Mesurer la capacité (et garder le projet actif)
         id: mesure
@@ -67,6 +72,50 @@ jobs:
           else
             gh issue create --title "$title" --body "$body"
           fi
+
+      - name: Prévenir des comptes en attente de validation
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          PENDING: ${{ steps.mesure.outputs.pending }}
+        run: |
+          set -euo pipefail
+          case "$PENDING" in ''|*[!0-9]*) PENDING=0 ;; esac
+          read -r number title < <(gh issue list --state open --search 'in:title "en attente de validation"' \
+            --json number,title -q '.[0] | "\(.number) \(.title)"' || true) || true
+          if [ "$PENDING" -eq 0 ]; then
+            if [ -n "${number:-}" ]; then
+              gh issue close "$number" --comment "Plus aucun compte en attente. Merci !"
+            fi
+            exit 0
+          fi
+          new_title="$PENDING compte(s) en attente de validation"
+          body="$PENDING personne(s) se sont inscrites et attendent qu'un administrateur valide leur compte.
+
+          Ouvrez l'application > menu > **Comptes en ligne** pour accepter ou refuser chaque demande. Ce ticket se fermera tout seul ensuite."
+          if [ -z "${number:-}" ]; then
+            gh issue create --title "$new_title" --body "$body"
+          elif [ "$title" != "$new_title" ]; then
+            gh issue edit "$number" --title "$new_title"
+            gh issue comment "$number" --body "$body"
+          fi
+
+  trimestre:
+    runs-on: ubuntu-latest
+    if: ${{ github.event.schedule == '0 7 1 1,4,7,10 *' }}
+    steps:
+      - name: Ouvrir le ticket de vérification trimestrielle
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          gh issue create --title "Vérification trimestrielle ($(date -u +%m/%Y))" --body "Quelques minutes, quatre fois par an. Cochez chaque case puis fermez ce ticket.
+
+          - [ ] **Ouvrir une sauvegarde** : Actions > Sauvegarde > dernière exécution verte > télécharger \`sauvegarde-base\` et l'ouvrir avec 7-Zip et le mot de passe. Si le mot de passe est perdu, changez le secret \`SAUVEGARDE_MOT_DE_PASSE\` tout de suite.
+          - [ ] **Regarder l'onglet Actions** : Veille Supabase et Sauvegarde doivent être vertes (pas de croix rouge ni de message « disabled »).
+          - [ ] **Ouvrir le site** et se connecter en administrateur : menu > Capacité du serveur doit rester sous 70 %.
+          - [ ] **Vérifier les administrateurs** : dans Comptes en ligne, au moins deux personnes de confiance ont le rôle administrateur, et les anciens membres sont désactivés."
 
   activite:
     runs-on: ubuntu-latest
