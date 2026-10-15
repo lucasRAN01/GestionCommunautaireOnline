@@ -6,34 +6,34 @@
 
 @if (!Store.IsAdmin)
 {
-    <EmptyState Icon="🔒" Title="Accès réservé" Message="La surveillance de la capacité est réservée aux administrateurs." />
+    <EmptyState Icon="🔒" Title="@L.T("Accès réservé")" Message="@L.T("La surveillance de la capacité est réservée aux administrateurs.")" />
 }
 else if (_report == null)
 {
-    <div class="card online-muted">@(_error ?? "Mesure de l'espace utilisé…")</div>
+    <div class="card online-muted">@(_error ?? L.T("Mesure de l'espace utilisé…"))</div>
 }
 else
 {
     var r = _report;
     <div class="page-head">
-        <p>Espace utilisé dans l'offre gratuite Supabase. Une alerte est créée dès @r.Settings.WarningPct % (attention) et @r.Settings.CriticalPct % (critique) ; elle s'affiche ici, dans le bandeau des administrateurs et, si configuré, en ticket GitHub par la vérification quotidienne.</p>
+        <p>@L.F("Espace utilisé dans l'offre gratuite Supabase. Une alerte est créée dès {0} % (attention) et {1} % (critique) ; elle s'affiche ici, dans le bandeau des administrateurs et, si configuré, en ticket GitHub par la vérification quotidienne.", r.Settings.WarningPct, r.Settings.CriticalPct)</p>
     </div>
 
     <div class="online-gauges">
-        @Gauge("Base de données", "Membres, calendrier, finances, messages… (texte)", r.DbBytes, r.Settings.DbLimitBytes, r.DbPercent,
+        @Gauge(L.T("Base de données"), L.T("Membres, calendrier, finances, messages… (texte)"), r.DbBytes, r.Settings.DbLimitBytes, r.DbPercent,
                CapacityService.DaysUntilFull(r.History, p => p.DbBytes, r.DbBytes, r.Settings.DbLimitBytes))
-        @Gauge("Fichiers", r.StorageFiles + " fichier(s) : photos, documents, journal multimédia", r.StorageBytes, r.Settings.StorageLimitBytes, r.StoragePercent,
+        @Gauge(L.T("Fichiers"), L.F("{0} fichier(s) : photos, documents, journal multimédia", r.StorageFiles), r.StorageBytes, r.Settings.StorageLimitBytes, r.StoragePercent,
                CapacityService.DaysUntilFull(r.History, p => p.StorageBytes, r.StorageBytes, r.Settings.StorageLimitBytes))
         <div class="card online-gauge">
             <div class="online-gauge-head">
-                <h3>Comptes</h3>
+                <h3>@L.T("Comptes")</h3>
                 <span class="online-level online-level-ok">OK</span>
             </div>
-            <div class="online-gauge-value">@r.MembersActive <small>actifs sur 50 000 par mois</small></div>
-            <p class="text-muted">@r.MembersPending demande(s) en attente de validation.</p>
+            <div class="online-gauge-value">@r.MembersActive <small>@L.T("actifs sur 50 000 par mois")</small></div>
+            <p class="text-muted">@L.F("{0} demande(s) en attente de validation.", r.MembersPending)</p>
             @if (r.MembersPending > 0 && Store.Can(Permissions.UsersManage))
             {
-                <button type="button" class="btn btn-secondary btn-sm" @onclick='() => State.Navigate("comptes")'>Valider les comptes</button>
+                <button type="button" class="btn btn-secondary btn-sm" @onclick='() => State.Navigate("comptes")'>@L.T("Valider les comptes")</button>
             }
         </div>
     </div>
@@ -41,7 +41,7 @@ else
     @if (OpenAlerts.Count > 0)
     {
         <section class="card online-section">
-            <div class="online-section-head"><h3>Alertes à traiter</h3><span class="online-count online-count-hot">@OpenAlerts.Count</span></div>
+            <div class="online-section-head"><h3>@L.T("Alertes à traiter")</h3><span class="online-count online-count-hot">@OpenAlerts.Count</span></div>
             @foreach (var a in OpenAlerts)
             {
                 var alert = a;
@@ -49,96 +49,96 @@ else
                     <span class="online-alert-icon" aria-hidden="true">@(alert.Level == "critique" ? "⛔" : "⚠")</span>
                     <div class="online-alert-main">
                         <strong>@alert.Message</strong>
-                        <span class="text-muted">@alert.CreatedAt.ToLocalTime().ToString("dd/MM/yyyy à HH:mm") · @Advice(alert.Metric)</span>
+                        <span class="text-muted">@L.F("{0:dd/MM/yyyy} à {0:HH:mm}", alert.CreatedAt.ToLocalTime()) · @Advice(alert.Metric)</span>
                     </div>
-                    <button type="button" class="btn btn-secondary btn-sm" @onclick="() => AcknowledgeAsync(alert)">Marquer comme traitée</button>
+                    <button type="button" class="btn btn-secondary btn-sm" @onclick="() => AcknowledgeAsync(alert)">@L.T("Marquer comme traitée")</button>
                 </div>
             }
         </section>
     }
 
     <section class="card online-section">
-        <div class="online-section-head"><h3>Évolution sur 90 jours</h3></div>
+        <div class="online-section-head"><h3>@L.T("Évolution sur 90 jours")</h3></div>
         @if (r.History.Count < 2)
         {
-            <p class="text-muted">L'historique se remplit chaque jour (vérification automatique GitHub et visites de cette page).</p>
+            <p class="text-muted">@L.T("L'historique se remplit chaque jour (vérification automatique GitHub et visites de cette page).")</p>
         }
         else
         {
             @HistoryChart(r)
             <div class="online-legend">
-                <span><i class="online-dot online-dot-db"></i>Base de données</span>
-                <span><i class="online-dot online-dot-files"></i>Fichiers</span>
-                <span><i class="online-dot online-dot-limit"></i>Seuils @r.Settings.WarningPct % / @r.Settings.CriticalPct %</span>
+                <span><i class="online-dot online-dot-db"></i>@L.T("Base de données")</span>
+                <span><i class="online-dot online-dot-files"></i>@L.T("Fichiers")</span>
+                <span><i class="online-dot online-dot-limit"></i>@L.F("Seuils {0} % / {1} %", r.Settings.WarningPct, r.Settings.CriticalPct)</span>
             </div>
         }
     </section>
 
     <div class="online-two-cols">
         <section class="card online-section">
-            <div class="online-section-head"><h3>Ce qui occupe la base</h3></div>
+            <div class="online-section-head"><h3>@L.T("Ce qui occupe la base")</h3></div>
             <div class="online-bars">
                 @foreach (var c in r.Collections.Take(8))
                 {
                     var pct = r.DbBytes == 0 ? 0 : 100.0 * c.Bytes / Math.Max(1, r.Collections.Sum(x => x.Bytes));
                     <div class="online-bar-row">
-                        <span class="online-bar-label">@CapacityService.CollectionLabel(c.Key)</span>
+                        <span class="online-bar-label">@L.T(CapacityService.CollectionLabel(c.Key))</span>
                         <span class="online-bar-track"><span class="online-bar-fill" style="width:@Css(pct)%"></span></span>
-                        <span class="online-bar-size">@CapacityService.FormatSize(c.Bytes)</span>
+                        <span class="online-bar-size">@Taille(c.Bytes)</span>
                     </div>
                 }
             </div>
         </section>
 
         <section class="card online-section">
-            <div class="online-section-head"><h3>Seuils d'alerte</h3></div>
+            <div class="online-section-head"><h3>@L.T("Seuils d'alerte")</h3></div>
             <div class="online-row">
                 <div class="form-group">
-                    <label for="cap-warn">Attention à partir de (%)</label>
+                    <label for="cap-warn">@L.T("Attention à partir de (%)")</label>
                     <input id="cap-warn" type="number" min="10" max="99" @bind="_warning" />
                 </div>
                 <div class="form-group">
-                    <label for="cap-crit">Critique à partir de (%)</label>
+                    <label for="cap-crit">@L.T("Critique à partir de (%)")</label>
                     <input id="cap-crit" type="number" min="11" max="100" @bind="_critical" />
                 </div>
             </div>
-            <button type="button" class="btn btn-primary btn-sm" disabled="@_busy" @onclick="SaveThresholdsAsync">Enregistrer les seuils</button>
+            <button type="button" class="btn btn-primary btn-sm" disabled="@_busy" @onclick="SaveThresholdsAsync">@L.T("Enregistrer les seuils")</button>
         </section>
     </div>
 
     <section class="card online-section">
-        <div class="online-section-head"><h3>Libérer de l'espace</h3></div>
+        <div class="online-section-head"><h3>@L.T("Libérer de l'espace")</h3></div>
         <ul class="online-tips">
-            <li>Les photos sont déjà réduites automatiquement avant l'envoi (1 600 pixels maximum, JPEG).</li>
-            <li>Videz la corbeille des documents et les archives devenues inutiles.</li>
-            <li>Supprimez les fichiers qui ne sont plus utilisés (photo remplacée, document supprimé) :</li>
+            <li>@L.T("Les photos sont déjà réduites automatiquement avant l'envoi (1 600 pixels maximum, JPEG).")</li>
+            <li>@L.T("Videz la corbeille des documents et les archives devenues inutiles.")</li>
+            <li>@L.T("Supprimez les fichiers qui ne sont plus utilisés (photo remplacée, document supprimé) :")</li>
         </ul>
         <div class="online-row">
-            <button type="button" class="btn btn-secondary btn-sm" disabled="@_busy" @onclick="FindUnusedAsync">Rechercher les fichiers inutilisés</button>
+            <button type="button" class="btn btn-secondary btn-sm" disabled="@_busy" @onclick="FindUnusedAsync">@L.T("Rechercher les fichiers inutilisés")</button>
             @if (_unused != null)
             {
-                <span class="text-muted">@_unused.Count fichier(s), @CapacityService.FormatSize(_unused.Sum(f => f.Size))</span>
+                <span class="text-muted">@L.F("{0} fichier(s), {1}", _unused.Count, Taille(_unused.Sum(f => f.Size)))</span>
                 @if (_unused.Count > 0)
                 {
-                    <button type="button" class="btn btn-danger btn-sm" disabled="@_busy" @onclick="() => _confirmCleanup = true">Supprimer</button>
+                    <button type="button" class="btn btn-danger btn-sm" disabled="@_busy" @onclick="() => _confirmCleanup = true">@L.T("Supprimer")</button>
                 }
             }
         </div>
     </section>
 
     <section class="card online-section">
-        <div class="online-section-head"><h3>Transfert mensuel (5 Go)</h3></div>
-        <p class="text-muted">Le volume téléchargé par les membres n'est pas mesurable depuis l'application. Il reste faible car chaque appareil garde les données et les fichiers en cache. Vérifiez-le de temps en temps dans le tableau de bord Supabase.</p>
+        <div class="online-section-head"><h3>@L.T("Transfert mensuel (5 Go)")</h3></div>
+        <p class="text-muted">@L.T("Le volume téléchargé par les membres n'est pas mesurable depuis l'application. Il reste faible car chaque appareil garde les données et les fichiers en cache. Vérifiez-le de temps en temps dans le tableau de bord Supabase.")</p>
         @if (!string.IsNullOrEmpty(UsageUrl))
         {
-            <a class="btn btn-secondary btn-sm" href="@UsageUrl" target="_blank" rel="noopener">Ouvrir l'utilisation Supabase</a>
+            <a class="btn btn-secondary btn-sm" href="@UsageUrl" target="_blank" rel="noopener">@L.T("Ouvrir l'utilisation Supabase")</a>
         }
     </section>
 }
 
-<ConfirmDialog Show="_confirmCleanup" Title="Supprimer les fichiers inutilisés"
-               Message="@($"Supprimer définitivement {_unused?.Count ?? 0} fichier(s) qui ne sont plus utilisés par aucune donnée ?")"
-               ConfirmLabel="Supprimer" Danger="true"
+<ConfirmDialog Show="_confirmCleanup" Title="@L.T("Supprimer les fichiers inutilisés")"
+               Message="@L.F("Supprimer définitivement {0} fichier(s) qui ne sont plus utilisés par aucune donnée ?", _unused?.Count ?? 0)"
+               ConfirmLabel="@L.T("Supprimer")" Danger="true"
                OnConfirm="CleanupAsync" OnCancel="() => _confirmCleanup = false" />
 
 @code {
@@ -170,7 +170,7 @@ else
         var res = await Capacity.MeasureAsync();
         if (!res.Ok || res.Data == null)
         {
-            _error = res.Error ?? "Mesure impossible.";
+            _error = res.Error ?? L.T("Mesure impossible.");
             return;
         }
         _report = res.Data;
@@ -190,14 +190,14 @@ else
     {
         if (_warning < 10 || _critical > 100 || _warning >= _critical)
         {
-            State.NotifyError("Seuils invalides : le seuil « attention » doit être inférieur au seuil « critique » (entre 10 et 100 %).");
+            State.NotifyError(L.T("Seuils invalides : le seuil « attention » doit être inférieur au seuil « critique » (entre 10 et 100 %)."));
             return;
         }
         _busy = true;
         var res = await Capacity.SaveThresholdsAsync(_warning, _critical);
         _busy = false;
         if (!res.Ok) { State.NotifyError(res.Error!); return; }
-        State.NotifySuccess("Seuils enregistrés.");
+        State.NotifySuccess(L.T("Seuils enregistrés."));
         await LoadAsync();
     }
 
@@ -218,16 +218,24 @@ else
         var error = await Capacity.DeleteFilesAsync(_unused);
         _busy = false;
         if (error != null) { State.NotifyError(error); return; }
-        State.NotifySuccess(_unused.Count + " fichier(s) supprimé(s).");
+        State.NotifySuccess(L.F("{0} fichier(s) supprimé(s).", _unused.Count));
         _unused = null;
         await LoadAsync();
     }
 
     private string Advice(string metric) => metric == "base"
-        ? "Supprimez l'historique inutile (journal d'activité, archives)."
-        : "Supprimez les fichiers inutilisés et videz la corbeille des documents.";
+        ? L.T("Supprimez l'historique inutile (journal d'activité, archives).")
+        : L.T("Supprimez les fichiers inutilisés et videz la corbeille des documents.");
 
     private static string Css(double v) => v.ToString("0.0", CultureInfo.InvariantCulture);
+
+    /// <summary>Taille lisible avec l'unité (o, Ko, Mo, Go) dans la langue du membre.</summary>
+    private static string Taille(long bytes)
+    {
+        var s = CapacityService.FormatSize(bytes);
+        var i = s.LastIndexOf(' ');
+        return i < 0 ? s : s[..(i + 1)] + L.T(s[(i + 1)..]);
+    }
 
     private RenderFragment Gauge(string title, string subtitle, long used, long limit, double percent, int? daysUntilFull) => __builder =>
     {
@@ -235,9 +243,9 @@ else
         <div class="card online-gauge online-gauge-@level">
             <div class="online-gauge-head">
                 <h3>@title</h3>
-                <span class="online-level online-level-@level">@(level == "critique" ? "Critique" : level == "attention" ? "Attention" : "OK")</span>
+                <span class="online-level online-level-@level">@(level == "critique" ? L.T("Critique") : level == "attention" ? L.T("Attention") : "OK")</span>
             </div>
-            <div class="online-gauge-value">@percent.ToString("0.#") % <small>@CapacityService.FormatSize(used) sur @CapacityService.FormatSize(limit)</small></div>
+            <div class="online-gauge-value">@percent.ToString("0.#") % <small>@L.F("{0} sur {1}", Taille(used), Taille(limit))</small></div>
             <div class="online-meter" role="meter" aria-valuemin="0" aria-valuemax="100" aria-valuenow="@Css(percent)" aria-label="@title">
                 <span class="online-meter-fill" style="width:@Css(Math.Min(percent, 100))%"></span>
                 <span class="online-meter-mark" style="left:@_report.Settings.WarningPct%"></span>
@@ -245,9 +253,9 @@ else
             </div>
             <p class="text-muted">@subtitle</p>
             <p class="online-projection">
-                @(daysUntilFull == null ? "Pas de hausse notable sur les 30 derniers jours."
-                  : daysUntilFull == 0 ? "Limite atteinte."
-                  : "Au rythme actuel, plein dans environ " + daysUntilFull + " jour(s).")
+                @(daysUntilFull == null ? L.T("Pas de hausse notable sur les 30 derniers jours.")
+                  : daysUntilFull == 0 ? L.T("Limite atteinte.")
+                  : L.F("Au rythme actuel, plein dans environ {0} jour(s).", daysUntilFull))
             </p>
         </div>
     };
@@ -263,7 +271,7 @@ else
         string Line(Func<CapacityPoint, double> pct) => string.Join(" ", pts.Select(p => X(p.Day) + "," + Y(pct(p))));
         var db = Line(p => 100.0 * p.DbBytes / Math.Max(1, r.Settings.DbLimitBytes));
         var files = Line(p => 100.0 * p.StorageBytes / Math.Max(1, r.Settings.StorageLimitBytes));
-        <svg class="online-chart" viewBox="0 0 @Css(w) @Css(h)" preserveAspectRatio="none" role="img" aria-label="Évolution de l'espace utilisé en pourcentage de la limite">
+        <svg class="online-chart" viewBox="0 0 @Css(w) @Css(h)" preserveAspectRatio="none" role="img" aria-label="@L.T("Évolution de l'espace utilisé en pourcentage de la limite")">
             <line x1="0" x2="@Css(w)" y1="@Y(r.Settings.WarningPct)" y2="@Y(r.Settings.WarningPct)" class="online-chart-limit" />
             <line x1="0" x2="@Css(w)" y1="@Y(r.Settings.CriticalPct)" y2="@Y(r.Settings.CriticalPct)" class="online-chart-limit online-chart-crit" />
             <polyline points="@db" class="online-chart-db" />

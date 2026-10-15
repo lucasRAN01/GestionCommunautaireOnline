@@ -5,17 +5,17 @@
 
 @if (!Store.Can(Permissions.UsersManage))
 {
-    <EmptyState Icon="🔒" Title="Accès réservé" Message="La validation des comptes est réservée aux personnes qui gèrent les utilisateurs." />
+    <EmptyState Icon="🔒" Title="@L.T("Accès réservé")" Message="@L.T("La validation des comptes est réservée aux personnes qui gèrent les utilisateurs.")" />
 }
 else
 {
     <div class="page-head">
-        <p>Chaque inscription doit être validée ici avant que le membre puisse se connecter. Choisissez son rôle au moment de la validation ; il pourra être changé ensuite depuis la fiche du membre.</p>
+        <p>@L.T("Chaque inscription doit être validée ici avant que le membre puisse se connecter. Choisissez son rôle au moment de la validation ; il pourra être changé ensuite depuis la fiche du membre.")</p>
     </div>
 
     @if (_loading)
     {
-        <div class="card online-muted">Chargement des comptes…</div>
+        <div class="card online-muted">@L.T("Chargement des comptes…")</div>
     }
     else if (_error != null)
     {
@@ -25,12 +25,12 @@ else
     {
         <section class="card online-section">
             <div class="online-section-head">
-                <h3>Demandes en attente</h3>
+                <h3>@L.T("Demandes en attente")</h3>
                 <span class="online-count @(Pending.Count > 0 ? "online-count-hot" : "")">@Pending.Count</span>
             </div>
             @if (Pending.Count == 0)
             {
-                <p class="text-muted">Aucune demande en attente.</p>
+                <p class="text-muted">@L.T("Aucune demande en attente.")</p>
             }
             else
             {
@@ -44,32 +44,32 @@ else
                                 <div>
                                     <strong>@profile.NomComplet</strong>
                                     <div class="text-muted online-account-meta">@profile.Email@(string.IsNullOrWhiteSpace(profile.Telephone) ? "" : " · " + profile.Telephone)</div>
-                                    <div class="text-muted online-account-meta">Inscrit le @Date(profile.CreatedAt)</div>
+                                    <div class="text-muted online-account-meta">@L.F("Inscrit le {0}", Date(profile.CreatedAt))</div>
                                     @{ var fiches = FichesSimilaires(profile); }
                                     @if (fiches.Count > 0)
                                     {
                                         <div class="online-link-fiche">
-                                            <label for="lien-@profile.Id">⚠ Une fiche existe peut-être déjà pour cette personne :</label>
+                                            <label for="lien-@profile.Id">@L.T("⚠ Une fiche existe peut-être déjà pour cette personne :")</label>
                                             <select id="lien-@profile.Id" value="@LienFor(profile, fiches)" @onchange="e => _liens[profile.Id] = e.Value?.ToString() ?? NouvelleFiche">
                                                 @foreach (var f in fiches)
                                                 {
-                                                    <option value="@f.Fiche.Id">Relier à la fiche de @f.Fiche.NomComplet (@f.Raison)</option>
+                                                    <option value="@f.Fiche.Id">@L.F("Relier à la fiche de {0} ({1})", f.Fiche.NomComplet, Raison(f.Raison))</option>
                                                 }
-                                                <option value="@NouvelleFiche">Créer une nouvelle fiche</option>
+                                                <option value="@NouvelleFiche">@L.T("Créer une nouvelle fiche")</option>
                                             </select>
                                         </div>
                                     }
                                 </div>
                             </div>
                             <div class="online-account-actions">
-                                <select aria-label="Rôle attribué à @profile.NomComplet" value="@RoleFor(profile)" @onchange="e => _roles[profile.Id] = e.Value?.ToString() ?? Roles.Utilisateur">
+                                <select aria-label="@L.F("Rôle attribué à {0}", profile.NomComplet)" value="@RoleFor(profile)" @onchange="e => _roles[profile.Id] = e.Value?.ToString() ?? Roles.Utilisateur">
                                     @foreach (var role in AssignableRoles)
                                     {
-                                        <option value="@role">@role</option>
+                                        <option value="@role">@L.T(role)</option>
                                     }
                                 </select>
-                                <button type="button" class="btn btn-primary btn-sm" disabled="@_busy" @onclick="() => ApproveAsync(profile)">Valider</button>
-                                <button type="button" class="btn btn-secondary btn-sm" disabled="@_busy" @onclick="() => RejectAsync(profile)">Refuser</button>
+                                <button type="button" class="btn btn-primary btn-sm" disabled="@_busy" @onclick="() => ApproveAsync(profile)">@L.T("Valider")</button>
+                                <button type="button" class="btn btn-secondary btn-sm" disabled="@_busy" @onclick="() => RejectAsync(profile)">@L.T("Refuser")</button>
                             </div>
                         </div>
                     }
@@ -79,7 +79,7 @@ else
 
         <section class="card online-section">
             <div class="online-section-head">
-                <h3>Comptes en ligne</h3>
+                <h3>@L.T("Comptes en ligne")</h3>
                 <span class="online-count">@Others.Count</span>
             </div>
             <div class="online-account-list">
@@ -91,48 +91,48 @@ else
                             <Avatar UserName="@profile.NomComplet" Seed="@profile.Email" Size="sm" />
                             <div>
                                 <strong>@profile.NomComplet</strong>
-                                <span class="online-status-pill online-status-@profile.Statut">@OnlineStatuts.Label(profile.Statut)</span>
-                                <div class="text-muted online-account-meta">@profile.Email · @profile.Role</div>
-                                <div class="text-muted online-account-meta">Dernière visite : @Date(profile.LastSeenAt)</div>
+                                <span class="online-status-pill online-status-@profile.Statut">@L.T(OnlineStatuts.Label(profile.Statut))</span>
+                                <div class="text-muted online-account-meta">@profile.Email · @L.T(profile.Role)</div>
+                                <div class="text-muted online-account-meta">@L.F("Dernière visite : {0}", Date(profile.LastSeenAt))</div>
                             </div>
                         </div>
                         <div class="online-account-actions">
                             @if (profile.Statut == OnlineStatuts.Actif && Store.IsAdmin && profile.Id != Session.Profile?.Id)
                             {
-                                <button type="button" class="btn btn-secondary btn-sm" @onclick="() => OpenPassword(profile)">Nouveau mot de passe</button>
+                                <button type="button" class="btn btn-secondary btn-sm" @onclick="() => OpenPassword(profile)">@L.T("Nouveau mot de passe")</button>
                             }
                             @if (profile.Statut == OnlineStatuts.Refuse)
                             {
-                                <button type="button" class="btn btn-secondary btn-sm" disabled="@_busy" @onclick="() => ApproveAsync(profile)">Valider quand même</button>
-                                <button type="button" class="btn btn-danger btn-sm" disabled="@_busy" @onclick="() => _toDelete = profile">Supprimer</button>
+                                <button type="button" class="btn btn-secondary btn-sm" disabled="@_busy" @onclick="() => ApproveAsync(profile)">@L.T("Valider quand même")</button>
+                                <button type="button" class="btn btn-danger btn-sm" disabled="@_busy" @onclick="() => _toDelete = profile">@L.T("Supprimer")</button>
                             }
                         </div>
                     </div>
                 }
             </div>
-            <p class="field-hint">Pour changer le rôle d'un membre ou désactiver son compte, modifiez sa fiche dans « Utilisateurs » : le compte en ligne suit automatiquement.</p>
+            <p class="field-hint">@L.T("Pour changer le rôle d'un membre ou désactiver son compte, modifiez sa fiche dans « Utilisateurs » : le compte en ligne suit automatiquement.")</p>
         </section>
     }
 }
 
-<Modal Title="Nouveau mot de passe" Show="_pwdFor != null" OnClose="() => _pwdFor = null">
+<Modal Title="@L.T("Nouveau mot de passe")" Show="_pwdFor != null" OnClose="() => _pwdFor = null">
     <ChildContent>
-        <p>Définissez un mot de passe provisoire pour <strong>@_pwdFor?.NomComplet</strong> et transmettez-le-lui. Il pourra le changer depuis « Mes informations ».</p>
+        <p>@L.T("Définissez un mot de passe provisoire pour") <strong>@_pwdFor?.NomComplet</strong> @L.T("et transmettez-le-lui. Il pourra le changer depuis « Mes informations ».")</p>
         <div class="form-group">
-            <label for="new-pwd">Mot de passe provisoire</label>
+            <label for="new-pwd">@L.T("Mot de passe provisoire")</label>
             <input id="new-pwd" type="text" autocomplete="off" @bind="_newPassword" />
-            <span class="field-hint">8 caractères minimum.</span>
+            <span class="field-hint">@L.T("8 caractères minimum.")</span>
         </div>
     </ChildContent>
     <FooterContent>
-        <button type="button" class="btn btn-secondary" @onclick="() => _pwdFor = null">Annuler</button>
-        <button type="button" class="btn btn-primary" disabled="@_busy" @onclick="SavePasswordAsync">Enregistrer</button>
+        <button type="button" class="btn btn-secondary" @onclick="() => _pwdFor = null">@L.T("Annuler")</button>
+        <button type="button" class="btn btn-primary" disabled="@_busy" @onclick="SavePasswordAsync">@L.T("Enregistrer")</button>
     </FooterContent>
 </Modal>
 
-<ConfirmDialog Show="_toDelete != null" Title="Supprimer la demande"
-               Message="@($"Supprimer définitivement la demande de {_toDelete?.NomComplet} ? La personne pourra se réinscrire.")"
-               ConfirmLabel="Supprimer" Danger="true"
+<ConfirmDialog Show="_toDelete != null" Title="@L.T("Supprimer la demande")"
+               Message="@L.F("Supprimer définitivement la demande de {0} ? La personne pourra se réinscrire.", _toDelete?.NomComplet)"
+               ConfirmLabel="@L.T("Supprimer")" Danger="true"
                OnConfirm="DeleteAsync" OnCancel="() => _toDelete = null" />
 
 @code {
@@ -191,7 +191,7 @@ else
         var error = await Accounts.ApproveAsync(profile, role, lien == NouvelleFiche ? null : lien);
         _busy = false;
         if (error != null) { State.NotifyError(error); return; }
-        State.NotifySuccess(profile.NomComplet + " peut maintenant se connecter (" + role + ").");
+        State.NotifySuccess(L.F("{0} peut maintenant se connecter ({1}).", profile.NomComplet, L.T(role)));
         await LoadAsync();
     }
 
@@ -201,7 +201,7 @@ else
         var error = await Accounts.RejectAsync(profile);
         _busy = false;
         if (error != null) { State.NotifyError(error); return; }
-        State.NotifyInfo("Inscription de " + profile.NomComplet + " refusée.");
+        State.NotifyInfo(L.F("Inscription de {0} refusée.", profile.NomComplet));
         await LoadAsync();
     }
 
@@ -212,7 +212,7 @@ else
         if (profile == null) return;
         var error = await Accounts.DeleteRequestAsync(profile);
         if (error != null) { State.NotifyError(error); return; }
-        State.NotifySuccess("Demande supprimée.");
+        State.NotifySuccess(L.T("Demande supprimée."));
         await LoadAsync();
     }
 
@@ -225,14 +225,17 @@ else
     private async Task SavePasswordAsync()
     {
         if (_pwdFor == null) return;
-        if (_newPassword.Length < 8) { State.NotifyError("Le mot de passe doit contenir au moins 8 caractères."); return; }
+        if (_newPassword.Length < 8) { State.NotifyError(L.T("Le mot de passe doit contenir au moins 8 caractères.")); return; }
         _busy = true;
         var error = await Accounts.SetPasswordAsync(_pwdFor, _newPassword);
         _busy = false;
         if (error != null) { State.NotifyError(error); return; }
-        State.NotifySuccess("Mot de passe de " + _pwdFor.NomComplet + " modifié. Transmettez-le-lui.");
+        State.NotifySuccess(L.F("Mot de passe de {0} modifié. Transmettez-le-lui.", _pwdFor.NomComplet));
         _pwdFor = null;
     }
 
-    private static string Date(DateTimeOffset? d) => d == null ? "jamais" : d.Value.ToLocalTime().ToString("dd/MM/yyyy à HH:mm");
+    private static string Date(DateTimeOffset? d) => d == null ? L.T("jamais") : L.F("{0:dd/MM/yyyy} à {0:HH:mm}", d.Value.ToLocalTime());
+
+    /// <summary>Raisons « même nom, même e-mail » affichées dans la langue du membre.</summary>
+    private static string Raison(string raison) => string.Join(", ", raison.Split(", ").Select(r => L.T(r)));
 }

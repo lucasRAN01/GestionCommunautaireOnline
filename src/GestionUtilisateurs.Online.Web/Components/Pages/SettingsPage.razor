@@ -8,7 +8,7 @@
 @implements IDisposable
 
 <div class="page-head">
-    <p>Personnalisez l'application, votre affichage et les données de la communauté.</p>
+    <p>@L.T("Personnalisez l'application, votre affichage et les données de la communauté.")</p>
 </div>
 
 @{
@@ -16,15 +16,15 @@
 }
 @if (self != null)
 {
-    <div class="settings-section-label">Compte connecté</div>
+    <div class="settings-section-label">@L.T("Compte connecté")</div>
     <div class="card settings-user-card settings-card settings-card-account" role="button" tabindex="0" @onclick="GoProfile" @onkeydown="OnAccountKeyDown">
         <span class="card-corner" aria-hidden="true"></span>
         <Avatar UserName="@self.NomComplet" Seed="@self.Identifiant" Size="lg" Photo="@self.Photo" />
         <div class="settings-user-main">
             <div class="user-card-name">@self.NomComplet</div>
             <div class="user-card-sub">@@@self.Identifiant</div>
-            <Badge Text="@self.Role" Kind="role" />
-            <Badge Text="@self.Statut" Kind="@(self.Actif ? "active" : "inactive")" />
+            <Badge Text="@L.T(self.Role)" Kind="role" />
+            <Badge Text="@L.T(self.Statut)" Kind="@(self.Actif ? "active" : "inactive")" />
         </div>
     </div>
 }
@@ -33,27 +33,27 @@
     <span class="card-corner" aria-hidden="true"></span>
     <div class="settings-card-head">
         <span class="settings-deco settings-deco-appearance" aria-hidden="true">🎨</span>
-        <h3>Apparence</h3>
-        <button type="button" class="section-toggle" aria-label="Réduire ou agrandir la section Apparence" aria-expanded="@(!IsCollapsed("appearance"))" @onclick='() => ToggleSection("appearance")'>@(IsCollapsed("appearance") ? "▸" : "▾")</button>
+        <h3>@L.T("Apparence")</h3>
+        <button type="button" class="section-toggle" aria-label="@L.T("Réduire ou agrandir la section Apparence")" aria-expanded="@(!IsCollapsed("appearance"))" @onclick='() => ToggleSection("appearance")'>@(IsCollapsed("appearance") ? "▸" : "▾")</button>
     </div>
     <div class="form-group">
-        <label for="st-appname">Nom de l'application</label>
+        <label for="st-appname">@L.T("Nom de l'application")</label>
         <input id="st-appname" type="text" value="@_name" disabled="@(!Store.IsAdmin)"
                @oninput="e => _name = e.Value?.ToString() ?? string.Empty" />
         @if (!Store.IsAdmin)
         {
-            <span class="field-hint">Réservé à l'administrateur.</span>
+            <span class="field-hint">@L.T("Réservé à l'administrateur.")</span>
         }
     </div>
     @if (Store.IsAdmin)
     {
         <div class="form-group">
-            <label>Logo de l'application</label>
+            <label>@L.T("Logo de l'application")</label>
             <div class="photo-control">
                 @if (!string.IsNullOrWhiteSpace(_logo))
                 {
-                    <button type="button" class="logo-btn" aria-label="Voir le logo en grand" @onclick="() => _logoPreview = true">
-                        <img class="settings-logo-preview" src="@_logo" alt="Logo de l'application" />
+                    <button type="button" class="logo-btn" aria-label="@L.T("Voir le logo en grand")" @onclick="() => _logoPreview = true">
+                        <img class="settings-logo-preview" src="@_logo" alt="@L.T("Logo de l'application")" />
                     </button>
                 }
                 else
@@ -61,26 +61,26 @@
                     <div class="photo-placeholder">GU</div>
                 }
                 <div class="photo-actions">
-                    <button type="button" class="btn btn-secondary btn-sm" @onclick="CaptureLogo">📷 Prendre une photo</button>
-                    <button type="button" class="btn btn-secondary btn-sm" @onclick="PickLogo">🖼 Choisir une image</button>
+                    <button type="button" class="btn btn-secondary btn-sm" @onclick="CaptureLogo">@L.T("📷 Prendre une photo")</button>
+                    <button type="button" class="btn btn-secondary btn-sm" @onclick="PickLogo">@L.T("🖼 Choisir une image")</button>
                     @if (!string.IsNullOrWhiteSpace(_logo))
                     {
-                        <button type="button" class="btn btn-secondary btn-sm" @onclick="() => _logo = string.Empty">Retirer</button>
+                        <button type="button" class="btn btn-secondary btn-sm" @onclick="() => _logo = string.Empty">@L.T("Retirer")</button>
                     }
                 </div>
             </div>
-            <span class="field-hint">Touchez le logo pour l'agrandir.</span>
+            <span class="field-hint">@L.T("Touchez le logo pour l'agrandir.")</span>
         </div>
         <div class="form-group">
-            <label>Couleur d'accent</label>
+            <label>@L.T("Couleur d'accent")</label>
             <div class="color-swatches">
                 @foreach (var (c, nom) in CouleursAccent.Toutes)
                 {
                     <button type="button" class="color-swatch @(string.Equals(c, _color, StringComparison.OrdinalIgnoreCase) ? "selected" : "")"
-                            style="background:@c" title="@nom" aria-label="@nom" @onclick="() => SelectAccentAsync(c)"></button>
+                            style="background:@c" title="@L.T(nom)" aria-label="@L.T(nom)" @onclick="() => SelectAccentAsync(c)"></button>
                 }
-                <label class="color-swatch color-custom" title="Autre couleur">
-                    <input type="color" value="@_color" aria-label="Choisir une autre couleur" @onchange="e => SelectAccentAsync(e.Value?.ToString() ?? _color)" />
+                <label class="color-swatch color-custom" title="@L.T("Autre couleur")">
+                    <input type="color" value="@_color" aria-label="@L.T("Choisir une autre couleur")" @onchange="e => SelectAccentAsync(e.Value?.ToString() ?? _color)" />
                 </label>
             </div>
         </div>
@@ -91,22 +91,22 @@
         <span class="field-hint">@L.T("Votre choix uniquement : chaque membre choisit sa langue.")</span>
     </div>
     <div class="form-group">
-        <label for="st-theme-perso">Mon thème (personnel)</label>
+        <label for="st-theme-perso">@L.T("Mon thème (personnel)")</label>
         <select id="st-theme-perso" value="@_theme" @onchange="OnPersonalThemeChanged">
-            <option value="light">Clair</option>
-            <option value="dark">Sombre</option>
+            <option value="light">@L.T("Clair")</option>
+            <option value="dark">@L.T("Sombre")</option>
         </select>
-        <span class="field-hint">Votre choix uniquement : il ne change pas le thème des autres membres. Clair par défaut.</span>
+        <span class="field-hint">@L.T("Votre choix uniquement : il ne change pas le thème des autres membres. Clair par défaut.")</span>
     </div>
     <div class="appearance-preview @(_theme == "dark" ? "preview-dark" : "preview-light")" style="--preview-accent:@_color">
         <span class="appearance-preview-dot"></span>
-        <div><strong>Aperçu instantané</strong><span>Thème @_theme · couleur d'accent</span></div>
-        <button type="button" class="appearance-preview-button">Bouton</button>
+        <div><strong>@L.T("Aperçu instantané")</strong><span>@L.F("Thème {0} · couleur d'accent", _theme)</span></div>
+        <button type="button" class="appearance-preview-button">@L.T("Bouton")</button>
     </div>
     @if (Store.IsAdmin)
     {
         <div class="form-actions">
-            <button class="btn btn-primary" @onclick="SaveAppearance" disabled="@_saving">Enregistrer</button>
+            <button class="btn btn-primary" @onclick="SaveAppearance" disabled="@_saving">@L.T("Enregistrer")</button>
         </div>
     }
 </div>
@@ -117,10 +117,10 @@
     <span class="card-corner" aria-hidden="true"></span>
     <div class="settings-card-head">
         <span class="settings-deco settings-deco-menu" aria-hidden="true">☰</span>
-        <h3>Ordre du menu</h3>
-        <button type="button" class="section-toggle" aria-label="Réduire ou agrandir la section Ordre du menu" aria-expanded="@(!IsCollapsed("menu"))" @onclick='() => ToggleSection("menu")'>@(IsCollapsed("menu") ? "▸" : "▾")</button>
+        <h3>@L.T("Ordre du menu")</h3>
+        <button type="button" class="section-toggle" aria-label="@L.T("Réduire ou agrandir la section Ordre du menu")" aria-expanded="@(!IsCollapsed("menu"))" @onclick='() => ToggleSection("menu")'>@(IsCollapsed("menu") ? "▸" : "▾")</button>
     </div>
-    <p class="muted">Glissez-déposez la poignée <span aria-hidden="true">⋮⋮</span> pour réordonner les entrées du menu « ⋮ » (souris, tactile, stylet). Les boutons ▲ ▼ restent disponibles. Touchez 👁 / 🙈 pour masquer ou ré-afficher une entrée. Seules vos entrées accessibles sont listées.</p>
+    <p class="muted">@L.T("Glissez-déposez la poignée") <span aria-hidden="true">⋮⋮</span> @L.T("pour réordonner les entrées du menu « ⋮ » (souris, tactile, stylet). Les boutons ▲ ▼ restent disponibles. Touchez 👁 / 🙈 pour masquer ou ré-afficher une entrée. Seules vos entrées accessibles sont listées.")</p>
     @{
         var menuDefs = new Dictionary<string, AppMenus.MenuDef>();
         foreach (var d in AppMenus.All) menuDefs[d.Key] = d;
@@ -133,23 +133,23 @@
             var idx = i;
             var key = visibleMenu[i];
             var hidden = IsMenuHidden(key);
-            var hideLabel = (hidden ? "Afficher " : "Masquer ") + def.Label;
-            var hideTitle = hidden ? "Afficher" : "Masquer";
+            var hideLabel = hidden ? L.F("Afficher {0}", L.T(def.Label)) : L.F("Masquer {0}", L.T(def.Label));
+            var hideTitle = hidden ? L.T("Afficher") : L.T("Masquer");
             var hideIcon = hidden ? "🙈" : "👁";
             <div class="menu-order-item @(hidden ? "menu-hidden" : "")" data-rkey="@key" style="@(hidden ? "opacity:.55" : "")">
-                <span class="reorder-handle" aria-hidden="true" title="Glisser pour réordonner">⋮⋮</span>
+                <span class="reorder-handle" aria-hidden="true" title="@L.T("Glisser pour réordonner")">⋮⋮</span>
                 <span class="menu-order-icon" aria-hidden="true">@def.Icon</span>
-                <span class="menu-order-label">@def.Label @(hidden ? "(masqué)" : "")</span>
+                <span class="menu-order-label">@L.T(def.Label) @(hidden ? L.T("(masqué)") : "")</span>
                 <div class="menu-order-actions">
-                    <button type="button" class="btn btn-secondary btn-sm menu-order-btn" disabled="@(idx == 0)" aria-label="Monter @def.Label" @onclick="() => MoveMenuVisible(idx, -1)">▲</button>
-                    <button type="button" class="btn btn-secondary btn-sm menu-order-btn" disabled="@(idx >= visibleMenu.Count - 1)" aria-label="Descendre @def.Label" @onclick="() => MoveMenuVisible(idx, 1)">▼</button>
+                    <button type="button" class="btn btn-secondary btn-sm menu-order-btn" disabled="@(idx == 0)" aria-label="@L.F("Monter {0}", L.T(def.Label))" @onclick="() => MoveMenuVisible(idx, -1)">▲</button>
+                    <button type="button" class="btn btn-secondary btn-sm menu-order-btn" disabled="@(idx >= visibleMenu.Count - 1)" aria-label="@L.F("Descendre {0}", L.T(def.Label))" @onclick="() => MoveMenuVisible(idx, 1)">▼</button>
                     <button type="button" class="btn btn-secondary btn-sm menu-order-btn" aria-label="@hideLabel" title="@hideTitle" @onclick="() => ToggleMenuHidden(key)">@hideIcon</button>
                 </div>
             </div>
         }
     </div>
     <div class="form-actions">
-        <button type="button" class="btn btn-secondary" @onclick="ResetMenuOrder">↺ Réinitialiser l'ordre d'origine</button>
+        <button type="button" class="btn btn-secondary" @onclick="ResetMenuOrder">@L.T("↺ Réinitialiser l'ordre d'origine")</button>
     </div>
 </div>
 }
@@ -158,20 +158,20 @@
     <span class="card-corner" aria-hidden="true"></span>
     <div class="settings-card-head">
         <span class="settings-deco settings-deco-guide" aria-hidden="true">🧭</span>
-        <h3>Guide et aide</h3>
-        <button type="button" class="section-toggle" aria-label="Réduire ou agrandir la section Guide et aide" aria-expanded="@(!IsCollapsed("guide"))" @onclick='() => ToggleSection("guide")'>@(IsCollapsed("guide") ? "▸" : "▾")</button>
+        <h3>@L.T("Guide et aide")</h3>
+        <button type="button" class="section-toggle" aria-label="@L.T("Réduire ou agrandir la section Guide et aide")" aria-expanded="@(!IsCollapsed("guide"))" @onclick='() => ToggleSection("guide")'>@(IsCollapsed("guide") ? "▸" : "▾")</button>
     </div>
     <div class="form-actions" style="gap:10px">
-        <button type="button" class="btn btn-primary" @onclick="OpenGuide">📖 Ouvrir le guide utilisateur</button>
-        <button type="button" class="btn btn-secondary" @onclick="ReplayTour">▶ Revoir le mini-guide de démarrage</button>
+        <button type="button" class="btn btn-primary" @onclick="OpenGuide">@L.T("📖 Ouvrir le guide utilisateur")</button>
+        <button type="button" class="btn btn-secondary" @onclick="ReplayTour">@L.T("▶ Revoir le mini-guide de démarrage")</button>
     </div>
     <div class="form-group" style="margin-top:12px">
         <label class="form-check" for="st-aides-contextuelles">
             <input id="st-aides-contextuelles" type="checkbox" checked="@ConseilsActifs"
                    @onchange="ToggleContextualHelp" />
-            Afficher un conseil la première fois que j'ouvre une fonctionnalité
+            @L.T("Afficher un conseil la première fois que j'ouvre une fonctionnalité")
         </label>
-        <span class="field-hint">Votre choix personnel : il ne change pas celui des autres utilisateurs. Le bouton « ⓘ » reste disponible en haut de chaque écran.</span>
+        <span class="field-hint">@L.T("Votre choix personnel : il ne change pas celui des autres utilisateurs. Le bouton « ⓘ » reste disponible en haut de chaque écran.")</span>
     </div>
 </div>
 
@@ -181,59 +181,59 @@
         <span class="card-corner" aria-hidden="true"></span>
         <div class="settings-card-head">
             <span class="settings-deco settings-deco-cardemembre" aria-hidden="true">🪪</span>
-            <h3>Configuration carte de membre</h3>
-            <button type="button" class="section-toggle" aria-label="Réduire ou agrandir la section Carte de membre" aria-expanded="@(!IsCollapsed("cartemembre"))" @onclick='() => ToggleSection("cartemembre")'>@(IsCollapsed("cartemembre") ? "▸" : "▾")</button>
+            <h3>@L.T("Configuration carte de membre")</h3>
+            <button type="button" class="section-toggle" aria-label="@L.T("Réduire ou agrandir la section Carte de membre")" aria-expanded="@(!IsCollapsed("cartemembre"))" @onclick='() => ToggleSection("cartemembre")'>@(IsCollapsed("cartemembre") ? "▸" : "▾")</button>
         </div>
         <div class="form-group">
-            <label for="st-carte-slogan">Slogan de la carte de membre</label>
+            <label for="st-carte-slogan">@L.T("Slogan de la carte de membre")</label>
             <input id="st-carte-slogan" type="text" value="@_carteSlogan" maxlength="80"
-                   placeholder="Votre communauté, notre force"
+                   placeholder="@L.T("Votre communauté, notre force")"
                    @oninput="e => _carteSlogan = e.Value?.ToString() ?? string.Empty" />
-            <span class="field-hint">Affiché en face avant de la carte de membre.</span>
+            <span class="field-hint">@L.T("Affiché en face avant de la carte de membre.")</span>
         </div>
         <div class="form-group">
-            <label for="st-carte-citation">Citation de la carte de membre</label>
+            <label for="st-carte-citation">@L.T("Citation de la carte de membre")</label>
             <textarea id="st-carte-citation" rows="2" maxlength="180"
-                      placeholder="Ensemble, nous allons plus loin."
+                      placeholder="@L.T("Ensemble, nous allons plus loin.")"
                       value="@_carteCitation"
                       @oninput="e => _carteCitation = e.Value?.ToString() ?? string.Empty"></textarea>
-            <span class="field-hint">Affichée au dos de la carte de membre.</span>
+            <span class="field-hint">@L.T("Affichée au dos de la carte de membre.")</span>
         </div>
         <div class="form-group">
-            <label for="st-carte-largeur">Taille réelle à l'impression (mm)</label>
+            <label for="st-carte-largeur">@L.T("Taille réelle à l'impression (mm)")</label>
             <div class="quota-input-row">
                 <input id="st-carte-largeur" type="number" min="50" max="150" value="@_carteLargeurMm"
                        @oninput="e => _carteLargeurMm = int.TryParse(e.Value?.ToString(), out var w) ? w : 85"
-                       aria-label="Largeur de la carte en millimètres" style="max-width:90px" />
+                       aria-label="@L.T("Largeur de la carte en millimètres")" style="max-width:90px" />
                 <span class="quota-input-unit">×</span>
                 <input id="st-carte-hauteur" type="number" min="30" max="100" value="@_carteHauteurMm"
                        @oninput="e => _carteHauteurMm = int.TryParse(e.Value?.ToString(), out var h) ? h : 55"
-                       aria-label="Hauteur de la carte en millimètres" style="max-width:90px" />
+                       aria-label="@L.T("Hauteur de la carte en millimètres")" style="max-width:90px" />
                 <span class="quota-input-unit">mm</span>
             </div>
-            <span class="field-hint">Format standard : 85 × 55 mm. Appliqué au PDF et à l'impression.</span>
+            <span class="field-hint">@L.T("Format standard : 85 × 55 mm. Appliqué au PDF et à l'impression.")</span>
         </div>
         <div class="form-group">
-            <label for="st-matricule">Format du matricule</label>
+            <label for="st-matricule">@L.T("Format du matricule")</label>
             <input id="st-matricule" type="text" value="@_matriculeFormat" maxlength="30"
-                   placeholder="Ex : M-{NNNN}"
+                   placeholder="@L.T("Ex : M-{NNNN}")"
                    @oninput="e => _matriculeFormat = e.Value?.ToString() ?? string.Empty" />
-            <span class="field-hint">Codes : {NNNN} numéro (un N par chiffre), {AAAA} ou {AA} année d'adhésion, {MM} mois, {INI} initiales. Laissez vide pour saisir les matricules à la main.</span>
+            <span class="field-hint">@L.T("Codes : {NNNN} numéro (un N par chiffre), {AAAA} ou {AA} année d'adhésion, {MM} mois, {INI} initiales. Laissez vide pour saisir les matricules à la main.")</span>
             @if (DataStore.ValiderFormatMatricule(_matriculeFormat) is { } errFormat)
             {
                 <span class="form-error">@errFormat</span>
             }
             else if (!string.IsNullOrWhiteSpace(_matriculeFormat))
             {
-                <span class="field-hint">Prochain matricule : <strong>@Store.ApercuMatricule(_matriculeFormat)</strong></span>
+                <span class="field-hint">@L.T("Prochain matricule :") <strong>@Store.ApercuMatricule(_matriculeFormat)</strong></span>
             }
             @if (_sansMatricule > 0 && !string.IsNullOrWhiteSpace(Store.Settings.MatriculeFormat) && Store.Can(Permissions.UsersManage))
             {
-                <button type="button" class="btn btn-secondary btn-sm" style="align-self:flex-start;margin-top:6px" @onclick="AttribuerMatricules">Attribuer un matricule aux @_sansMatricule fiche(s) sans matricule</button>
+                <button type="button" class="btn btn-secondary btn-sm" style="align-self:flex-start;margin-top:6px" @onclick="AttribuerMatricules">@L.F("Attribuer un matricule aux {0} fiche(s) sans matricule", _sansMatricule)</button>
             }
         </div>
         <div class="form-actions">
-            <button class="btn btn-primary" @onclick="SaveAppearance" disabled="@_saving">Enregistrer</button>
+            <button class="btn btn-primary" @onclick="SaveAppearance" disabled="@_saving">@L.T("Enregistrer")</button>
         </div>
     </div>
 }
@@ -244,11 +244,11 @@
         <span class="card-corner" aria-hidden="true"></span>
         <div class="settings-card-head">
             <span class="settings-deco settings-deco-pagesize" aria-hidden="true">📄</span>
-            <h3>Nombre d'utilisateurs par page</h3>
-            <button type="button" class="section-toggle" aria-label="Réduire ou agrandir la section" aria-expanded="@(!IsCollapsed("pagesize"))" @onclick='() => ToggleSection("pagesize")'>@(IsCollapsed("pagesize") ? "▸" : "▾")</button>
+            <h3>@L.T("Nombre d'utilisateurs par page")</h3>
+            <button type="button" class="section-toggle" aria-label="@L.T("Réduire ou agrandir la section")" aria-expanded="@(!IsCollapsed("pagesize"))" @onclick='() => ToggleSection("pagesize")'>@(IsCollapsed("pagesize") ? "▸" : "▾")</button>
         </div>
         <div class="form-group">
-            <label for="st-pagesize">Affichage de la liste des utilisateurs</label>
+            <label for="st-pagesize">@L.T("Affichage de la liste des utilisateurs")</label>
             <select id="st-pagesize" value="@_pageSize" @onchange="e => _pageSize = int.TryParse(e.Value?.ToString(), out var p) ? Math.Clamp(p, 10, 100) : 10">
                 <option value="10">10</option>
                 <option value="25">25</option>
@@ -261,23 +261,23 @@
         <span class="card-corner" aria-hidden="true"></span>
         <div class="settings-card-head">
             <span class="settings-deco settings-deco-security" aria-hidden="true">🔒</span>
-            <h3>Sécurité</h3>
-            <button type="button" class="section-toggle" aria-label="Réduire ou agrandir la section Sécurité" aria-expanded="@(!IsCollapsed("security"))" @onclick='() => ToggleSection("security")'>@(IsCollapsed("security") ? "▸" : "▾")</button>
+            <h3>@L.T("Sécurité")</h3>
+            <button type="button" class="section-toggle" aria-label="@L.T("Réduire ou agrandir la section Sécurité")" aria-expanded="@(!IsCollapsed("security"))" @onclick='() => ToggleSection("security")'>@(IsCollapsed("security") ? "▸" : "▾")</button>
         </div>
         <div class="form-group">
-            <label for="st-session">Déconnexion automatique après inactivité</label>
+            <label for="st-session">@L.T("Déconnexion automatique après inactivité")</label>
             <select id="st-session" value="@_sessionTimeout" @onchange="OnSessionTimeoutChanged">
-                <option value="5">5 minutes</option>
-                <option value="15">15 minutes</option>
-                <option value="30">30 minutes</option>
-                <option value="60">1 heure</option>
-                <option value="120">2 heures</option>
-                <option value="0">Jamais</option>
+                <option value="5">@L.T("5 minutes")</option>
+                <option value="15">@L.T("15 minutes")</option>
+                <option value="30">@L.T("30 minutes")</option>
+                <option value="60">@L.T("1 heure")</option>
+                <option value="120">@L.T("2 heures")</option>
+                <option value="0">@L.T("Jamais")</option>
             </select>
-            <span class="field-hint">Seule l'inactivité prolongée déconnecte. Ouvrir une autre application ne déconnecte pas.</span>
+            <span class="field-hint">@L.T("Seule l'inactivité prolongée déconnecte. Ouvrir une autre application ne déconnecte pas.")</span>
         </div>
         <div class="form-actions">
-            <button class="btn btn-primary" @onclick="SaveAppearance" disabled="@_saving">Enregistrer</button>
+            <button class="btn btn-primary" @onclick="SaveAppearance" disabled="@_saving">@L.T("Enregistrer")</button>
         </div>
     </div>
 }
@@ -288,12 +288,12 @@
         <span class="card-corner" aria-hidden="true"></span>
         <div class="settings-card-head">
             <span class="settings-deco settings-deco-fields" aria-hidden="true">🧩</span>
-            <h3>Champs personnalisés</h3>
-            <button type="button" class="section-toggle" aria-label="Réduire ou agrandir la section Champs" aria-expanded="@(!IsCollapsed("fields"))" @onclick='() => ToggleSection("fields")'>@(IsCollapsed("fields") ? "▸" : "▾")</button>
+            <h3>@L.T("Champs personnalisés")</h3>
+            <button type="button" class="section-toggle" aria-label="@L.T("Réduire ou agrandir la section Champs")" aria-expanded="@(!IsCollapsed("fields"))" @onclick='() => ToggleSection("fields")'>@(IsCollapsed("fields") ? "▸" : "▾")</button>
         </div>
-        <p class="muted">Personnalisez le formulaire utilisateur : texte, nombre, liste, choix, pièce jointe, image…</p>
+        <p class="muted">@L.T("Personnalisez le formulaire utilisateur : texte, nombre, liste, choix, pièce jointe, image…")</p>
         <div class="form-actions">
-            <button class="btn btn-secondary" @onclick="GoFields">🧩 Gérer les champs</button>
+            <button class="btn btn-secondary" @onclick="GoFields">@L.T("🧩 Gérer les champs")</button>
         </div>
     </div>
 }
@@ -304,31 +304,31 @@
         <span class="card-corner" aria-hidden="true"></span>
         <div class="settings-card-head">
             <span class="settings-deco settings-deco-actions" aria-hidden="true">⇄</span>
-            <h3>Actions</h3>
-            <button type="button" class="section-toggle" aria-label="Réduire ou agrandir la section Actions" aria-expanded="@(!IsCollapsed("actions"))" @onclick='() => ToggleSection("actions")'>@(IsCollapsed("actions") ? "▸" : "▾")</button>
+            <h3>@L.T("Actions")</h3>
+            <button type="button" class="section-toggle" aria-label="@L.T("Réduire ou agrandir la section Actions")" aria-expanded="@(!IsCollapsed("actions"))" @onclick='() => ToggleSection("actions")'>@(IsCollapsed("actions") ? "▸" : "▾")</button>
         </div>
-        <p class="muted">L'export et l'import des utilisateurs sont accessibles à l'administrateur et au gestionnaire.</p>
+        <p class="muted">@L.T("L'export et l'import des utilisateurs sont accessibles à l'administrateur et au gestionnaire.")</p>
         @if (Store.OnlineMode)
         {
-            <p class="field-hint">Les données sont sauvegardées automatiquement sur le serveur chaque semaine. L'export Excel ci-dessous reste disponible à tout moment.</p>
+            <p class="field-hint">@L.T("Les données sont sauvegardées automatiquement sur le serveur chaque semaine. L'export Excel ci-dessous reste disponible à tout moment.")</p>
         }
         else
         {
         <div class="form-group">
             <label class="form-check" for="st-autoexport">
                 <input id="st-autoexport" type="checkbox" checked="@_autoExport" @onchange="OnAutoExportChanged" />
-                Export automatique mensuel de toutes les données
+                @L.T("Export automatique mensuel de toutes les données")
             </label>
-            <span class="field-hint">Chaque mois, la sauvegarde complète (JSON) + la liste des utilisateurs (Excel) sont enregistrées dans Téléchargements. Dernier export : @LastAutoExportLabel.</span>
+            <span class="field-hint">@L.F("Chaque mois, la sauvegarde complète (JSON) + la liste des utilisateurs (Excel) sont enregistrées dans Téléchargements. Dernier export : {0}.", LastAutoExportLabel)</span>
         </div>
         }
         <div class="form-actions">
-            <button class="btn btn-secondary" @onclick="ExportExcel">⇩ Exporter Excel</button>
+            <button class="btn btn-secondary" @onclick="ExportExcel">@L.T("⇩ Exporter Excel")</button>
             @if (Store.IsManager)
             {
-                <button class="btn btn-secondary" @onclick="OpenRestore">⇪ Importer Excel</button>
+                <button class="btn btn-secondary" @onclick="OpenRestore">@L.T("⇪ Importer Excel")</button>
             }
-            <button class="btn btn-secondary" @onclick="ExportNowAsync" disabled="@_exporting">@(_exporting ? "Export…" : "⤓ Exporter maintenant")</button>
+            <button class="btn btn-secondary" @onclick="ExportNowAsync" disabled="@_exporting">@(_exporting ? L.T("Export…") : L.T("⤓ Exporter maintenant"))</button>
         </div>
     </div>
 }
@@ -339,41 +339,41 @@
 <div class="card logout-card">
     <button class="btn btn-danger-outline btn-block" @onclick="AskLogout">
         <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M18.36 6.64a9 9 0 1 1-12.73 0"/><line x1="12" y1="2" x2="12" y2="12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
-        Se déconnecter
+        @L.T("Se déconnecter")
     </button>
 </div>
 
-<Modal Title="Importer Excel" Show="_showRestore" OnClose="() => _showRestore = false">
+<Modal Title="@L.T("Importer Excel")" Show="_showRestore" OnClose="() => _showRestore = false">
     <ChildContent>
-        <p class="muted" style="margin-top:0">Choisissez un fichier <strong>.xlsx</strong> exporté par l'application. Les utilisateurs absents sont ajoutés, les identifiants existants sont conservés.</p>
+        <p class="muted" style="margin-top:0">@L.T("Choisissez un fichier") <strong>.xlsx</strong> @L.T("exporté par l'application. Les utilisateurs absents sont ajoutés, les identifiants existants sont conservés.")</p>
         <div class="import-format">
-            <div class="import-format-title">📋 Format attendu du fichier</div>
+            <div class="import-format-title">@L.T("📋 Format attendu du fichier")</div>
             <ul class="import-format-list">
-                <li><strong>Classeur Excel (.xlsx)</strong> — 1ère ligne = en-têtes.</li>
-                <li><strong>Colonnes :</strong> Nom*, Prénom*, Identifiant, Email, Téléphone (+261…), Rôle (Administrateur / Gestionnaire / Utilisateur), Statut (Actif / Inactif), Date de création (JJ/MM/AAAA), Dernière connexion, Notes + champs personnalisés.</li>
-                <li><strong>Dates :</strong> JJ/MM/AAAA (ex. 05/09/2026).</li>
-                <li><strong>Exemple :</strong> NOM | Prénom | prenom.nom | mail@domaine.fr | +261321234567 | Utilisateur | Actif | 05/09/2026 | …</li>
-                <li>Astuce : exportez d'abord avec « Exporter Excel » pour obtenir un modèle valide.</li>
+                <li><strong>@L.T("Classeur Excel (.xlsx)")</strong> @L.T("— 1ère ligne = en-têtes.")</li>
+                <li><strong>@L.T("Colonnes :")</strong> @L.T("Nom*, Prénom*, Identifiant, Email, Téléphone (+261…), Rôle (Administrateur / Gestionnaire / Utilisateur), Statut (Actif / Inactif), Date de création (JJ/MM/AAAA), Dernière connexion, Notes + champs personnalisés.")</li>
+                <li><strong>@L.T("Dates :")</strong> @L.T("JJ/MM/AAAA (ex. 05/09/2026).")</li>
+                <li><strong>@L.T("Exemple :")</strong> NOM | Prénom | prenom.nom | mail@domaine.fr | +261321234567 | Utilisateur | Actif | 05/09/2026 | …</li>
+                <li>@L.T("Astuce : exportez d'abord avec « Exporter Excel » pour obtenir un modèle valide.")</li>
             </ul>
         </div>
         <div class="form-actions" style="margin:4px 0 8px">
-            <button class="btn btn-secondary" @onclick="PickRestore">📂 Choisir un fichier Excel</button>
+            <button class="btn btn-secondary" @onclick="PickRestore">@L.T("📂 Choisir un fichier Excel")</button>
         </div>
         @if (_pendingImport != null)
         {
-            <p class="muted">@(_pendingImport.Count + " utilisateur(s) détecté(s), " + _pendingImport.Count(u => Store.FindUserByIdentifier(u.Identifiant) != null) + " déjà présent(s).")</p>
+            <p class="muted">@L.F("{0} utilisateur(s) détecté(s), {1} déjà présent(s).", _pendingImport.Count, _pendingImport.Count(u => Store.FindUserByIdentifier(u.Identifiant) != null))</p>
         }
         <span class="form-error">@_restoreError</span>
     </ChildContent>
     <FooterContent>
-        <button class="btn btn-secondary" @onclick="() => _showRestore = false">Annuler</button>
-        <button class="btn btn-primary" disabled="@(_pendingImport == null || (_pendingImport != null && _pendingImport.All(u => Store.FindUserByIdentifier(u.Identifiant) != null)))" @onclick="ApplyRestore">Ajouter les nouveaux utilisateurs</button>
+        <button class="btn btn-secondary" @onclick="() => _showRestore = false">@L.T("Annuler")</button>
+        <button class="btn btn-primary" disabled="@(_pendingImport == null || (_pendingImport != null && _pendingImport.All(u => Store.FindUserByIdentifier(u.Identifiant) != null)))" @onclick="ApplyRestore">@L.T("Ajouter les nouveaux utilisateurs")</button>
     </FooterContent>
 </Modal>
 
-<ConfirmDialog Show="_confirmLogout" Title="Déconnexion"
-               Message="Voulez-vous vraiment vous déconnecter ?"
-               ConfirmLabel="Se déconnecter" Danger="true" OnConfirm="ConfirmLogout" OnCancel="() => _confirmLogout = false" />
+<ConfirmDialog Show="_confirmLogout" Title="@L.T("Déconnexion")"
+               Message="@L.T("Voulez-vous vraiment vous déconnecter ?")"
+               ConfirmLabel="@L.T("Se déconnecter")" Danger="true" OnConfirm="ConfirmLogout" OnCancel="() => _confirmLogout = false" />
 
 <Modal Title="" Show="_logoPreview" OnClose="() => _logoPreview = false">
     <ChildContent>
@@ -409,7 +409,7 @@
     private void AttribuerMatricules()
     {
         var (res, n) = Store.AttribuerMatriculesManquants();
-        if (res.Success) State.NotifySuccess(n + " matricule(s) attribué(s).");
+        if (res.Success) State.NotifySuccess(L.F("{0} matricule(s) attribué(s).", n));
         else State.NotifyError(res.Error);
     }
     private int _carteLargeurMm = 85;
@@ -421,7 +421,7 @@
     private bool _exporting;
 
     private string LastAutoExportLabel =>
-        string.IsNullOrWhiteSpace(Store.Settings.DernierExportAuto) ? "jamais" : Store.Settings.DernierExportAuto;
+        string.IsNullOrWhiteSpace(Store.Settings.DernierExportAuto) ? L.T("jamais") : Store.Settings.DernierExportAuto;
 
     private void OnAutoExportChanged(ChangeEventArgs e)
     {
@@ -748,7 +748,7 @@
             });
             await Js.ApplySettingsAsync(Store.SettingsAffichees());
             _quotaDirty = false;
-            State.NotifySuccess("Paramètres enregistrés.");
+            State.NotifySuccess(L.T("Paramètres enregistrés."));
         }
         finally
         {
@@ -772,11 +772,11 @@
         if (path != null)
         {
             Store.LogActivity(ActivityTypes.Export, "Export Excel des utilisateurs (" + Store.Users.Count + ")");
-            State.NotifySuccess("Export réussi : " + path);
+            State.NotifySuccess(L.F("Export réussi : {0}", path));
         }
         else
         {
-            State.NotifyError("L'export a échoué. Réessayez.");
+            State.NotifyError(L.T("L'export a échoué. Réessayez."));
         }
     }
 
@@ -794,14 +794,14 @@
         var bytes = await Picker.PickXlsxAsync();
         if (bytes == null)
         {
-            _restoreError = "Fichier annulé ou illisible.";
+            _restoreError = L.T("Fichier annulé ou illisible.");
             return;
         }
 
         var result = Store.ParseExcelImport(bytes);
         if (!result.Success)
         {
-            _restoreError = "Sauvegarde refusée : " + (result.Error ?? "fichier invalide.");
+            _restoreError = L.F("Sauvegarde refusée : {0}", result.Error ?? L.T("fichier invalide."));
             return;
         }
         _pendingImport = result.Users;
@@ -812,7 +812,7 @@
         _restoreError = "";
         if (_pendingImport == null || _pendingImport.Count == 0)
         {
-            _restoreError = "Veuillez d'abord choisir un fichier Excel.";
+            _restoreError = L.T("Veuillez d'abord choisir un fichier Excel.");
             return;
         }
 
@@ -825,7 +825,7 @@
 
         _showRestore = false;
         _pendingImport = null;
-        State.NotifySuccess(count + " utilisateur(s) ajouté(s) à l'annuaire.");
+        State.NotifySuccess(L.F("{0} utilisateur(s) ajouté(s) à l'annuaire.", count));
     }
 
     private static string ExportFileName(string stem) => stem + "-" + DateTime.Now.ToString("dd-MM-yyyy_HH-mm-ss") + ".xlsx";
