@@ -3,13 +3,13 @@
 
 <div class="sig-pad">
     <canvas id="@_canvasId" class="sig-canvas"></canvas>
-    <p class="sig-hint">Dessinez avec le doigt, le stylet ou la souris.</p>
+    <p class="sig-hint">@L.T("Dessinez avec le doigt, le stylet ou la souris.")</p>
     @if (!string.IsNullOrEmpty(_error))
     {
         <p class="form-error">@_error</p>
     }
     <div class="sig-actions">
-        <button type="button" class="btn btn-secondary btn-sm" @onclick="ClearAsync">🧹 Effacer</button>
+        <button type="button" class="btn btn-secondary btn-sm" @onclick="ClearAsync">@L.T("🧹 Effacer")</button>
     </div>
 </div>
 
@@ -38,7 +38,7 @@
     {
         if (await Js.SignatureIsEmptyAsync(_canvasId))
         {
-            _error = "Veuillez dessiner votre signature avant de valider.";
+            _error = L.T("Veuillez dessiner votre signature avant de valider.");
             StateHasChanged();
             return null;
         }

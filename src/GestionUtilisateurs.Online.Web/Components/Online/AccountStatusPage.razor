@@ -9,17 +9,17 @@
         <p class="online-status-text">@Message</p>
         @if (Session.Profile != null)
         {
-            <p class="text-muted online-status-account">Compte : @Session.Profile.Email</p>
+            <p class="text-muted online-status-account">@L.F("Compte : {0}", Session.Profile.Email)</p>
         }
         @if (Session.State is OnlineSessionState.Pending or OnlineSessionState.NoMemberRecord or OnlineSessionState.Error)
         {
             <button type="button" class="btn btn-primary btn-block" disabled="@_busy" @onclick="RecheckAsync">
-                @(_busy ? "Vérification…" : "Vérifier à nouveau")
+                @(_busy ? L.T("Vérification…") : L.T("Vérifier à nouveau"))
             </button>
         }
         @if (Session.State != OnlineSessionState.NotConfigured)
         {
-            <button type="button" class="btn btn-secondary btn-block online-status-logout" @onclick="Session.SignOutAsync">Se déconnecter</button>
+            <button type="button" class="btn btn-secondary btn-block online-status-logout" @onclick="Session.SignOutAsync">@L.T("Se déconnecter")</button>
         }
     </div>
 </div>
@@ -29,22 +29,22 @@
 
     private string Title => Session.State switch
     {
-        OnlineSessionState.Pending => "Compte en attente de validation",
-        OnlineSessionState.Refused => "Inscription refusée",
-        OnlineSessionState.Disabled => "Compte désactivé",
-        OnlineSessionState.NoMemberRecord => "Fiche membre manquante",
-        OnlineSessionState.NotConfigured => "Configuration requise",
-        _ => "Connexion impossible"
+        OnlineSessionState.Pending => L.T("Compte en attente de validation"),
+        OnlineSessionState.Refused => L.T("Inscription refusée"),
+        OnlineSessionState.Disabled => L.T("Compte désactivé"),
+        OnlineSessionState.NoMemberRecord => L.T("Fiche membre manquante"),
+        OnlineSessionState.NotConfigured => L.T("Configuration requise"),
+        _ => L.T("Connexion impossible")
     };
 
     private string Message => Session.State switch
     {
-        OnlineSessionState.Pending => "Merci pour votre inscription. Un administrateur doit valider votre compte et vous attribuer un rôle. Revenez un peu plus tard ou cliquez sur « Vérifier à nouveau ».",
-        OnlineSessionState.Refused => "Un administrateur a refusé cette inscription. Contactez la communauté si vous pensez qu'il s'agit d'une erreur.",
-        OnlineSessionState.Disabled => "Ce compte a été désactivé par un administrateur. Contactez la communauté pour le réactiver.",
-        OnlineSessionState.NoMemberRecord => "Votre compte est validé, mais votre fiche membre n'a pas encore été créée. Demandez à un administrateur de valider à nouveau votre compte depuis « Comptes en ligne ».",
-        OnlineSessionState.NotConfigured => "L'adresse du projet Supabase n'est pas configurée (fichier appsettings.json). Suivez le guide de mise en ligne du dépôt.",
-        _ => Session.Error ?? "Une erreur est survenue."
+        OnlineSessionState.Pending => L.T("Merci pour votre inscription. Un administrateur doit valider votre compte et vous attribuer un rôle. Revenez un peu plus tard ou cliquez sur « Vérifier à nouveau »."),
+        OnlineSessionState.Refused => L.T("Un administrateur a refusé cette inscription. Contactez la communauté si vous pensez qu'il s'agit d'une erreur."),
+        OnlineSessionState.Disabled => L.T("Ce compte a été désactivé par un administrateur. Contactez la communauté pour le réactiver."),
+        OnlineSessionState.NoMemberRecord => L.T("Votre compte est validé, mais votre fiche membre n'a pas encore été créée. Demandez à un administrateur de valider à nouveau votre compte depuis « Comptes en ligne »."),
+        OnlineSessionState.NotConfigured => L.T("L'adresse du projet Supabase n'est pas configurée (fichier appsettings.json). Suivez le guide de mise en ligne du dépôt."),
+        _ => Session.Error ?? L.T("Une erreur est survenue.")
     };
 
     private async Task RecheckAsync()

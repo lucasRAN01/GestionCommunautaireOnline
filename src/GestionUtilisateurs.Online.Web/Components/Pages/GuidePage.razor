@@ -5,25 +5,25 @@
 <div class="guide-hero">
     <span class="guide-hero-icon" aria-hidden="true">🧭</span>
     <div class="guide-hero-main">
-        <h2 class="guide-hero-title">Guide utilisateur</h2>
-        <p class="guide-hero-sub">Le fonctionnement de l'application expliqué pas à pas, module par module.</p>
+        <h2 class="guide-hero-title">@L.T("Guide utilisateur")</h2>
+        <p class="guide-hero-sub">@L.T("Le fonctionnement de l'application expliqué pas à pas, module par module.")</p>
     </div>
     @if (!Store.IsBaseAdmin)
     {
-        <button type="button" class="btn btn-primary btn-sm guide-hero-tour" @onclick="ReplayTour">▶ Mini-guide</button>
+        <button type="button" class="btn btn-primary btn-sm guide-hero-tour" @onclick="ReplayTour">@L.T("▶ Mini-guide")</button>
     }
 </div>
 
 @if (_selected == null)
 {
     <div class="guide-search-row">
-        <input class="guide-search" type="search" placeholder="🔍 Rechercher un module…" value="@_search"
-               @oninput="OnSearchInput" aria-label="Rechercher un module du guide" />
+        <input class="guide-search" type="search" placeholder="@L.T("🔍 Rechercher un module…")" value="@_search"
+               @oninput="OnSearchInput" aria-label="@L.T("Rechercher un module du guide")" />
     </div>
     @if (Filtered.Count == 0)
     {
         <div class="card guide-empty">
-            <p class="muted" style="margin:0">Aucun module ne correspond à « @_search ».</p>
+            <p class="muted" style="margin:0">@L.F("Aucun module ne correspond à « {0} ».", _search)</p>
         </div>
     }
     else
@@ -46,7 +46,7 @@
 else
 {
     <div class="card guide-module" id="guide-top">
-        <button type="button" class="btn btn-secondary btn-sm guide-back" @onclick="BackToToc">← Tous les modules</button>
+        <button type="button" class="btn btn-secondary btn-sm guide-back" @onclick="BackToToc">@L.T("← Tous les modules")</button>
         <div class="guide-module-head">
             <span class="guide-module-icon" aria-hidden="true">@_selected.Icon</span>
             <div>

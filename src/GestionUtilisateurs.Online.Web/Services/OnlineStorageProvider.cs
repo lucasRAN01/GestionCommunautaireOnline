@@ -230,12 +230,12 @@ public class OnlineStorageProvider : IStorageProvider
                         // Modification refusée : on revient à la version du serveur.
                         if (_synced.TryGetValue(key, out var server)) _values[key] = server;
                         else _values.Remove(key);
-                        SaveRejected?.Invoke(key, Quiet ? "" : res.Message ?? "Modification refusée par le serveur.");
+                        SaveRejected?.Invoke(key, Quiet ? "" : res.Message ?? L.T("Modification refusée par le serveur."));
                         break;
                     default:
                         // Erreur réseau : on garde la modification et on réessaie plus tard.
                         lock (_dirty) _dirty.Add(key);
-                        SaveFailed?.Invoke(res.Message ?? "Enregistrement impossible.");
+                        SaveFailed?.Invoke(res.Message ?? L.T("Enregistrement impossible."));
                         _ = RetryLaterAsync();
                         return;
                 }

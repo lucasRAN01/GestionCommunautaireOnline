@@ -97,7 +97,7 @@ public class CapacityService
         for (var i = 0; i < names.Count; i += 100)
         {
             var res = await _api.RemoveFilesAsync(names.Skip(i).Take(100));
-            if (!res.Ok) return res.Error ?? "Suppression impossible.";
+            if (!res.Ok) return res.Error ?? L.T("Suppression impossible.");
         }
         return null;
     }
@@ -131,10 +131,10 @@ public class CapacityService
 
     public static string FormatSize(long bytes)
     {
-        if (bytes < 1024) return bytes + " o";
-        if (bytes < 1024L * 1024) return Math.Round(bytes / 1024.0, 0) + " Ko";
-        if (bytes < 1024L * 1024 * 1024) return Math.Round(bytes / (1024.0 * 1024), 1).ToString("0.#") + " Mo";
-        return Math.Round(bytes / (1024.0 * 1024 * 1024), 2).ToString("0.##") + " Go";
+        if (bytes < 1024) return bytes + " " + L.T("o");
+        if (bytes < 1024L * 1024) return Math.Round(bytes / 1024.0, 0) + " " + L.T("Ko");
+        if (bytes < 1024L * 1024 * 1024) return Math.Round(bytes / (1024.0 * 1024), 1).ToString("0.#") + " " + L.T("Mo");
+        return Math.Round(bytes / (1024.0 * 1024 * 1024), 2).ToString("0.##") + " " + L.T("Go");
     }
 }
 

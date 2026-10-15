@@ -3,11 +3,11 @@
 
 @if (Current != null)
 {
-    <div class="photo-overlay" @onclick="Close" @onkeydown="OnKey" tabindex="0" role="dialog" aria-label="Photo de @Current.NomComplet">
+    <div class="photo-overlay" @onclick="Close" @onkeydown="OnKey" tabindex="0" role="dialog" aria-label="@L.F("Photo de {0}", Current.NomComplet)">
         <div class="photo-overlay-content" @onclick:stopPropagation="true">
             @if (ShowImage)
             {
-                <img class="photo-viewer-img" src="@Current.Photo" alt="Photo de @Current.NomComplet" />
+                <img class="photo-viewer-img" src="@Current.Photo" alt="@L.F("Photo de {0}", Current.NomComplet)" />
             }
             else
             {
@@ -15,7 +15,7 @@
             }
             <div class="photo-overlay-meta">
                 <span class="photo-overlay-name">@Current.NomComplet</span>
-                <button class="btn btn-secondary" @onclick="Close">✕ Fermer</button>
+                <button class="btn btn-secondary" @onclick="Close">@L.T("✕ Fermer")</button>
             </div>
         </div>
     </div>

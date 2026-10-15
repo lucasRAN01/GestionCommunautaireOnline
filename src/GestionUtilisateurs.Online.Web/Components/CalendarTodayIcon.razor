@@ -16,8 +16,6 @@
     private System.Threading.Timer? _timer;
     private string _todayKey = "";
 
-    private static readonly CultureInfo Fr = CultureInfo.GetCultureInfo("fr-FR");
-
     protected override void OnInitialized()
     {
         Refresh();
@@ -33,8 +31,10 @@
     {
         var today = DateTime.Today;
         _todayKey = today.ToString("yyyy-MM-dd");
-        var abbr = today.ToString("ddd", Fr).TrimEnd('.');
-        _week = abbr.Length >= 3 ? char.ToUpperInvariant(abbr[0]) + abbr[1..3] : abbr;
+        // Malgache : 4 lettres (alah, alat, alar, alak) pour distinguer les jours en « ala- ».
+        var abbr = L.Jour(today.DayOfWeek);
+        var n = L.Langue == L.Mg ? 4 : 3;
+        _week = abbr.Length >= n ? char.ToUpperInvariant(abbr[0]) + abbr[1..n] : abbr;
         _day = today.Day.ToString();
         _full = today.ToString("dd/MM/yyyy");
     }

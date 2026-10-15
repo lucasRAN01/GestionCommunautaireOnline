@@ -7,9 +7,9 @@
 
 <div class="app-shell">
     @* Navigation latérale de la version web (écrans larges uniquement ; le mobile garde la barre du bas). *@
-    <aside class="web-sidebar" aria-label="Navigation principale">
+    <aside class="web-sidebar" aria-label="@L.T("Navigation principale")">
         <div class="web-sidebar-brand">
-            <button type="button" class="web-sidebar-logo" aria-label="Afficher le logo et l'histoire de la communauté" @onclick="OpenLogo">
+            <button type="button" class="web-sidebar-logo" aria-label="@L.T("Afficher le logo et l'histoire de la communauté")" @onclick="OpenLogo">
                 @if (!string.IsNullOrWhiteSpace(Store.Settings.Logo))
                 {
                     <img src="@Store.Settings.Logo" alt="" />
@@ -39,7 +39,7 @@
         <div class="web-sidebar-foot">
             <button type="button" class="web-nav-item" @onclick='() => Go("profile")'>
                 <Avatar UserName="@currentUser?.NomComplet" Seed="@currentUser?.Identifiant" Size="sm" Photo="@currentUser?.Photo" />
-                <span class="web-nav-label">@currentUser?.NomComplet<small>@currentUser?.Role</small></span>
+                <span class="web-nav-label">@currentUser?.NomComplet<small>@L.T(currentUser?.Role)</small></span>
             </button>
         </div>
     </aside>
@@ -47,39 +47,39 @@
     <header class="app-topbar">
         @if (State.HasHistory)
         {
-            <button class="back-button" aria-label="Retour" @onclick="GoBack">
+            <button class="back-button" aria-label="@L.T("Retour")" @onclick="GoBack">
                 <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" d="M15 18l-6-6 6-6"/></svg>
             </button>
         }
         @if (!string.IsNullOrWhiteSpace(Store.Settings.Logo))
         {
-            <button type="button" class="logo-btn" aria-label="Afficher le logo et l'histoire de la communauté" @onclick="OpenLogo">
-                <img class="topbar-logo" src="@Store.Settings.Logo" alt="Logo" />
+            <button type="button" class="logo-btn" aria-label="@L.T("Afficher le logo et l'histoire de la communauté")" @onclick="OpenLogo">
+                <img class="topbar-logo" src="@Store.Settings.Logo" alt="@L.T("Logo")" />
             </button>
         }
         else
         {
-            <button type="button" class="logo-btn" aria-label="Afficher le logo et l'histoire de la communauté" @onclick="OpenLogo">
+            <button type="button" class="logo-btn" aria-label="@L.T("Afficher le logo et l'histoire de la communauté")" @onclick="OpenLogo">
                 <span class="topbar-logo-mark" aria-hidden="true">GU</span>
             </button>
         }
         <h2 class="page-title">@PageTitle</h2>
         <div class="topbar-actions">
             <div class="dropdown-wrap">
-                <button class="avatar-button" aria-label="Menu utilisateur" @onclick="ToggleMenu">
+                <button class="avatar-button" aria-label="@L.T("Menu utilisateur")" @onclick="ToggleMenu">
                     <Avatar UserName="@currentUser?.NomComplet" Seed="@currentUser?.Identifiant" Size="sm" Photo="@currentUser?.Photo" />
                 </button>
             </div>
             @if (State.CurrentPage != "guide")
             {
                 <div class="dropdown-wrap">
-                    <button class="topbar-menu-btn topbar-help-btn" aria-label="Aide sur cette page" @onclick="OpenHelp" title="Aide sur cette page">
+                    <button class="topbar-menu-btn topbar-help-btn" aria-label="@L.T("Aide sur cette page")" @onclick="OpenHelp" title="@L.T("Aide sur cette page")">
                         <span class="topbar-help-icon" aria-hidden="true">ⓘ</span>
                     </button>
                 </div>
             }
             <div class="dropdown-wrap">
-                <button class="topbar-menu-btn" aria-label="Plus d'options" @onclick="ToggleMore">
+                <button class="topbar-menu-btn" aria-label="@L.T("Plus d'options")" @onclick="ToggleMore">
                     <span class="topbar-menu-icon" aria-hidden="true">⋮</span>
                 </button>
             </div>
@@ -96,9 +96,9 @@
                     <span class="text-muted" style="font-size:12px">@currentUser?.Identifiant</span>
                 </div>
             </button>
-            <button class="user-menu-item" @onclick='() => Go("profile")'><span class="menu-icon menu-profile" aria-hidden="true"><svg viewBox="0 0 24 24" width="18" height="18"><circle cx="12" cy="8" r="3.6" fill="currentColor" opacity=".25"/><circle cx="12" cy="8" r="3.6" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M4.5 20c1.4-3.4 4.2-5 7.5-5s6.1 1.6 7.5 5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></span><span class="menu-label">Mes informations</span></button>
-            <button class="user-menu-item" @onclick="OpenPassword"><span class="menu-icon" aria-hidden="true">🔑</span><span class="menu-label">Changer mon mot de passe</span></button>
-            <button class="user-menu-item danger" @onclick="AskLogout"><span class="menu-icon menu-logout" aria-hidden="true"><svg viewBox="0 0 24 24" width="18" height="18"><path d="M14 4H6a1 1 0 0 0-1 1v14a1 1 0 0 0 1 1h8" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/><path d="M10 12h10m-3-3 3 3-3 3" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span class="menu-label">Déconnexion</span></button>
+            <button class="user-menu-item" @onclick='() => Go("profile")'><span class="menu-icon menu-profile" aria-hidden="true"><svg viewBox="0 0 24 24" width="18" height="18"><circle cx="12" cy="8" r="3.6" fill="currentColor" opacity=".25"/><circle cx="12" cy="8" r="3.6" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M4.5 20c1.4-3.4 4.2-5 7.5-5s6.1 1.6 7.5 5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></span><span class="menu-label">@L.T("Mes informations")</span></button>
+            <button class="user-menu-item" @onclick="OpenPassword"><span class="menu-icon" aria-hidden="true">🔑</span><span class="menu-label">@L.T("Changer mon mot de passe")</span></button>
+            <button class="user-menu-item danger" @onclick="AskLogout"><span class="menu-icon menu-logout" aria-hidden="true"><svg viewBox="0 0 24 24" width="18" height="18"><path d="M14 4H6a1 1 0 0 0-1 1v14a1 1 0 0 0 1 1h8" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/><path d="M10 12h10m-3-3 3 3-3 3" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span class="menu-label">@L.T("Déconnexion")</span></button>
         </div>
     }
 
@@ -108,10 +108,10 @@
             <div class="quota-banner @(Online.Admin.Level == "critique" ? "quota-banner-critical" : "")" role="alert">
                 <span class="quota-banner-icon" aria-hidden="true">@(Online.Admin.Level == "critique" ? "⛔" : "⚠")</span>
                 <div class="quota-banner-main">
-                    <strong>@(Online.Admin.Level == "critique" ? "Serveur bientôt saturé" : "Espace serveur à surveiller")</strong>
-                    <span>@Online.Admin.OpenAlerts alerte(s) de capacité Supabase à traiter (offre gratuite).</span>
+                    <strong>@(Online.Admin.Level == "critique" ? L.T("Serveur bientôt saturé") : L.T("Espace serveur à surveiller"))</strong>
+                    <span>@L.F("{0} alerte(s) de capacité Supabase à traiter (offre gratuite).", Online.Admin.OpenAlerts)</span>
                 </div>
-                <button type="button" class="btn btn-secondary btn-sm" @onclick='() => Go("capacite")'>Voir</button>
+                <button type="button" class="btn btn-secondary btn-sm" @onclick='() => Go("capacite")'>@L.T("Voir")</button>
             </div>
         }
         @if (Online.Admin.PendingAccounts > 0 && Store.Can(Permissions.UsersManage) && State.CurrentPage != "comptes")
@@ -119,10 +119,10 @@
             <div class="quota-banner online-pending-banner" role="status">
                 <span class="quota-banner-icon" aria-hidden="true">👤</span>
                 <div class="quota-banner-main">
-                    <strong>@Online.Admin.PendingAccounts inscription(s) à valider</strong>
-                    <span>Ces personnes attendent votre validation pour accéder à l'application.</span>
+                    <strong>@L.F("{0} inscription(s) à valider", Online.Admin.PendingAccounts)</strong>
+                    <span>@L.T("Ces personnes attendent votre validation pour accéder à l'application.")</span>
                 </div>
-                <button type="button" class="btn btn-secondary btn-sm" @onclick='() => Go("comptes")'>Valider</button>
+                <button type="button" class="btn btn-secondary btn-sm" @onclick='() => Go("comptes")'>@L.T("Valider")</button>
             </div>
         }
         @if (false && _storageLevel != "ok")
@@ -130,10 +130,10 @@
             <div class="quota-banner @(_storageLevel == "critical" ? "quota-banner-critical" : "")" role="alert">
                 <span class="quota-banner-icon" aria-hidden="true">@(_storageLevel == "critical" ? "⛔" : "⚠")</span>
                 <div class="quota-banner-main">
-                    <strong>@(_storageLevel == "critical" ? "Stockage saturé (" + _storagePercent.ToString("0") + " %)" : "Stockage presque plein (" + _storagePercent.ToString("0") + " %)")</strong>
-                    <span>@FormatSize(_storageUsedBytes) utilisés sur @_storageQuotaLabel. Videz la corbeille et les archives pour libérer de l'espace.</span>
+                    <strong>@(_storageLevel == "critical" ? L.F("Stockage saturé ({0} %)", _storagePercent.ToString("0")) : L.F("Stockage presque plein ({0} %)", _storagePercent.ToString("0")))</strong>
+                    <span>@L.F("{0} utilisés sur {1}. Videz la corbeille et les archives pour libérer de l'espace.", FormatSize(_storageUsedBytes), _storageQuotaLabel)</span>
                 </div>
-                <button type="button" class="btn btn-secondary btn-sm" @onclick="OpenStorage">Voir</button>
+                <button type="button" class="btn btn-secondary btn-sm" @onclick="OpenStorage">@L.T("Voir")</button>
             </div>
         }
         @if (_showContextBanner && _contextHelp is { } ctx)
@@ -145,8 +145,8 @@
                     <p>@ctx.Summary</p>
                 </div>
                 <div class="help-banner-actions">
-                    <button type="button" class="btn btn-primary btn-sm" @onclick="OpenHelp">En savoir plus</button>
-                    <button type="button" class="btn btn-secondary btn-sm" @onclick="DismissContextHelp">OK, j'ai compris</button>
+                    <button type="button" class="btn btn-primary btn-sm" @onclick="OpenHelp">@L.T("En savoir plus")</button>
+                    <button type="button" class="btn btn-secondary btn-sm" @onclick="DismissContextHelp">@L.T("OK, j'ai compris")</button>
                 </div>
             </div>
         }
@@ -157,36 +157,36 @@
         @if (Store.IsBaseAdmin)
         {
             <button class="bottom-nav-item @(NavCls("data"))" @onclick="@(() => Go("data"))">
-                <span class="bn-icon nav-svg nav-data" aria-hidden="true"><svg viewBox="0 0 24 24" width="24" height="24"><ellipse cx="12" cy="5.5" rx="7" ry="2.8" fill="currentColor" opacity=".3"/><path d="M5 5.5v13c0 1.5 3.1 2.8 7 2.8s7-1.3 7-2.8v-13" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M5 12c0 1.5 3.1 2.8 7 2.8s7-1.3 7-2.8" fill="none" stroke="currentColor" stroke-width="1.8" opacity=".7"/></svg></span><span class="bn-label">Gestion de données</span>
+                <span class="bn-icon nav-svg nav-data" aria-hidden="true"><svg viewBox="0 0 24 24" width="24" height="24"><ellipse cx="12" cy="5.5" rx="7" ry="2.8" fill="currentColor" opacity=".3"/><path d="M5 5.5v13c0 1.5 3.1 2.8 7 2.8s7-1.3 7-2.8v-13" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M5 12c0 1.5 3.1 2.8 7 2.8s7-1.3 7-2.8" fill="none" stroke="currentColor" stroke-width="1.8" opacity=".7"/></svg></span><span class="bn-label">@L.T("Gestion de données")</span>
             </button>
         }
         else
         {
             <button class="bottom-nav-item @(NavCls("dashboard"))" @onclick="@(() => Go("dashboard"))">
-                <span class="bn-icon nav-svg nav-home" aria-hidden="true"><svg viewBox="0 0 24 24" width="24" height="24"><path d="M4 10.5 12 3.5l8 7" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/><path d="M6 9.5V20h12V9.5" fill="currentColor" opacity=".18"/><path d="M6 9.5V20h12V9.5" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"/><circle cx="12" cy="14.5" r="1.6" fill="currentColor"/></svg></span><span class="bn-label">Accueil</span>
+                <span class="bn-icon nav-svg nav-home" aria-hidden="true"><svg viewBox="0 0 24 24" width="24" height="24"><path d="M4 10.5 12 3.5l8 7" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/><path d="M6 9.5V20h12V9.5" fill="currentColor" opacity=".18"/><path d="M6 9.5V20h12V9.5" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"/><circle cx="12" cy="14.5" r="1.6" fill="currentColor"/></svg></span><span class="bn-label">@L.T("Accueil")</span>
             </button>
             <button class="bottom-nav-item @(NavCls("users"))" @onclick="@(() => Go("users"))">
-                <span class="bn-icon nav-svg nav-users" aria-hidden="true"><svg viewBox="0 0 24 24" width="24" height="24"><circle cx="9" cy="8" r="3.2" fill="currentColor" opacity=".25"/><circle cx="9" cy="8" r="3.2" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M3 19c1-3 3.2-4.5 6-4.5s5 1.5 6 4.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><circle cx="16.5" cy="9" r="2.4" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M16 14.6c2 .3 3.6 1.5 4.5 3.9" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></span><span class="bn-label">@(Store.IsManager ? "Utilisateurs" : "Mes informations")</span>
+                <span class="bn-icon nav-svg nav-users" aria-hidden="true"><svg viewBox="0 0 24 24" width="24" height="24"><circle cx="9" cy="8" r="3.2" fill="currentColor" opacity=".25"/><circle cx="9" cy="8" r="3.2" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M3 19c1-3 3.2-4.5 6-4.5s5 1.5 6 4.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><circle cx="16.5" cy="9" r="2.4" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M16 14.6c2 .3 3.6 1.5 4.5 3.9" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></span><span class="bn-label">@(Store.IsManager ? L.T("Utilisateurs") : L.T("Mes informations"))</span>
             </button>
-            <button class="bottom-nav-item cal-nav-item @(NavCls("calendar"))" @onclick="@(() => Go("calendar"))" aria-label="Calendrier — @_calWeekday @_calDay">
+            <button class="bottom-nav-item cal-nav-item @(NavCls("calendar"))" @onclick="@(() => Go("calendar"))" aria-label="@L.F("Calendrier — {0} {1}", _calWeekday, _calDay)">
                 <span class="bn-icon cal-nav-icon nav-cal" aria-hidden="true">
                     <span class="cal-nav-weekday">@_calWeekday</span>
                     <span class="cal-nav-day">@_calDay</span>
                 </span>
                 @if (_calEventsToday > 0)
                 {
-                    <span class="cal-nav-badge" aria-label="@_calEventsToday événement(s) aujourd'hui">@_calEventsToday</span>
+                    <span class="cal-nav-badge" aria-label="@L.F("{0} événement(s) aujourd'hui", _calEventsToday)">@_calEventsToday</span>
                 }
-                <span class="bn-label">Calendrier</span>
+                <span class="bn-label">@L.T("Calendrier")</span>
             </button>
             @if (Store.IsManager)
             {
                 <button class="bottom-nav-item @(NavCls("activity"))" @onclick="@(() => Go("activity"))">
-                    <span class="bn-icon nav-svg nav-activity" aria-hidden="true"><svg viewBox="0 0 24 24" width="24" height="24"><rect x="5" y="4" width="14" height="17" rx="2.5" fill="currentColor" opacity=".15"/><rect x="5" y="4" width="14" height="17" rx="2.5" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M9 9.5h6M9 13h6M9 16.5h3.5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/><path d="M15.5 2.8v3.5h3.5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg></span><span class="bn-label">Activité</span>
+                    <span class="bn-icon nav-svg nav-activity" aria-hidden="true"><svg viewBox="0 0 24 24" width="24" height="24"><rect x="5" y="4" width="14" height="17" rx="2.5" fill="currentColor" opacity=".15"/><rect x="5" y="4" width="14" height="17" rx="2.5" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M9 9.5h6M9 13h6M9 16.5h3.5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/><path d="M15.5 2.8v3.5h3.5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg></span><span class="bn-label">@L.T("Activité")</span>
                 </button>
             }
-            <button class="bottom-nav-item @(NavCls("settings"))" @onclick="@(() => Go("settings"))" aria-label="Paramètres">
-                <span class="bn-icon nav-svg nav-settings" aria-hidden="true"><svg viewBox="0 0 24 24" width="24" height="24"><circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M12 2.5l1.2 2.7 2.9-.6 1 2.8 2.9.8-.5 2.9 2 2.1-2 2.1.5 2.9-2.9.8-1 2.8-2.9-.6L12 21.5l-1.2-2.7-2.9.6-1-2.8-2.9-.8.5-2.9-2-2.1 2-2.1-.5-2.9 2.9-.8 1-2.8 2.9.6z" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/></svg></span><span class="bn-label">Paramètres</span>
+            <button class="bottom-nav-item @(NavCls("settings"))" @onclick="@(() => Go("settings"))" aria-label="@L.T("Paramètres")">
+                <span class="bn-icon nav-svg nav-settings" aria-hidden="true"><svg viewBox="0 0 24 24" width="24" height="24"><circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M12 2.5l1.2 2.7 2.9-.6 1 2.8 2.9.8-.5 2.9 2 2.1-2 2.1.5 2.9-2.9.8-1 2.8-2.9-.6L12 21.5l-1.2-2.7-2.9.6-1-2.8-2.9-.8.5-2.9-2-2.1 2-2.1-.5-2.9 2.9-.8 1-2.8 2.9.6z" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/></svg></span><span class="bn-label">@L.T("Paramètres")</span>
             </button>
         }
     </nav>
@@ -194,9 +194,9 @@
     @if (_moreOpen)
     {
         <div class="more-overlay" @onclick="CloseMore">
-            <div class="user-menu more-sheet" role="dialog" aria-label="Menu" @onmousedown="NoOp" @onmousedown:stopPropagation="true" @onclick="NoOp" @onclick:stopPropagation="true">
+            <div class="user-menu more-sheet" role="dialog" aria-label="@L.T("Menu")" @onmousedown="NoOp" @onmousedown:stopPropagation="true" @onclick="NoOp" @onclick:stopPropagation="true">
                 <div class="more-head">
-                    <button type="button" class="modal-close" aria-label="Fermer le menu" @onclick="CloseMore">×</button>
+                    <button type="button" class="modal-close" aria-label="@L.T("Fermer le menu")" @onclick="CloseMore">×</button>
                 </div>
                 <div class="more-sheet-grid @MenuGridCls">
                     @foreach (var menuItem in (_visibleMore ?? VisibleMoreItems))
@@ -208,7 +208,7 @@
                             <span class="menu-label">@it.Label</span>
                             @if (!string.IsNullOrEmpty(badge))
                             {
-                                <span class="menu-badge" aria-label="@badge notification(s)">@badge</span>
+                                <span class="menu-badge" aria-label="@L.F("{0} notification(s)", badge)">@badge</span>
                             }
                         </button>
                     }
@@ -217,27 +217,27 @@
         </div>
     }
 
-    <Modal Title="Changer mon mot de passe" Show="_pwdOpen" OnClose="() => _pwdOpen = false">
+    <Modal Title="@L.T("Changer mon mot de passe")" Show="_pwdOpen" OnClose="() => _pwdOpen = false">
         <ChildContent>
             <div class="form-group">
-                <label for="me-pwd">Nouveau mot de passe</label>
+                <label for="me-pwd">@L.T("Nouveau mot de passe")</label>
                 <input id="me-pwd" type="password" autocomplete="new-password" @bind="_pwd1" />
             </div>
             <div class="form-group">
-                <label for="me-pwd2">Confirmer</label>
+                <label for="me-pwd2">@L.T("Confirmer")</label>
                 <input id="me-pwd2" type="password" autocomplete="new-password" @bind="_pwd2" />
-                <span class="field-hint">8 caractères minimum.</span>
+                <span class="field-hint">@L.T("8 caractères minimum.")</span>
             </div>
         </ChildContent>
         <FooterContent>
-            <button type="button" class="btn btn-secondary" @onclick="() => _pwdOpen = false">Annuler</button>
-            <button type="button" class="btn btn-primary" disabled="@_pwdBusy" @onclick="SavePasswordAsync">Enregistrer</button>
+            <button type="button" class="btn btn-secondary" @onclick="() => _pwdOpen = false">@L.T("Annuler")</button>
+            <button type="button" class="btn btn-primary" disabled="@_pwdBusy" @onclick="SavePasswordAsync">@L.T("Enregistrer")</button>
         </FooterContent>
     </Modal>
 
-    <ConfirmDialog Show="_confirmLogout" Title="Déconnexion"
-                   Message="Voulez-vous vraiment vous déconnecter ?"
-                   ConfirmLabel="Se déconnecter" Danger="true"
+    <ConfirmDialog Show="_confirmLogout" Title="@L.T("Déconnexion")"
+                   Message="@L.T("Voulez-vous vraiment vous déconnecter ?")"
+                   ConfirmLabel="@L.T("Se déconnecter")" Danger="true"
                    OnConfirm="ConfirmLogout" OnCancel="() => _confirmLogout = false" />
 
     <Modal Title="" Show="_logoOpen" OnClose="() => _logoOpen = false">
@@ -245,7 +245,7 @@
             <div class="logo-modal">
                 @if (!string.IsNullOrWhiteSpace(Store.Settings.Logo))
                 {
-                    <img class="logo-modal-img" src="@Store.Settings.Logo" alt="Logo de la communauté" />
+                    <img class="logo-modal-img" src="@Store.Settings.Logo" alt="@L.T("Logo de la communauté")" />
                 }
                 else
                 {
@@ -280,10 +280,10 @@
                                 }
                                 @if (Store.Community.Chapitres.Count > 3)
                                 {
-                                    <div class="logo-modal-more">… et @(Store.Community.Chapitres.Count - 3) autre(s) chapitre(s)</div>
+                                    <div class="logo-modal-more">@L.F("… et {0} autre(s) chapitre(s)", Store.Community.Chapitres.Count - 3)</div>
                                 }
                             </div>
-                            <button type="button" class="btn btn-primary btn-block" style="margin-top:12px" @onclick="OpenCommunityFromLogo">📖 Ouvrir l'histoire complète</button>
+                            <button type="button" class="btn btn-primary btn-block" style="margin-top:12px" @onclick="OpenCommunityFromLogo">@L.T("📖 Ouvrir l'histoire complète")</button>
                         }
                     </div>
                 }
@@ -291,13 +291,13 @@
         </ChildContent>
     </Modal>
 
-    <Modal Title="Espace de stockage utilisé" Show="_showStorage" CssClass="modal-storage" OnClose="() => _showStorage = false">
+    <Modal Title="@L.T("Espace de stockage utilisé")" Show="_showStorage" CssClass="modal-storage" OnClose="() => _showStorage = false">
         <ChildContent>
-            <p class="muted" style="margin-top:0">Répartition des données de la communauté par module. Touchez un module pour voir le détail.</p>
+            <p class="muted" style="margin-top:0">@L.T("Répartition des données de la communauté par module. Touchez un module pour voir le détail.")</p>
             <div class="storage-items">
                 @foreach (var item in _storageBreakdown)
                 {
-                    <div class="storage-item storage-item-link" role="button" tabindex="0" aria-label="Voir le détail @item.Label" @onclick="() => OpenStorageDetail(item.Key)" @onkeydown="(k) => OnStorageKey(k, item.Key)">
+                    <div class="storage-item storage-item-link" role="button" tabindex="0" aria-label="@L.F("Voir le détail {0}", item.Label)" @onclick="() => OpenStorageDetail(item.Key)" @onkeydown="(k) => OnStorageKey(k, item.Key)">
                         <div class="storage-item-main">
                             <div class="storage-item-label">@item.Label</div>
                             <div class="storage-item-desc">@item.Description</div>
@@ -316,8 +316,8 @@
             </div>
             <div class="storage-item storage-item-total">
                 <div class="storage-item-main">
-                    <div class="storage-item-label">Total utilisé</div>
-                    <div class="storage-item-desc">@FormatSize(_storageUsedBytes) / @FormatSize(_storageQuotaBytes) · @_storagePercent.ToString("0.000") % du quota</div>
+                    <div class="storage-item-label">@L.T("Total utilisé")</div>
+                    <div class="storage-item-desc">@FormatSize(_storageUsedBytes) / @FormatSize(_storageQuotaBytes) · @L.F("{0} % du quota", _storagePercent.ToString("0.000"))</div>
                     <div class="storage-item-bar">
                         <div class="storage-item-fill" style="width:@Math.Min(StorageQuotaPercent(), 100).ToString("0.0", System.Globalization.CultureInfo.InvariantCulture)%"></div>
                     </div>
@@ -326,38 +326,38 @@
             </div>
         </ChildContent>
         <FooterContent>
-            <button type="button" class="btn btn-primary" @onclick="() => _showStorage = false">Fermer</button>
+            <button type="button" class="btn btn-primary" @onclick="() => _showStorage = false">@L.T("Fermer")</button>
         </FooterContent>
     </Modal>
 
-    <Modal Title="@(_storageDetail == null ? "Détail du stockage" : _storageDetail.Label)" Show="_storageDetail != null" OnClose="CloseStorageDetail">
+    <Modal Title="@(_storageDetail == null ? L.T("Détail du stockage") : _storageDetail.Label)" Show="_storageDetail != null" OnClose="CloseStorageDetail">
         <ChildContent>
             @if (_storageDetail != null)
             {
                 <div class="storage-detail-hero">
                     <span class="storage-detail-icon" aria-hidden="true">@StorageIcon(_storageDetail.Key)</span>
                     <div class="storage-detail-value">@FormatSize(_storageDetail.Bytes)</div>
-                    <div class="storage-detail-sub">@StorageCountLabel(_storageDetail.Key) · @StoragePercentOf(_storageDetail.Bytes).ToString("0.0") % du stockage utilisé</div>
+                    <div class="storage-detail-sub">@StorageCountLabel(_storageDetail.Key) · @L.F("{0} % du stockage utilisé", StoragePercentOf(_storageDetail.Bytes).ToString("0.0"))</div>
                 </div>
                 <p class="muted">@_storageDetail.Description</p>
                 <div class="storage-item-bar storage-detail-bar">
                     <div class="storage-item-fill" style="width:@Math.Min(StoragePercentOf(_storageDetail.Bytes), 100).ToString("0.0", System.Globalization.CultureInfo.InvariantCulture)%"></div>
                 </div>
                 <div class="storage-detail-lines">
-                    <div class="storage-line"><span>Source</span><strong>@_storageDetail.Label</strong></div>
-                    <div class="storage-line"><span>Taille</span><strong>@FormatSize(_storageDetail.Bytes)</strong></div>
-                    <div class="storage-line"><span>Éléments</span><strong>@StorageCountLabel(_storageDetail.Key)</strong></div>
-                    <div class="storage-line storage-total"><span>Part du total</span><strong>@StoragePercentOf(_storageDetail.Bytes).ToString("0.0") %</strong></div>
+                    <div class="storage-line"><span>@L.T("Source")</span><strong>@_storageDetail.Label</strong></div>
+                    <div class="storage-line"><span>@L.T("Taille")</span><strong>@FormatSize(_storageDetail.Bytes)</strong></div>
+                    <div class="storage-line"><span>@L.T("Éléments")</span><strong>@StorageCountLabel(_storageDetail.Key)</strong></div>
+                    <div class="storage-line storage-total"><span>@L.T("Part du total")</span><strong>@StoragePercentOf(_storageDetail.Bytes).ToString("0.0") %</strong></div>
                 </div>
             }
         </ChildContent>
         <FooterContent>
-            <button type="button" class="btn btn-secondary" @onclick="BackToStorageList">← Retour à la liste</button>
-            <button type="button" class="btn btn-primary" @onclick="CloseStorageDetail">Fermer</button>
+            <button type="button" class="btn btn-secondary" @onclick="BackToStorageList">@L.T("← Retour à la liste")</button>
+            <button type="button" class="btn btn-primary" @onclick="CloseStorageDetail">@L.T("Fermer")</button>
         </FooterContent>
     </Modal>
 
-    <Modal Title="@(_helpModal == null ? "Aide" : _helpModal.Title)" Show="_helpModal != null" OnClose="() => _helpModal = null">
+    <Modal Title="@(_helpModal == null ? L.T("Aide") : _helpModal.Title)" Show="_helpModal != null" OnClose="() => _helpModal = null">
         <ChildContent>
             @if (_helpModal != null)
             {
@@ -385,8 +385,8 @@
             }
         </ChildContent>
         <FooterContent>
-            <button type="button" class="btn btn-primary" @onclick="OpenGuide">Ouvrir le guide utilisateur</button>
-            <button type="button" class="btn btn-secondary" @onclick="() => _helpModal = null">Fermer</button>
+            <button type="button" class="btn btn-primary" @onclick="OpenGuide">@L.T("Ouvrir le guide utilisateur")</button>
+            <button type="button" class="btn btn-secondary" @onclick="() => _helpModal = null">@L.T("Fermer")</button>
         </FooterContent>
     </Modal>
 
@@ -415,7 +415,6 @@
     private bool _showStorage;
     private StorageUsageItem? _storageDetail;
     private IReadOnlyList<StorageUsageItem> _storageBreakdown = Array.Empty<StorageUsageItem>();
-    private static readonly CultureInfo Fr = CultureInfo.GetCultureInfo("fr-FR");
 
     // Aide contextuelle et mini-guide illustré
     private HelpEntry? _contextHelp;
@@ -425,32 +424,32 @@
 
     private string PageTitle => State.CurrentPage switch
     {
-        "dashboard" => "Accueil",
-        "users" => Store.IsManager ? "Utilisateurs" : "Mes informations",
-        "profile" => "Mes informations",
-        "activity" => "Journal d'activité",
-        "calendar" => _calMonthLabel ?? "Calendrier",
-        "fields" => "Champs personnalisés",
-        "settings" => "Paramètres",
-        "documents" => "Documents",
-        "data" => "Gestion de données",
-        "archive" => "Archives des utilisateurs",
-        "community" => "Communauté",
-        "comptes" => "Comptes en ligne",
-        "capacite" => "Capacité du serveur",
-        "roles" => "Rôles et permissions",
-        "messagerie" => "Messagerie",
-        "taches" => "Tâches",
-        "finances" => "Finances",
-        "materiel" => "Matériel",
-        "reunions" => "Réunions",
-        "rappels" => "Rappels",
-        "situations" => "Situations",
-        "carte" => "Carte membre",
-        "votes" => "Votes",
-        "journal" => "Journal multimédia",
-        "guide" => "Guide utilisateur",
-        _ => (Store.Settings.AppName ?? "Gestion des utilisateurs")
+        "dashboard" => L.T("Accueil"),
+        "users" => Store.IsManager ? L.T("Utilisateurs") : L.T("Mes informations"),
+        "profile" => L.T("Mes informations"),
+        "activity" => L.T("Journal d'activité"),
+        "calendar" => _calMonthLabel ?? L.T("Calendrier"),
+        "fields" => L.T("Champs personnalisés"),
+        "settings" => L.T("Paramètres"),
+        "documents" => L.T("Documents"),
+        "data" => L.T("Gestion de données"),
+        "archive" => L.T("Archives des utilisateurs"),
+        "community" => L.T("Communauté"),
+        "comptes" => L.T("Comptes en ligne"),
+        "capacite" => L.T("Capacité du serveur"),
+        "roles" => L.T("Rôles et permissions"),
+        "messagerie" => L.T("Messagerie"),
+        "taches" => L.T("Tâches"),
+        "finances" => L.T("Finances"),
+        "materiel" => L.T("Matériel"),
+        "reunions" => L.T("Réunions"),
+        "rappels" => L.T("Rappels"),
+        "situations" => L.T("Situations"),
+        "carte" => L.T("Carte membre"),
+        "votes" => L.T("Votes"),
+        "journal" => L.T("Journal multimédia"),
+        "guide" => L.T("Guide utilisateur"),
+        _ => (Store.Settings.AppName ?? L.T("Gestion des utilisateurs"))
     };
 
     private string NavCls(string page) => State.CurrentPage == page ? "active" : "";
@@ -552,26 +551,26 @@
 
     private List<MoreItem> AllMoreItems => new()
     {
-        new("archive", "Archives des utilisateurs", "🗃", "menu-archive", () => Store.IsAdmin, () => Go("archive")),
-        new("comptes", "Comptes en ligne", "👤", "menu-comptes", () => Store.Can(Permissions.UsersManage), () => Go("comptes")),
-        new("capacite", "Capacité du serveur", "📊", "menu-storage", () => Store.IsAdmin, () => Go("capacite")),
+        new("archive", L.T("Archives des utilisateurs"), "🗃", "menu-archive", () => Store.IsAdmin, () => Go("archive")),
+        new("comptes", L.T("Comptes en ligne"), "👤", "menu-comptes", () => Store.Can(Permissions.UsersManage), () => Go("comptes")),
+        new("capacite", L.T("Capacité du serveur"), "📊", "menu-storage", () => Store.IsAdmin, () => Go("capacite")),
         // En ligne, aucun compte n'a le rôle technique « Administrateur de la base » :
         // la gestion directe des données est ouverte aux administrateurs.
-        new("data", "Gestion de données", "🗄", "menu-data", () => Store.IsAdmin && !Store.IsBaseAdmin, () => Go("data")),
-        new("documents", "Gestion documentaire", "📄", "menu-docs", () => !Store.IsBaseAdmin, () => Go("documents")),
-        new("community", "Histoire de la communauté", "📖", "menu-community", () => true, () => Go("community")),
-        new("roles", "Rôles et permissions", "🛡", "menu-roles", () => Store.Can(Permissions.RolesManage), () => Go("roles")),
-        new("messagerie", "Messagerie", "✉", "menu-msg", () => Store.Can(Permissions.MessagerieUse), () => Go("messagerie")),
-        new("taches", "Tâches et suivi", "☑", "menu-tasks", () => Store.Can(Permissions.TachesUse), () => Go("taches")),
-        new("finances", "Finances", "💰", "menu-finances", () => Store.Can(Permissions.FinancesManage), () => Go("finances")),
-        new("materiel", "Matériel", "🧰", "menu-materiel", () => Store.Can(Permissions.MaterielManage), () => Go("materiel")),
-        new("reunions", "Présence et réunions", "👥", "menu-reunions", () => Store.Can(Permissions.PresenceManage), () => Go("reunions")),
-        new("rappels", "Rappels intelligents", "⏰", "menu-rappels", () => Store.Can(Permissions.RappelsUse), () => Go("rappels")),
-        new("situations", "Situations particulières", "🤝", "menu-situations", () => Store.Can(Permissions.SituationsManage), () => Go("situations")),
-        new("carte", "Carte de membre", "🪪", "menu-carte", () => Store.Can(Permissions.CarteMembreView), () => Go("carte")),
-        new("votes", "Votes et décisions", "🗳", "menu-votes", () => true, () => Go("votes")),
-        new("journal", "Journal multimédia", "🎞", "menu-journal", () => Store.Can(Permissions.JournalMediaUse), () => Go("journal")),
-        new("guide", "Guide utilisateur", "🧭", "menu-guide", () => true, OpenGuide)
+        new("data", L.T("Gestion de données"), "🗄", "menu-data", () => Store.IsAdmin && !Store.IsBaseAdmin, () => Go("data")),
+        new("documents", L.T("Gestion documentaire"), "📄", "menu-docs", () => !Store.IsBaseAdmin, () => Go("documents")),
+        new("community", L.T("Histoire de la communauté"), "📖", "menu-community", () => true, () => Go("community")),
+        new("roles", L.T("Rôles et permissions"), "🛡", "menu-roles", () => Store.Can(Permissions.RolesManage), () => Go("roles")),
+        new("messagerie", L.T("Messagerie"), "✉", "menu-msg", () => Store.Can(Permissions.MessagerieUse), () => Go("messagerie")),
+        new("taches", L.T("Tâches et suivi"), "☑", "menu-tasks", () => Store.Can(Permissions.TachesUse), () => Go("taches")),
+        new("finances", L.T("Finances"), "💰", "menu-finances", () => Store.Can(Permissions.FinancesManage), () => Go("finances")),
+        new("materiel", L.T("Matériel"), "🧰", "menu-materiel", () => Store.Can(Permissions.MaterielManage), () => Go("materiel")),
+        new("reunions", L.T("Présence et réunions"), "👥", "menu-reunions", () => Store.Can(Permissions.PresenceManage), () => Go("reunions")),
+        new("rappels", L.T("Rappels intelligents"), "⏰", "menu-rappels", () => Store.Can(Permissions.RappelsUse), () => Go("rappels")),
+        new("situations", L.T("Situations particulières"), "🤝", "menu-situations", () => Store.Can(Permissions.SituationsManage), () => Go("situations")),
+        new("carte", L.T("Carte de membre"), "🪪", "menu-carte", () => Store.Can(Permissions.CarteMembreView), () => Go("carte")),
+        new("votes", L.T("Votes et décisions"), "🗳", "menu-votes", () => true, () => Go("votes")),
+        new("journal", L.T("Journal multimédia"), "🎞", "menu-journal", () => Store.Can(Permissions.JournalMediaUse), () => Go("journal")),
+        new("guide", L.T("Guide utilisateur"), "🧭", "menu-guide", () => true, OpenGuide)
     };
 
     /// <summary>Entrées visibles du menu « … » dans l'ordre choisi dans les paramètres (défaut : ordre d'origine, sans les masquées).</summary>
@@ -887,10 +886,10 @@
 
     private static string FormatSize(long bytes)
     {
-        if (bytes < 1024) return bytes + " o";
-        if (bytes < 1024 * 1024) return (bytes / 1024.0).ToString("0.0") + " Ko";
-        if (bytes < 1024L * 1024L * 1024L) return (bytes / (1024.0 * 1024)).ToString("0.0") + " Mo";
-        return (bytes / (1024.0 * 1024 * 1024)).ToString("0.0") + " Go";
+        if (bytes < 1024) return bytes + " " + L.T("o");
+        if (bytes < 1024 * 1024) return (bytes / 1024.0).ToString("0.0") + " " + L.T("Ko");
+        if (bytes < 1024L * 1024L * 1024L) return (bytes / (1024.0 * 1024)).ToString("0.0") + " " + L.T("Mo");
+        return (bytes / (1024.0 * 1024 * 1024)).ToString("0.0") + " " + L.T("Go");
     }
 
     private string _storageLevel = "ok";
@@ -914,9 +913,9 @@
         if (_storageLevel != _lastStorageToast)
         {
             if (_storageLevel == "critical")
-                State.NotifyError("Stockage saturé (" + _storagePercent.ToString("0") + " %) : videz la corbeille et les archives.");
+                State.NotifyError(L.F("Stockage saturé ({0} %) : videz la corbeille et les archives.", _storagePercent.ToString("0")));
             else if (_storageLevel == "warning")
-                State.NotifyWarning("Stockage presque plein (" + _storagePercent.ToString("0") + " %) : pensez à libérer de l'espace.");
+                State.NotifyWarning(L.F("Stockage presque plein ({0} %) : pensez à libérer de l'espace.", _storagePercent.ToString("0")));
             _lastStorageToast = _storageLevel;
         }
     }
@@ -934,26 +933,26 @@
 
     private string StorageCountLabel(string key) => key switch
     {
-        "users" => Store.Users.Count + " compte(s)",
-        "fields" => Store.Fields.Count(f => !f.SystemField) + " champ(s) personnalisé(s)",
-        "activity" => Store.Activity.Count + " entrée(s)",
-        "archives" => Store.ArchivedUsers.Count + " archive(s)",
-        "events" => Store.Events.Count + " événement(s)",
-        "documents" => Store.Documents.Count(d => !d.Supprime) + " document(s)",
-        "folders" => Store.Folders.Count + " dossier(s)",
-        "community" => Store.Community.Chapitres.Count + " chapitre(s)",
-        "permissions" => Store.RolePermissions.Count + " rôle(s)",
-        "messages" => Store.Messages.Count + " message(s)",
-        "taches" => Store.Taches.Count + " tâche(s)",
-        "cotisations" => Store.Cotisations.Count + " cotisation(s)",
-        "tresorerie" => Store.Tresorerie.Count + " mouvement(s)",
-        "materiels" => Store.Materiels.Count + " matériel(s)",
-        "reunions" => Store.Reunions.Count + " réunion(s)",
-        "situations" => Store.Situations.Count + " suivi(s)",
-        "votes" => Store.Votes.Count + " vote(s)",
-        "journal_media" => Store.JournalMedia.Count + " média(s)",
-        "settings" => "1 configuration",
-        "session" => Store.GetCurrentUser() == null ? "aucune session" : "1 session active",
+        "users" => L.F("{0} compte(s)", Store.Users.Count),
+        "fields" => L.F("{0} champ(s) personnalisé(s)", Store.Fields.Count(f => !f.SystemField)),
+        "activity" => L.F("{0} entrée(s)", Store.Activity.Count),
+        "archives" => L.F("{0} archive(s)", Store.ArchivedUsers.Count),
+        "events" => L.F("{0} événement(s)", Store.Events.Count),
+        "documents" => L.F("{0} document(s)", Store.Documents.Count(d => !d.Supprime)),
+        "folders" => L.F("{0} dossier(s)", Store.Folders.Count),
+        "community" => L.F("{0} chapitre(s)", Store.Community.Chapitres.Count),
+        "permissions" => L.F("{0} rôle(s)", Store.RolePermissions.Count),
+        "messages" => L.F("{0} message(s)", Store.Messages.Count),
+        "taches" => L.F("{0} tâche(s)", Store.Taches.Count),
+        "cotisations" => L.F("{0} cotisation(s)", Store.Cotisations.Count),
+        "tresorerie" => L.F("{0} mouvement(s)", Store.Tresorerie.Count),
+        "materiels" => L.F("{0} matériel(s)", Store.Materiels.Count),
+        "reunions" => L.F("{0} réunion(s)", Store.Reunions.Count),
+        "situations" => L.F("{0} suivi(s)", Store.Situations.Count),
+        "votes" => L.F("{0} vote(s)", Store.Votes.Count),
+        "journal_media" => L.F("{0} média(s)", Store.JournalMedia.Count),
+        "settings" => L.T("1 configuration"),
+        "session" => Store.GetCurrentUser() == null ? L.T("aucune session") : L.T("1 session active"),
         _ => ""
     };
 
@@ -962,11 +961,12 @@
         var today = DateTime.Today;
         _calKey = today.ToString("yyyy-MM-dd");
         _calEventsToday = Store.Events.Count(e => CalendarPage.OccursOn(e, today));
-        var abbr = today.ToString("dddd", Fr)[..3];
+        // Malgache : 4 lettres (alah, alat, alar, alak) pour distinguer les jours en « ala- ».
+        var jour = L.Jour(today.DayOfWeek);
+        var abbr = jour[..Math.Min(L.Langue == L.Mg ? 4 : 3, jour.Length)];
         _calWeekday = char.ToUpperInvariant(abbr[0]) + abbr[1..];
         _calDay = today.Day.ToString();
-        var month = today.ToString("MMMM yyyy", Fr);
-        _calMonthLabel = month.Length > 0 ? char.ToUpperInvariant(month[0]) + month[1..] : month;
+        _calMonthLabel = L.Majuscule(L.MoisAnnee(today));
     }
 
     /// <summary>Entrées de la barre latérale web : navigation principale puis menu « … ».</summary>
@@ -976,18 +976,18 @@
         {
             var list = new List<MoreItem>();
             if (Store.IsBaseAdmin)
-                list.Add(new("data", "Gestion de données", "🗄", "", () => true, () => Go("data")));
+                list.Add(new("data", L.T("Gestion de données"), "🗄", "", () => true, () => Go("data")));
             else
             {
-                list.Add(new("dashboard", "Accueil", "🏠", "", () => true, () => Go("dashboard")));
-                list.Add(new("users", Store.IsManager ? "Utilisateurs" : "Mes informations", "👥", "", () => true, () => Go("users")));
-                list.Add(new("calendar", "Calendrier", "📅", "", () => true, () => Go("calendar")));
-                if (Store.IsManager) list.Add(new("activity", "Activité", "🧾", "", () => true, () => Go("activity")));
+                list.Add(new("dashboard", L.T("Accueil"), "🏠", "", () => true, () => Go("dashboard")));
+                list.Add(new("users", Store.IsManager ? L.T("Utilisateurs") : L.T("Mes informations"), "👥", "", () => true, () => Go("users")));
+                list.Add(new("calendar", L.T("Calendrier"), "📅", "", () => true, () => Go("calendar")));
+                if (Store.IsManager) list.Add(new("activity", L.T("Activité"), "🧾", "", () => true, () => Go("activity")));
             }
             list.AddRange(VisibleMoreItems);
             // Sur grand écran la barre du bas est masquée : les Paramètres passent dans la barre latérale.
             if (!Store.IsBaseAdmin)
-                list.Add(new("settings", "Paramètres", "⚙", "", () => true, () => Go("settings")));
+                list.Add(new("settings", L.T("Paramètres"), "⚙", "", () => true, () => Go("settings")));
             return list;
         }
     }
@@ -1006,14 +1006,14 @@
 
     private async Task SavePasswordAsync()
     {
-        if (_pwd1.Length < 8) { State.NotifyError("Le mot de passe doit contenir au moins 8 caractères."); return; }
-        if (_pwd1 != _pwd2) { State.NotifyError("Les deux mots de passe ne correspondent pas."); return; }
+        if (_pwd1.Length < 8) { State.NotifyError(L.T("Le mot de passe doit contenir au moins 8 caractères.")); return; }
+        if (_pwd1 != _pwd2) { State.NotifyError(L.T("Les deux mots de passe ne correspondent pas.")); return; }
         _pwdBusy = true;
         var error = await Online.ChangePasswordAsync(_pwd1);
         _pwdBusy = false;
         if (error != null) { State.NotifyError(error); return; }
         _pwdOpen = false;
-        State.NotifySuccess("Mot de passe modifié.");
+        State.NotifySuccess(L.T("Mot de passe modifié."));
     }
 
     private void OnOnlineChanged() => _ = InvokeAsync(StateHasChanged);

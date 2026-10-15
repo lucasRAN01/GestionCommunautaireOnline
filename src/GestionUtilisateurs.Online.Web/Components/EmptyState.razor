@@ -10,7 +10,7 @@
 
 @code {
     [Parameter] public string Icon { get; set; } = "📋";
-    [Parameter] public string Title { get; set; } = "Aucun élément";
+    [Parameter] public string Title { get; set; } = L.T("Aucun élément");
     [Parameter] public string? Message { get; set; }
     /// <summary>Actions optionnelles affichées sous le message (boutons).</summary>
     [Parameter] public RenderFragment? ChildContent { get; set; }

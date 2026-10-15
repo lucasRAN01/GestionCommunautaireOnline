@@ -3,11 +3,11 @@
 <div class="mpicker">
     <div class="search-box cal-search cal-opt-search" style="margin-bottom:0">
         <span class="search-icon" aria-hidden="true">&#128269;</span>
-        <input type="search" placeholder="@Placeholder" aria-label="Chercher un membre"
+        <input type="search" placeholder="@Placeholder" aria-label="@L.T("Chercher un membre")"
                value="@_search" @oninput="OnSearch" @onfocus="() => _open = true" />
         @if (!string.IsNullOrWhiteSpace(Value) || _open)
         {
-            <button type="button" class="mpicker-clear" aria-label="Effacer" @onclick="ClearAll">✕</button>
+            <button type="button" class="mpicker-clear" aria-label="@L.T("Effacer")" @onclick="ClearAll">✕</button>
         }
     </div>
     @if (_open)
@@ -16,7 +16,7 @@
             @if (AllowEmpty)
             {
                 <button type="button" class="mpicker-item" @onclick='() => Select("")'>
-                    <span class="mpicker-name">— Aucun —</span>
+                    <span class="mpicker-name">@L.T("— Aucun —")</span>
                 </button>
             }
             @foreach (var u in Visible)
@@ -36,11 +36,11 @@
             }
             @if (Visible.Count == 0)
             {
-                <div class="cal-no-events">Aucun membre trouvé pour « @_search ».</div>
+                <div class="cal-no-events">@L.F("Aucun membre trouvé pour « {0} ».", _search)</div>
             }
             else if (TotalCount > Visible.Count)
             {
-                <div class="mpicker-more">@TotalCount membre(s) — affinez la recherche (@Visible.Count affichés).</div>
+                <div class="mpicker-more">@L.F("{0} membre(s) — affinez la recherche ({1} affichés).", TotalCount, Visible.Count)</div>
             }
         </div>
     }
@@ -60,7 +60,7 @@
     [Parameter] public EventCallback<string> ValueChanged { get; set; }
     [Parameter] public bool AllowEmpty { get; set; }
     [Parameter] public bool ActiveOnly { get; set; } = true;
-    [Parameter] public string Placeholder { get; set; } = "Écrire pour chercher un membre…";
+    [Parameter] public string Placeholder { get; set; } = L.T("Écrire pour chercher un membre…");
 
     private string _search = "";
     private bool _open;
