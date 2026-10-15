@@ -80,7 +80,6 @@
   "Cotisation supprimée.": "Dues deleted.",
   "Mouvement enregistré.": "Transaction recorded.",
   "Mouvement supprimé.": "Transaction deleted.",
-
   "Le matériel n'est pas autorisé pour votre rôle.": "Equipment is not allowed for your role.",
   "Inventaire, stocks disponibles et prêts aux membres.": "Inventory, available stock and loans to members.",
   "Rechercher un matériel (nom, catégorie, responsable, état)…": "Search equipment (name, category, person in charge, condition)…",
@@ -99,7 +98,7 @@
   "Prêter": "Lend",
   "Aucun prêt actif.": "No active loans.",
   "depuis le {0}": "since {0}",
-  "Retour": "Return",
+  "Retour": "Back",
   "Derniers retours": "Latest returns",
   "Ajouter un matériel": "Add equipment",
   "Nouveau matériel": "New equipment",
@@ -111,7 +110,7 @@
   "Quantité totale *": "Total quantity *",
   "Bon": "Good",
   "Moyen": "Fair",
-  "Hors service": "Out of service",
+  "Hors service": "Out of order",
   "Responsable (facultatif)": "Person in charge (optional)",
   "Prêter du matériel": "Lend equipment",
   "Quantité * (max {0})": "Quantity * (max {0})",
@@ -123,7 +122,6 @@
   "Matériel supprimé.": "Equipment deleted.",
   "Prêt enregistré.": "Loan recorded.",
   "Retour enregistré.": "Return recorded.",
-
   "Décisions collectives : un bulletin par membre, modifiable tant que le vote est ouvert.": "Group decisions: one ballot per member, which can be changed while the vote is open.",
   "Rechercher un vote (question, description, auteur)…": "Search votes (question, description, author)…",
   "Rechercher un vote": "Search votes",
@@ -163,7 +161,6 @@
   "Vote clos.": "Vote closed.",
   "Vote rouvert.": "Vote reopened.",
   "Vote supprimé.": "Vote deleted.",
-
   "La messagerie interne n'est pas autorisée pour votre rôle.": "Internal messages are not allowed for your role.",
   "Messagerie de la communauté : vos messages vous suivent sur tous vos appareils.": "Community messages: your messages follow you on all your devices.",
   "Nouveau message": "New message",
@@ -196,7 +193,6 @@
   "Message envoyé.": "Message sent.",
   "Message supprimé.": "Message deleted.",
   "Message modifié.": "Message edited.",
-
   "Le journal multimédia n'est pas autorisé pour votre rôle.": "The media journal is not allowed for your role.",
   "Photos, vidéos et enregistrements audio, partagés avec la communauté.": "Photos, videos and audio recordings shared with the community.",
   "Rechercher un média (titre, description, type)…": "Search media (title, description, type)…",
@@ -235,7 +231,6 @@
   "{0} o": "{0} B",
   "{0} Ko": "{0} KB",
   "{0} Mo": "{0} MB",
-
   "Le récit vivant de notre communauté, chapitre par chapitre.": "The living story of our community, chapter by chapter.",
   "Rechercher dans l'histoire (chapitre, texte)…": "Search the story (chapter, text)…",
   "Rechercher un chapitre": "Search chapters",

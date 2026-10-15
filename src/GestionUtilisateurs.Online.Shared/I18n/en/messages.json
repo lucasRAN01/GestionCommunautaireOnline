@@ -128,7 +128,7 @@
   "Seul l'expéditeur ou un administrateur peut supprimer ce message.": "Only the sender or an administrator can delete this message.",
   "Message supprimé.": "Message deleted.",
   "Seul l'expéditeur peut modifier ce message.": "Only the sender can edit this message.",
-  "Modification impossible.": "Cannot edit.",
+  "Modification impossible.": "Unable to make the change.",
   "Le délai de modification (5 min) est dépassé.": "The editing window (5 min) has passed.",
   "Le titre de la tâche est obligatoire.": "The task title is required.",
   "Assigné introuvable : « {0} ».": "Assignee not found: \"{0}\".",
