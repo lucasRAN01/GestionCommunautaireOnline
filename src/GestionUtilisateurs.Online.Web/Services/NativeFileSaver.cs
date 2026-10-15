@@ -1,4 +1,5 @@
 using Microsoft.JSInterop;
+using GestionUtilisateurs.Shared.Services;
 
 namespace GestionUtilisateurs.Online.Web.Services;
 
@@ -22,7 +23,7 @@ public class NativeFileSaver
 
     /// <summary>Télécharge le fichier ; renvoie le nom affiché (dossier Téléchargements du navigateur).</summary>
     public async Task<string?> SaveAsync(string fileName, byte[] content, string mime)
-        => await _files.SaveAsync(fileName, content, mime) ? "Téléchargements/" + fileName : null;
+        => await _files.SaveAsync(fileName, content, mime) ? L.T("Téléchargements") + "/" + fileName : null;
 
     /// <summary>Ouvre un média stocké en data URL (photo, vidéo, audio du journal).</summary>
     public Task<bool> OpenMediaFromDataUrlAsync(string dataUrl, string mime, string fileName)
@@ -49,7 +50,7 @@ public class NativeFileSaver
         try
         {
             var ok = await _js.InvokeAsync<bool>("guWebPrint.printHtml", pagesHtml.ToArray(), fileName, pageWidthPt, pageHeightPt);
-            return ok ? fileName + " (impression du navigateur > Enregistrer au format PDF)" : null;
+            return ok ? L.F("{0} (impression du navigateur > Enregistrer au format PDF)", fileName) : null;
         }
         catch (JSException) { return null; }
     }

@@ -1,6 +1,7 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Microsoft.JSInterop;
+using GestionUtilisateurs.Shared.Services;
 
 namespace GestionUtilisateurs.Online.Web.Services;
 
@@ -53,10 +54,10 @@ public static class OnlineStatuts
 
     public static string Label(string statut) => statut switch
     {
-        EnAttente => "En attente",
-        Actif => "Actif",
-        Refuse => "Refusé",
-        Desactive => "Désactivé",
+        EnAttente => L.T("En attente"),
+        Actif => L.T("Actif"),
+        Refuse => L.T("Refusé"),
+        Desactive => L.T("Désactivé"),
         _ => statut
     };
 }
@@ -172,7 +173,7 @@ public class OnlineApi
     {
         if (message.Contains("Failed to fetch", StringComparison.OrdinalIgnoreCase)
             || message.Contains("NetworkError", StringComparison.OrdinalIgnoreCase))
-            return "Connexion au serveur impossible. Vérifiez votre connexion Internet.";
+            return L.T("Connexion au serveur impossible. Vérifiez votre connexion Internet.");
         return message;
     }
 }

@@ -83,9 +83,9 @@ public sealed class OnlineSession : IDisposable
     public async Task<string?> SignInAsync(string email, string password)
     {
         var res = await _api.SignInAsync(email, password);
-        if (!res.Ok) return res.Error ?? "Connexion impossible.";
+        if (!res.Ok) return res.Error ?? L.T("Connexion impossible.");
         var user = await _api.GetSessionAsync();
-        if (user == null) return "Connexion impossible.";
+        if (user == null) return L.T("Connexion impossible.");
         await EnterAsync(user);
         return null;
     }
@@ -94,10 +94,9 @@ public sealed class OnlineSession : IDisposable
     public async Task<string?> SignUpAsync(string email, string password, string prenom, string nom, string telephone)
     {
         var res = await _api.SignUpAsync(email, password, prenom, nom, telephone);
-        if (!res.Ok) return res.Error ?? "Inscription impossible.";
+        if (!res.Ok) return res.Error ?? L.T("Inscription impossible.");
         if (!res.HasSession)
-            return "Inscription enregistrée, mais la confirmation par e-mail est activée dans Supabase. "
-                + "Désactivez-la (voir le guide de mise en ligne) pour que la validation se fasse par l'administrateur.";
+            return L.T("Inscription enregistrée, mais la confirmation par e-mail est activée dans Supabase. Désactivez-la (voir le guide de mise en ligne) pour que la validation se fasse par l'administrateur.");
         var user = await _api.GetSessionAsync();
         if (user != null) await EnterAsync(user);
         return null;
@@ -136,7 +135,7 @@ public sealed class OnlineSession : IDisposable
     public async Task<string?> ChangePasswordAsync(string password)
     {
         var res = await _api.UpdatePasswordAsync(password);
-        return res.Ok ? null : res.Error ?? "Modification impossible.";
+        return res.Ok ? null : res.Error ?? L.T("Modification impossible.");
     }
 
     /// <summary>Met à jour le résumé administrateur (badges et bandeau de saturation).</summary>
@@ -169,7 +168,7 @@ public sealed class OnlineSession : IDisposable
         var profile = await _api.RpcAsync<OnlineProfile>("my_profile");
         if (!profile.Ok || profile.Data == null)
         {
-            Error = profile.Error ?? "Profil introuvable. Le schéma Supabase est-il installé ?";
+            Error = profile.Error ?? L.T("Profil introuvable. Le schéma Supabase est-il installé ?");
             SetState(OnlineSessionState.Error);
             return;
         }
@@ -282,7 +281,7 @@ public sealed class OnlineSession : IDisposable
     private void OnConflict(string key)
     {
         ReloadStore();
-        _state.NotifyWarning("Un autre membre vient de modifier ces données. Elles ont été mises à jour : vérifiez et refaites votre dernière modification si besoin.");
+        _state.NotifyWarning(L.T("Un autre membre vient de modifier ces données. Elles ont été mises à jour : vérifiez et refaites votre dernière modification si besoin."));
     }
 
     private void OnMerged(string key) => ReloadStore();
@@ -297,7 +296,7 @@ public sealed class OnlineSession : IDisposable
     {
         if (DateTime.UtcNow - _lastNetworkError < TimeSpan.FromMinutes(1)) return;
         _lastNetworkError = DateTime.UtcNow;
-        _state.NotifyWarning(message + " Nouvel essai automatique dans quelques secondes.");
+        _state.NotifyWarning(L.F("{0} Nouvel essai automatique dans quelques secondes.", message));
     }
 
     private void OnStoreSessionChanged()

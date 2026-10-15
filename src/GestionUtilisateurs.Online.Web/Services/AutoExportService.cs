@@ -1,3 +1,5 @@
+using GestionUtilisateurs.Shared.Services;
+
 namespace GestionUtilisateurs.Online.Web.Services;
 
 /// <summary>
@@ -60,21 +62,20 @@ public class AutoExportService
             if (jsonPath == null && excelPath == null)
             {
                 LastResult = null;
-                if (!silent) _state.NotifyError("Export automatique impossible : stockage inaccessible.");
+                if (!silent) _state.NotifyError(L.T("Export automatique impossible : stockage inaccessible."));
                 return false;
             }
 
             _store.MarkAutoExportDone();
-            var label = "Export automatique mensuel (" + month + ") : "
-                + (jsonPath ?? jsonName) + " + " + (excelPath ?? excelName);
+            var label = L.F("Export automatique mensuel ({0}) : {1} + {2}", month, jsonPath ?? jsonName, excelPath ?? excelName);
             LastResult = label;
-            if (!silent) _state.NotifySuccess("Export enregistré dans vos Téléchargements (fichiers JSON et Excel).");
+            if (!silent) _state.NotifySuccess(L.T("Export enregistré dans vos Téléchargements (fichiers JSON et Excel)."));
             return true;
         }
         catch (Exception ex)
         {
             LastResult = null;
-            if (!silent) _state.NotifyError("Export automatique impossible : " + ex.Message);
+            if (!silent) _state.NotifyError(L.F("Export automatique impossible : {0}", ex.Message));
             return false;
         }
     }

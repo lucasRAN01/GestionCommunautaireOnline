@@ -1,3 +1,5 @@
+using GestionUtilisateurs.Shared.Services;
+
 namespace GestionUtilisateurs.Online.Web.Services;
 
 /// <summary>Fichier importé dans la gestion documentaire.</summary>
@@ -28,7 +30,7 @@ public class DocumentService
     {
         LastError = null;
         if (await saver.OpenExternalAsync(fileName, content, mime)) return true;
-        LastError = "Impossible d'ouvrir ce fichier.";
+        LastError = L.T("Impossible d'ouvrir ce fichier.");
         return false;
     }
 
@@ -37,7 +39,7 @@ public class DocumentService
         LastError = null;
         if (files.Count == 0) return false;
         var ok = await _files.ShareAsync(files.Select(f => (f.FileName, f.Bytes, f.Mime)), title);
-        if (!ok) LastError = "Le partage a échoué.";
+        if (!ok) LastError = L.T("Le partage a échoué.");
         return ok;
     }
 
