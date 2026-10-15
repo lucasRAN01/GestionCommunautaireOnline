@@ -7,38 +7,38 @@
 {
     <div class="detail-hero">
         <div class="detail-hero-main">
-            <button class="avatar-btn" type="button" @onclick="OpenPhoto" aria-label="Agrandir la photo">
+            <button class="avatar-btn" type="button" @onclick="OpenPhoto" aria-label="@L.T("Agrandir la photo")">
                 <Avatar UserName="@_user.NomComplet" Seed="@_user.Identifiant" Size="lg" Photo="@_user.Photo" />
             </button>
             <h2>@_user.NomComplet</h2>
             <div class="detail-sub">@@@_user.Identifiant</div>
             <div class="detail-badges">
-                <Badge Text="@_user.Role" Kind="role" />
-                <Badge Text="@_user.Statut" Kind="@(_user.Actif ? "active" : "inactive")" />
+                <Badge Text="@L.T(_user.Role)" Kind="role" />
+                <Badge Text="@L.T(_user.Statut)" Kind="@(_user.Actif ? "active" : "inactive")" />
                 @if (_user.EstMineur)
                 {
-                    <span class="badge badge-minor">Mineur</span>
+                    <span class="badge badge-minor">@L.T("Mineur")</span>
                 }
             </div>
         </div>
         @if (Store.Can(Permissions.UsersManage))
         {
-            <button class="btn btn-primary detail-edit-btn" @onclick="() => OnEdit.InvokeAsync(_user.Id)">✎ Modifier</button>
+            <button class="btn btn-primary detail-edit-btn" @onclick="() => OnEdit.InvokeAsync(_user.Id)">✎ @L.T("Modifier")</button>
         }
     </div>
 
     <div class="section">
-        <h3>Coordonnées</h3>
-        <div class="kv-row"><span class="kv-label">E-mail</span><span class="kv-value">@(string.IsNullOrWhiteSpace(_user.Email) ? "—" : _user.Email)</span></div>
-        <div class="kv-row"><span class="kv-label">Téléphone</span><span class="kv-value">@(string.IsNullOrWhiteSpace(_user.Telephone) ? "—" : _user.Telephone)</span></div>
-        <div class="kv-row"><span class="kv-label">Matricule</span><span class="kv-value">@(string.IsNullOrWhiteSpace(_user.Matricule) ? "—" : _user.Matricule)</span></div>
+        <h3>@L.T("Coordonnées")</h3>
+        <div class="kv-row"><span class="kv-label">@L.T("E-mail")</span><span class="kv-value">@(string.IsNullOrWhiteSpace(_user.Email) ? "—" : _user.Email)</span></div>
+        <div class="kv-row"><span class="kv-label">@L.T("Téléphone")</span><span class="kv-value">@(string.IsNullOrWhiteSpace(_user.Telephone) ? "—" : _user.Telephone)</span></div>
+        <div class="kv-row"><span class="kv-label">@L.T("Matricule")</span><span class="kv-value">@(string.IsNullOrWhiteSpace(_user.Matricule) ? "—" : _user.Matricule)</span></div>
         @if (_user.EstMineur || !string.IsNullOrWhiteSpace(_user.ResponsableLegal))
         {
             var (respNom, respTel) = Store.ResponsableAffiche(_user);
-            <div class="kv-row"><span class="kv-label">Responsable légal</span><span class="kv-value">@(string.IsNullOrWhiteSpace(respNom) ? "À renseigner" : respNom)</span></div>
+            <div class="kv-row"><span class="kv-label">@L.T("Responsable légal")</span><span class="kv-value">@(string.IsNullOrWhiteSpace(respNom) ? L.T("À renseigner") : respNom)</span></div>
             @if (!string.IsNullOrWhiteSpace(respTel))
             {
-                <div class="kv-row"><span class="kv-label">Tél. du responsable</span><span class="kv-value">@respTel</span></div>
+                <div class="kv-row"><span class="kv-label">@L.T("Tél. du responsable")</span><span class="kv-value">@respTel</span></div>
             }
         }
     </div>
@@ -48,39 +48,39 @@
     @if (!famille.EstVide || peutGererFamille)
     {
         <div class="section family-section">
-            <h3>👪 Famille</h3>
+            <h3>👪 @L.T("Famille")</h3>
             @if (famille.EstVide)
             {
-                <p class="text-muted family-empty">Aucun lien de famille. Reliez ses parents, enfants, conjoint(e) ou frères et sœurs déjà inscrits.</p>
+                <p class="text-muted family-empty">@L.T("Aucun lien de famille. Reliez ses parents, enfants, conjoint(e) ou frères et sœurs déjà inscrits.")</p>
             }
-            @FamilleLigne("Parents", famille.Parents)
-            @FamilleLigne("Conjoint(e)", famille.Conjoints)
-            @FamilleLigne("Enfants", famille.Enfants)
-            @FamilleLigne("Frères et sœurs", famille.FreresSoeurs)
-            @FamilleLigne("Grands-parents", famille.GrandsParents)
-            @FamilleLigne("Petits-enfants", famille.PetitsEnfants)
+            @FamilleLigne(L.T("Parents"), famille.Parents)
+            @FamilleLigne(L.T("Conjoint(e)"), famille.Conjoints)
+            @FamilleLigne(L.T("Enfants"), famille.Enfants)
+            @FamilleLigne(L.T("Frères et sœurs"), famille.FreresSoeurs)
+            @FamilleLigne(L.T("Grands-parents"), famille.GrandsParents)
+            @FamilleLigne(L.T("Petits-enfants"), famille.PetitsEnfants)
             @if (peutGererFamille)
             {
                 <div class="form-actions" style="margin:8px 0 4px">
-                    <button class="btn btn-secondary btn-sm" @onclick="OuvrirLien">＋ Ajouter un lien de famille</button>
+                    <button class="btn btn-secondary btn-sm" @onclick="OuvrirLien">＋ @L.T("Ajouter un lien de famille")</button>
                 </div>
             }
         </div>
     }
 
-    <Modal Show="_lienOpen" Title="Ajouter un lien de famille" OnClose="() => _lienOpen = false">
+    <Modal Show="_lienOpen" Title="@L.T("Ajouter un lien de famille")" OnClose="() => _lienOpen = false">
         <div class="form-group">
-            <label for="fam-type">Lien</label>
+            <label for="fam-type">@L.T("Lien")</label>
             <select id="fam-type" value="@_lienType" @onchange="e => _lienType = e.Value?.ToString() ?? LiensFamille.Parent">
-                <option value="@LiensFamille.Parent">Son parent (père, mère)</option>
-                <option value="@LiensFamille.Enfant">Son enfant</option>
-                <option value="@LiensFamille.Conjoint">Son conjoint ou sa conjointe</option>
-                <option value="@LiensFamille.Fratrie">Son frère ou sa sœur</option>
+                <option value="@LiensFamille.Parent">@L.T("Son parent (père, mère)")</option>
+                <option value="@LiensFamille.Enfant">@L.T("Son enfant")</option>
+                <option value="@LiensFamille.Conjoint">@L.T("Son conjoint ou sa conjointe")</option>
+                <option value="@LiensFamille.Fratrie">@L.T("Son frère ou sa sœur")</option>
             </select>
         </div>
         <div class="form-group">
-            <label for="fam-search">Membre</label>
-            <input id="fam-search" type="text" placeholder="Écrire pour chercher un membre…" value="@_lienSearch"
+            <label for="fam-search">@L.T("Membre")</label>
+            <input id="fam-search" type="text" placeholder="@L.T("Écrire pour chercher un membre…")" value="@_lienSearch"
                    @oninput="e => { _lienSearch = e.Value?.ToString() ?? string.Empty; _lienChoix = null; }" />
             <div class="family-pick">
                 @foreach (var m in LienCandidats())
@@ -95,33 +95,33 @@
         </div>
         @if (_lienChoix != null && Store.FindUserByIdentifier(_lienChoix) is { } choisi)
         {
-            <p class="family-summary">@choisi.NomComplet sera indiqué(e) comme <strong>@LienPhrase(_lienType)</strong> de @_user.NomComplet.</p>
+            <p class="family-summary">@L.F("{0} sera indiqué(e) comme", choisi.NomComplet) <strong>@LienPhrase(_lienType)</strong> @L.F("de {0}.", _user.NomComplet)</p>
         }
         <div class="form-actions">
-            <button class="btn btn-secondary" @onclick="() => _lienOpen = false">Annuler</button>
-            <button class="btn btn-primary" disabled="@(_lienChoix == null)" @onclick="AjouterLien">Ajouter</button>
+            <button class="btn btn-secondary" @onclick="() => _lienOpen = false">@L.T("Annuler")</button>
+            <button class="btn btn-primary" disabled="@(_lienChoix == null)" @onclick="AjouterLien">@L.T("Ajouter")</button>
         </div>
     </Modal>
 
     <div class="section">
-        <h3>Organisation</h3>
-        <div class="kv-row"><span class="kv-label">Rôle</span><span class="kv-value">@_user.Role</span></div>
-        <div class="kv-row"><span class="kv-label">Créé le</span><span class="kv-value">@FormatDate(_user.DateCreation)</span></div>
+        <h3>@L.T("Organisation")</h3>
+        <div class="kv-row"><span class="kv-label">@L.T("Rôle")</span><span class="kv-value">@L.T(_user.Role)</span></div>
+        <div class="kv-row"><span class="kv-label">@L.T("Créé le")</span><span class="kv-value">@FormatDate(_user.DateCreation)</span></div>
         @if (!string.IsNullOrWhiteSpace(_user.DerniereConnexion))
         {
-            <div class="kv-row"><span class="kv-label">Dernière connexion</span><span class="kv-value">@FormatDate(_user.DerniereConnexion)</span></div>
+            <div class="kv-row"><span class="kv-label">@L.T("Dernière connexion")</span><span class="kv-value">@FormatDate(_user.DerniereConnexion)</span></div>
         }
     </div>
 
     <div class="section">
-        <h3>🎂 Anniversaire</h3>
+        <h3>🎂 @L.T("Anniversaire")</h3>
         @if (!string.IsNullOrWhiteSpace(_user.DateNaissance))
         {
-            <div class="kv-row"><span class="kv-label">Date de naissance</span><span class="kv-value">@FormatDate(_user.DateNaissance) (@AgeLabel(_user.DateNaissance) ans)</span></div>
+            <div class="kv-row"><span class="kv-label">@L.T("Date de naissance")</span><span class="kv-value">@FormatDate(_user.DateNaissance) (@L.F("{0} ans", AgeLabel(_user.DateNaissance)))</span></div>
         }
         else
         {
-            <div class="kv-row"><span class="kv-label">Date de naissance</span><span class="kv-value">—</span></div>
+            <div class="kv-row"><span class="kv-label">@L.T("Date de naissance")</span><span class="kv-value">—</span></div>
         }
         @foreach (var evt in BirthdayEvents)
         {
@@ -130,7 +130,7 @@
         @if (Store.Can(Permissions.CalendarUse) && !string.IsNullOrWhiteSpace(_user.DateNaissance) && BirthdayEvents.Count == 0)
         {
             <div class="form-actions" style="margin:8px 0 4px">
-                <button class="btn btn-secondary btn-sm" @onclick="CreateBirthdayEvent">🎂 Créer l'événement d'anniversaire</button>
+                <button class="btn btn-secondary btn-sm" @onclick="CreateBirthdayEvent">🎂 @L.T("Créer l'événement d'anniversaire")</button>
             </div>
         }
     </div>
@@ -138,7 +138,7 @@
     @if (!string.IsNullOrWhiteSpace(_user.Notes))
     {
         <div class="section">
-            <h3>Notes</h3>
+            <h3>@L.T("Notes")</h3>
             <div class="kv-row"><span class="kv-label">—</span><span class="kv-value">@_user.Notes</span></div>
         </div>
     }
@@ -146,11 +146,11 @@
     @if (!string.IsNullOrWhiteSpace(_user.Signature))
     {
         <div class="section">
-            <h3>Signature électronique</h3>
+            <h3>@L.T("Signature électronique")</h3>
             <div class="kv-row">
-                <span class="kv-label">Signée</span>
+                <span class="kv-label">@L.T("Signée")</span>
                 <span class="kv-value">
-                    <img class="signature-preview" src="@_user.Signature" alt="Signature de @_user.NomComplet"
+                    <img class="signature-preview" src="@_user.Signature" alt="@L.F("Signature de {0}", _user.NomComplet)"
                          @onclick="OpenSignature" />
                 </span>
             </div>
@@ -160,7 +160,7 @@
     @if (ActiveFields.Count > 0)
     {
         <div class="section">
-            <h3>Champs personnalisés</h3>
+            <h3>@L.T("Champs personnalisés")</h3>
             @foreach (var f in ActiveFields)
             {
                 var val = f.Id == FieldDefinition.FIELD_IDENTIFIANT
@@ -180,9 +180,9 @@
                                              @onclick="() => OpenImage(val.Fichier.Nom, val.Fichier.Data)" />
                                         <span class="file-name">@val.Fichier.Nom</span>
                                         <div class="file-actions">
-                                            <button type="button" class="btn btn-secondary btn-sm" @onclick="() => OpenImage(val.Fichier.Nom, val.Fichier.Data)">👁 Voir</button>
-                                            <button type="button" class="btn btn-secondary btn-sm" @onclick="() => OpenFile(val.Fichier)">⇱ Ouvrir</button>
-                                            <button type="button" class="btn btn-secondary btn-sm" @onclick="() => SaveFile(val.Fichier)">⇩ Enregistrer</button>
+                                            <button type="button" class="btn btn-secondary btn-sm" @onclick="() => OpenImage(val.Fichier.Nom, val.Fichier.Data)">👁 @L.T("Voir")</button>
+                                            <button type="button" class="btn btn-secondary btn-sm" @onclick="() => OpenFile(val.Fichier)">⇱ @L.T("Ouvrir")</button>
+                                            <button type="button" class="btn btn-secondary btn-sm" @onclick="() => SaveFile(val.Fichier)">⇩ @L.T("Enregistrer")</button>
                                         </div>
                                     </div>
                                 }
@@ -199,8 +199,8 @@
                                         @if (!string.IsNullOrWhiteSpace(val.Fichier.Data))
                                         {
                                             <div class="file-actions">
-                                                <button type="button" class="btn btn-secondary btn-sm" @onclick="() => OpenFile(val.Fichier)">⇱ Ouvrir</button>
-                                                <button type="button" class="btn btn-secondary btn-sm" @onclick="() => SaveFile(val.Fichier)">⇩ Enregistrer</button>
+                                                <button type="button" class="btn btn-secondary btn-sm" @onclick="() => OpenFile(val.Fichier)">⇱ @L.T("Ouvrir")</button>
+                                                <button type="button" class="btn btn-secondary btn-sm" @onclick="() => SaveFile(val.Fichier)">⇩ @L.T("Enregistrer")</button>
                                             </div>
                                         }
                                     </div>
@@ -223,19 +223,19 @@
     @if (Store.IsManager)
         {
             <div class="section">
-                <h3>Actions</h3>
+                <h3>@L.T("Actions")</h3>
                 <div class="form-actions">
                     @if (CanToggleActive)
                     {
-                        <button class="btn btn-secondary" @onclick="AskToggle">@(_user.Actif ? "⛔ Désactiver" : "✓ Activer")</button>
+                        <button class="btn btn-secondary" @onclick="AskToggle">@(_user.Actif ? "⛔ " + L.T("Désactiver") : "✓ " + L.T("Activer"))</button>
                     }
                     @if (Store.Can(Permissions.CarteMembreView))
                     {
-                        <button class="btn btn-secondary" @onclick="OpenCarte">🪪 Voir la carte de membre</button>
+                        <button class="btn btn-secondary" @onclick="OpenCarte">🪪 @L.T("Voir la carte de membre")</button>
                     }
                     @if (Store.IsAdmin)
                     {
-                        <button class="btn btn-danger-outline" @onclick="AskDelete">🗑 Supprimer</button>
+                        <button class="btn btn-danger-outline" @onclick="AskDelete">🗑 @L.T("Supprimer")</button>
                     }
                 </div>
             </div>
@@ -243,12 +243,12 @@
         else if (SelfView)
         {
             <div class="section">
-                <h3>Actions</h3>
+                <h3>@L.T("Actions")</h3>
                 <div class="form-actions">
-                    <p class="text-muted" style="margin:0 0 8px">Pour corriger vos informations, demandez à un gestionnaire. Votre mot de passe se change depuis votre avatar, en haut.</p>
+                    <p class="text-muted" style="margin:0 0 8px">@L.T("Pour corriger vos informations, demandez à un gestionnaire. Votre mot de passe se change depuis votre avatar, en haut.")</p>
                     @if (Store.Can(Permissions.CarteMembreView))
                     {
-                        <button class="btn btn-secondary btn-block" @onclick="OpenCarte">🪪 Voir ma carte de membre</button>
+                        <button class="btn btn-secondary btn-block" @onclick="OpenCarte">🪪 @L.T("Voir ma carte de membre")</button>
                     }
                 </div>
             </div>
@@ -256,15 +256,15 @@
         else
         {
             <div class="section">
-                <h3>Actions</h3>
-                <p class="muted">Consultation seule : votre rôle ne permet pas de modifier ce compte.</p>
+                <h3>@L.T("Actions")</h3>
+                <p class="muted">@L.T("Consultation seule : votre rôle ne permet pas de modifier ce compte.")</p>
             </div>
         }
 
 @if (!SelfView)
     {
         <div class="form-actions" style="margin-bottom:8px">
-            <button class="btn btn-secondary btn-block" @onclick="OnBack">← Retour à la liste</button>
+            <button class="btn btn-secondary btn-block" @onclick="OnBack">← @L.T("Retour à la liste")</button>
         </div>
     }
 
@@ -286,11 +286,11 @@
 }
 else
 {
-    <EmptyState Icon="☹" Title="Utilisateur introuvable" Message="Ce compte n'existe plus." />
+    <EmptyState Icon="☹" Title="@L.T("Utilisateur introuvable")" Message="@L.T("Ce compte n'existe plus.")" />
     @if (!SelfView)
     {
         <div class="form-actions" style="margin:12px 0 8px">
-            <button class="btn btn-secondary btn-block" @onclick="OnBack">← Retour à la liste</button>
+            <button class="btn btn-secondary btn-block" @onclick="OnBack">← @L.T("Retour à la liste")</button>
         </div>
     }
 }
@@ -327,7 +327,7 @@ else
                         <button type="button" class="family-chip-name" @onclick="() => OuvrirMembre(membre)">@membre.NomComplet</button>
                         @if (direct && Store.Can(Permissions.UsersManage))
                         {
-                            <button type="button" class="family-chip-x" aria-label="Retirer le lien avec @membre.NomComplet" @onclick="() => AskRetirerLien(membre)">✕</button>
+                            <button type="button" class="family-chip-x" aria-label="@L.F("Retirer le lien avec {0}", membre.NomComplet)" @onclick="() => AskRetirerLien(membre)">✕</button>
                         }
                     </span>
                 }
@@ -362,10 +362,10 @@ else
 
     private static string LienPhrase(string type) => type switch
     {
-        LiensFamille.Parent => "parent",
-        LiensFamille.Enfant => "enfant",
-        LiensFamille.Conjoint => "conjoint(e)",
-        _ => "frère ou sœur"
+        LiensFamille.Parent => L.T("parent"),
+        LiensFamille.Enfant => L.T("enfant"),
+        LiensFamille.Conjoint => L.T("conjoint(e)"),
+        _ => L.T("frère ou sœur")
     };
 
     private void AjouterLien()
@@ -374,20 +374,20 @@ else
         var res = Store.AjouterLienFamille(_user.Id, _lienChoix, _lienType);
         if (!res.Success) { State.NotifyError(res.Error); return; }
         _lienOpen = false;
-        State.NotifySuccess("Lien de famille ajouté.");
+        State.NotifySuccess(L.T("Lien de famille ajouté."));
     }
 
     private void AskRetirerLien(UserAccount m)
     {
         if (_user == null) return;
         var userId = _user.Id;
-        _confirm = new ConfirmState(true, "Retirer le lien de famille",
-            $"Retirer le lien entre « {_user.NomComplet} » et « {m.NomComplet} » ? Les deux fiches restent inchangées.",
-            "Retirer", true, () =>
+        _confirm = new ConfirmState(true, L.T("Retirer le lien de famille"),
+            L.F("Retirer le lien entre « {0} » et « {1} » ? Les deux fiches restent inchangées.", _user.NomComplet, m.NomComplet),
+            L.T("Retirer"), true, () =>
             {
                 _confirm = ConfirmState.Hidden();
                 var res = Store.RetirerLienFamille(userId, m.Identifiant);
-                if (res.Success) State.NotifySuccess("Lien retiré.");
+                if (res.Success) State.NotifySuccess(L.T("Lien retiré."));
                 else State.NotifyError(res.Error);
             });
     }
@@ -428,7 +428,7 @@ else
     {
         if (_user == null) return;
         var res = Store.EnsureBirthdayEvent(_user.Id);
-        if (res.Success) State.NotifySuccess("Événement d'anniversaire créé dans le calendrier.");
+        if (res.Success) State.NotifySuccess(L.T("Événement d'anniversaire créé dans le calendrier."));
         else State.NotifyError(res.Error);
     }
 
@@ -437,7 +437,7 @@ else
     private void OpenSignature()
     {
         if (_user == null || string.IsNullOrWhiteSpace(_user.Signature)) return;
-        OpenImage("Signature — " + _user.NomComplet, _user.Signature);
+        OpenImage(L.F("Signature — {0}", _user.NomComplet), _user.Signature);
     }
 
     private void OpenCarte()
@@ -457,7 +457,7 @@ else
     {
         if (string.IsNullOrWhiteSpace(file.Data))
         {
-            State.NotifyError("Le contenu de ce fichier n'est pas disponible.");
+            State.NotifyError(L.T("Le contenu de ce fichier n'est pas disponible."));
             return;
         }
         if ((file.Mime ?? "").StartsWith("image/", StringComparison.OrdinalIgnoreCase))
@@ -468,29 +468,29 @@ else
         var bytes = DecodeDataUrl(file.Data);
         if (bytes == null)
         {
-            State.NotifyError("Impossible de lire le contenu du fichier.");
+            State.NotifyError(L.T("Impossible de lire le contenu du fichier."));
             return;
         }
         var opened = await Saver.OpenExternalAsync(file.Nom, bytes, file.Mime ?? "application/octet-stream");
         if (!opened) opened = await Saver.OpenWithChooserAsync(file.Nom, bytes, file.Mime ?? "application/octet-stream");
-        if (!opened) State.NotifyError("Aucune application disponible pour ouvrir ce fichier. Utilisez « Enregistrer » puis ouvrez-le depuis Téléchargements.");
+        if (!opened) State.NotifyError(L.T("Aucune application disponible pour ouvrir ce fichier. Utilisez « Enregistrer » puis ouvrez-le depuis Téléchargements."));
     }
 
     private async Task SaveFile(FileRef file)
     {
         if (string.IsNullOrWhiteSpace(file.Data))
         {
-            State.NotifyError("Le contenu de ce fichier n'est pas disponible.");
+            State.NotifyError(L.T("Le contenu de ce fichier n'est pas disponible."));
             return;
         }
         var bytes = DecodeDataUrl(file.Data);
         if (bytes == null)
         {
-            State.NotifyError("Impossible de lire le contenu du fichier.");
+            State.NotifyError(L.T("Impossible de lire le contenu du fichier."));
             return;
         }
         var path = await Saver.SaveAsync(file.Nom, bytes, file.Mime);
-        State.Notify(path == null ? "Échec de l'enregistrement du fichier." : "Fichier enregistré : " + path,
+        State.Notify(path == null ? L.T("Échec de l'enregistrement du fichier.") : L.F("Fichier enregistré : {0}", path),
             path == null ? "error" : "success");
     }
 
@@ -504,9 +504,9 @@ else
 
     private static string FormatSize(long bytes)
     {
-        if (bytes < 1024) return bytes + " o";
-        if (bytes < 1024 * 1024) return Math.Round(bytes / 1024.0, 1) + " Ko";
-        return Math.Round(bytes / (1024.0 * 1024), 1) + " Mo";
+        if (bytes < 1024) return L.F("{0} o", bytes);
+        if (bytes < 1024 * 1024) return L.F("{0} Ko", Math.Round(bytes / 1024.0, 1));
+        return L.F("{0} Mo", Math.Round(bytes / (1024.0 * 1024), 1));
     }
 
     private IReadOnlyList<FieldDefinition> ActiveFields =>
@@ -517,7 +517,7 @@ else
         if (val == null) return "—";
         return f.Type switch
         {
-            FieldType.Booleen => val.Booleen ? "Oui" : "Non",
+            FieldType.Booleen => val.Booleen ? L.T("Oui") : L.T("Non"),
             FieldType.Nombre => val.Nombre?.ToString(CultureInfo.InvariantCulture) ?? "—",
             FieldType.Liste => string.IsNullOrWhiteSpace(val.Texte) ? "—" : val.Texte,
             FieldType.Date => DataStore.FormatDateCourte(val.Texte),
@@ -542,12 +542,12 @@ else
     {
         if (_user == null) return;
         var activate = !_user.Actif;
-        _confirm = new ConfirmState(true, activate ? "Activer" : "Désactiver",
-            $"Voulez-vous vraiment {(activate ? "activer" : "désactiver")} « {_user.NomComplet} » ?",
-            activate ? "Activer" : "Désactiver", !activate, () =>
+        _confirm = new ConfirmState(true, activate ? L.T("Activer") : L.T("Désactiver"),
+            activate ? L.F("Voulez-vous vraiment activer « {0} » ?", _user.NomComplet) : L.F("Voulez-vous vraiment désactiver « {0} » ?", _user.NomComplet),
+            activate ? L.T("Activer") : L.T("Désactiver"), !activate, () =>
             {
                 var res = Store.SetUserActive(_user.Id, activate);
-                State.Notify(res.Success ? (activate ? "Utilisateur activé." : "Utilisateur désactivé.") : "Erreur : " + res.Error,
+                State.Notify(res.Success ? (activate ? L.T("Utilisateur activé.") : L.T("Utilisateur désactivé.")) : L.F("Erreur : {0}", res.Error),
                     res.Success ? "success" : "error");
             });
     }
@@ -555,12 +555,12 @@ else
     private void AskReset()
     {
         if (_user == null) return;
-        _confirm = new ConfirmState(true, "Réinitialiser le mot de passe",
-            $"Le nouveau mot de passe de « {_user.NomComplet} » sera : « {DataStore.DEFAULT_PASSWORD} ».",
-            "Réinitialiser", false, () =>
+        _confirm = new ConfirmState(true, L.T("Réinitialiser le mot de passe"),
+            L.F("Le nouveau mot de passe de « {0} » sera : « {1} ».", _user.NomComplet, DataStore.DEFAULT_PASSWORD),
+            L.T("Réinitialiser"), false, () =>
             {
                 var res = Store.ResetPassword(_user.Id);
-                State.Notify(res.Success ? $"Mot de passe réinitialisé : « {DataStore.DEFAULT_PASSWORD} »." : "Erreur : " + res.Error,
+                State.Notify(res.Success ? L.F("Mot de passe réinitialisé : « {0} ».", DataStore.DEFAULT_PASSWORD) : L.F("Erreur : {0}", res.Error),
                     res.Success ? "success" : "error");
             });
     }
@@ -568,20 +568,20 @@ else
     private void AskDelete()
     {
         if (_user == null) return;
-        _confirm = new ConfirmState(true, "Supprimer l'utilisateur",
-            $"Supprimer « {_user.NomComplet} » ? Le compte sera placé dans les archives.",
-            "Supprimer", true, () =>
+        _confirm = new ConfirmState(true, L.T("Supprimer l'utilisateur"),
+            L.F("Supprimer « {0} » ? Le compte sera placé dans les archives.", _user.NomComplet),
+            L.T("Supprimer"), true, () =>
             {
                 var actor = Store.GetCurrentUser()?.Id;
                 var res = Store.DeleteUser(_user.Id, actor);
                 if (res.Success)
                 {
-                    State.NotifySuccess("Utilisateur supprimé et archivé.");
+                    State.NotifySuccess(L.T("Utilisateur supprimé et archivé."));
                     _ = OnBack.InvokeAsync();
                 }
                 else
                 {
-                    State.NotifyError("Erreur : " + res.Error);
+                    State.NotifyError(L.F("Erreur : {0}", res.Error));
                 }
             });
     }

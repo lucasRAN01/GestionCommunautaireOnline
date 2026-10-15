@@ -3,54 +3,54 @@
 @inject PhotoService Photos
 
 <div class="form-group" style="display:flex;align-items:center;gap:10px;margin-bottom:6px">
-    <button class="btn btn-secondary btn-sm" @onclick="OnClose">← Annuler</button>
-    <h2 style="margin:0;font-size:18px;font-weight:700">@(_isNew ? "Nouvel utilisateur" : "Modifier l'utilisateur")</h2>
+    <button class="btn btn-secondary btn-sm" @onclick="OnClose">← @L.T("Annuler")</button>
+    <h2 style="margin:0;font-size:18px;font-weight:700">@(_isNew ? L.T("Nouvel utilisateur") : L.T("Modifier l'utilisateur"))</h2>
 </div>
 
 <div class="card">
-    <div class="divider-section">Identité</div>
+    <div class="divider-section">@L.T("Identité")</div>
     <div class="form-group">
-        <label for="uf-nom">Nom <span class="required">*</span></label>
+        <label for="uf-nom">@L.T("Nom") <span class="required">*</span></label>
         <input id="uf-nom" type="text" value="@_model.Nom" @oninput="e => _model.Nom = (e.Value?.ToString() ?? string.Empty).ToUpperInvariant()" />
         <span class="form-error">@Err("nom")</span>
     </div>
     <div class="form-group">
-        <label for="uf-prenom">Prénom(s) <span class="required">*</span></label>
+        <label for="uf-prenom">@L.T("Prénom(s)") <span class="required">*</span></label>
         <input id="uf-prenom" type="text" value="@_model.Prenom" @oninput="e => _model.Prenom = e.Value?.ToString() ?? string.Empty" />
         <span class="form-error">@Err("prenom")</span>
     </div>
     <div class="form-group">
-        <label for="uf-matricule">Matricule (facultatif, unique)</label>
-        <input id="uf-matricule" type="text" placeholder="@(string.IsNullOrEmpty(_matriculeAuto) ? "Ex : M-0001" : _matriculeAuto)" value="@_model.Matricule" @oninput="e => _model.Matricule = e.Value?.ToString() ?? string.Empty" />
+        <label for="uf-matricule">@L.T("Matricule (facultatif, unique)")</label>
+        <input id="uf-matricule" type="text" placeholder="@(string.IsNullOrEmpty(_matriculeAuto) ? L.T("Ex : M-0001") : _matriculeAuto)" value="@_model.Matricule" @oninput="e => _model.Matricule = e.Value?.ToString() ?? string.Empty" />
         @if (!string.IsNullOrEmpty(_matriculeAuto))
         {
-            <span class="field-hint">Laissez vide pour attribuer automatiquement « @_matriculeAuto ».</span>
+            <span class="field-hint">@L.F("Laissez vide pour attribuer automatiquement « {0} ».", _matriculeAuto)</span>
         }
         else
         {
-            <span class="field-hint">Affiché sur la carte de membre. Le format automatique se règle dans Paramètres › Carte de membre.</span>
+            <span class="field-hint">@L.T("Affiché sur la carte de membre. Le format automatique se règle dans Paramètres › Carte de membre.")</span>
         }
         <span class="form-error">@Err("matricule")</span>
     </div>
     <div class="form-group">
-        <label for="uf-photo">Photo</label>
+        <label for="uf-photo">@L.T("Photo")</label>
         <div class="photo-control">
             @if (!string.IsNullOrWhiteSpace(_model.Photo))
             {
-                <img class="photo-preview" src="@_model.Photo" alt="Photo de l'utilisateur" />
+                <img class="photo-preview" src="@_model.Photo" alt="@L.T("Photo de l'utilisateur")" />
             }
             else
             {
-                <div class="photo-placeholder">Aucune photo</div>
+                <div class="photo-placeholder">@L.T("Aucune photo")</div>
             }
             @if (CanEditPhoto)
             {
                 <div class="photo-actions">
-                    <button type="button" class="btn btn-secondary btn-sm" @onclick="CapturePhoto">📷 Prendre une photo</button>
-                    <button type="button" class="btn btn-secondary btn-sm" @onclick="PickPhoto">🖼 Choisir une image</button>
+                    <button type="button" class="btn btn-secondary btn-sm" @onclick="CapturePhoto">📷 @L.T("Prendre une photo")</button>
+                    <button type="button" class="btn btn-secondary btn-sm" @onclick="PickPhoto">🖼 @L.T("Choisir une image")</button>
                     @if (!string.IsNullOrWhiteSpace(_model.Photo))
                     {
-                        <button type="button" class="btn btn-secondary btn-sm" @onclick="() => _model.Photo = string.Empty">Retirer</button>
+                        <button type="button" class="btn btn-secondary btn-sm" @onclick="() => _model.Photo = string.Empty">@L.T("Retirer")</button>
                     }
                 </div>
             }
@@ -58,92 +58,92 @@
     </div>
 
     <div class="form-group">
-        <label for="uf-signature">Signature électronique (facultatif)</label>
+        <label for="uf-signature">@L.T("Signature électronique (facultatif)")</label>
         <div class="photo-control">
             @if (!string.IsNullOrWhiteSpace(_model.Signature))
             {
-                <img class="signature-preview" src="@_model.Signature" alt="Signature de l'utilisateur" />
+                <img class="signature-preview" src="@_model.Signature" alt="@L.T("Signature de l'utilisateur")" />
             }
             else
             {
-                <div class="photo-placeholder">Aucune signature</div>
+                <div class="photo-placeholder">@L.T("Aucune signature")</div>
             }
             @if (CanEditPhoto)
             {
                 <div class="photo-actions">
-                    <button type="button" class="btn btn-secondary btn-sm" @onclick="() => _showPad = true">✍ Dessiner</button>
-                    <button type="button" class="btn btn-secondary btn-sm" @onclick="PickSignature">📁 Choisir une image</button>
+                    <button type="button" class="btn btn-secondary btn-sm" @onclick="() => _showPad = true">✍ @L.T("Dessiner")</button>
+                    <button type="button" class="btn btn-secondary btn-sm" @onclick="PickSignature">📁 @L.T("Choisir une image")</button>
                     @if (!string.IsNullOrWhiteSpace(_model.Signature))
                     {
-                        <button type="button" class="btn btn-secondary btn-sm" @onclick="OpenSignaturePreview">🔍 Ouvrir</button>
-                        <button type="button" class="btn btn-secondary btn-sm" @onclick="() => _model.Signature = string.Empty">Retirer</button>
+                        <button type="button" class="btn btn-secondary btn-sm" @onclick="OpenSignaturePreview">🔍 @L.T("Ouvrir")</button>
+                        <button type="button" class="btn btn-secondary btn-sm" @onclick="() => _model.Signature = string.Empty">@L.T("Retirer")</button>
                     }
                 </div>
             }
             else if (!string.IsNullOrWhiteSpace(_model.Signature))
             {
                 <div class="photo-actions">
-                    <button type="button" class="btn btn-secondary btn-sm" @onclick="OpenSignaturePreview">🔍 Ouvrir</button>
+                    <button type="button" class="btn btn-secondary btn-sm" @onclick="OpenSignaturePreview">🔍 @L.T("Ouvrir")</button>
                 </div>
             }
         </div>
-        <span class="field-hint">Affichée au dos de la carte de membre.</span>
+        <span class="field-hint">@L.T("Affichée au dos de la carte de membre.")</span>
     </div>
 
-    <div class="divider-section">Compte</div>
+    <div class="divider-section">@L.T("Compte")</div>
     @if (!IsSelfSimpleUser)
     {
         <div class="form-group">
-            <label for="uf-role">Rôle <span class="required">*</span></label>
+            <label for="uf-role">@L.T("Rôle") <span class="required">*</span></label>
             <select id="uf-role" value="@_model.Role" disabled="@(!Store.IsManager)" @onchange="OnRoleChanged">
                 @if (Store.IsManager)
                 {
-                    <option value="Administrateur">Administrateur</option>
+                    <option value="Administrateur">@L.T("Administrateur")</option>
                 }
-                <option value="Gestionnaire">Gestionnaire</option>
-                <option value="Utilisateur">Utilisateur</option>
+                <option value="Gestionnaire">@L.T("Gestionnaire")</option>
+                <option value="Utilisateur">@L.T("Utilisateur")</option>
             </select>
             <span class="form-error">@Err("role")</span>
         </div>
     }
     <div class="form-group">
-        <label for="uf-email">Email (facultatif)</label>
+        <label for="uf-email">@L.T("Email (facultatif)")</label>
         <input id="uf-email" type="email" placeholder="exemple@domaine.fr" value="@_model.Email" @oninput="e => _model.Email = e.Value?.ToString() ?? string.Empty" />
         <span class="form-error">@Err("email")</span>
     </div>
     <div class="form-group">
-        <label for="uf-tel">Téléphone (facultatif)</label>
+        <label for="uf-tel">@L.T("Téléphone (facultatif)")</label>
         <div class="tel-input">
             <span class="tel-prefix">+261</span>
             <input id="uf-tel" type="tel" placeholder="xx xx xxx xx" value="@TelDigits"
-                   @oninput="e => OnTelInput(e.Value?.ToString() ?? string.Empty)" aria-label="Numéro de téléphone" />
+                   @oninput="e => OnTelInput(e.Value?.ToString() ?? string.Empty)" aria-label="@L.T("Numéro de téléphone")" />
         </div>
         <span class="form-error">@Err("telephone")</span>
     </div>
     <div class="form-group">
-        <label for="uf-naissance">Date de naissance (facultatif)</label>
+        <label for="uf-naissance">@L.T("Date de naissance (facultatif)")</label>
         <DateInput Id="uf-naissance" Value="@_model.DateNaissance" ValueChanged="@(v => _model.DateNaissance = v)" MinYear="1900" MaxYear="@(DateTime.Now.Year)" />
-        <span class="field-hint">Liée aux anniversaires du calendrier.</span>
+        <span class="field-hint">@L.T("Liée aux anniversaires du calendrier.")</span>
     </div>
     @if (new UserAccount { DateNaissance = DataStore.ToYmd(_model.DateNaissance) }.Age is { } age && age < 18)
     {
         <div class="form-group minor-box">
-            <span class="badge badge-minor">Moins de 18 ans (@age ans)</span>
-            <label for="uf-resp">Responsable légal (parent ou tuteur) *</label>
-            <input id="uf-resp" type="text" placeholder="Nom et prénom" value="@_model.ResponsableLegal" @oninput="e => _model.ResponsableLegal = e.Value?.ToString() ?? string.Empty" />
-            <span class="field-hint">Si un parent est déjà inscrit, vous pouvez aussi le relier dans la section « Famille » de la fiche.</span>
+            <span class="badge badge-minor">@L.F("Moins de 18 ans ({0} ans)", age)</span>
+            <label for="uf-resp">@L.T("Responsable légal (parent ou tuteur) *")</label>
+            <input id="uf-resp" type="text" placeholder="@L.T("Nom et prénom")" value="@_model.ResponsableLegal" @oninput="e => _model.ResponsableLegal = e.Value?.ToString() ?? string.Empty" />
+            <span class="field-hint">@L.T("Si un parent est déjà inscrit, vous pouvez aussi le relier dans la section « Famille » de la fiche.")</span>
             <span class="form-error">@Err("responsable")</span>
-            <label for="uf-resp-tel" style="margin-top:8px">Téléphone du responsable</label>
+            <label for="uf-resp-tel" style="margin-top:8px">@L.T("Téléphone du responsable")</label>
             <input id="uf-resp-tel" type="tel" placeholder="+261 xx xx xxx xx" value="@_model.ResponsableTelephone" @oninput="e => _model.ResponsableTelephone = e.Value?.ToString() ?? string.Empty" />
         </div>
     }
     @if (!IsSelfSimpleUser)
     {
         <div class="form-group">
-            <label for="uf-actif">Statut</label>
+            <label for="uf-actif">@L.T("Statut")</label>
             <select id="uf-actif" value="@(_model.Actif ? "1" : "0")" disabled="@(_statusLocked || !CanChangeStatus)" @onchange="OnStatutChange">
-                <option value="1">Actif</option>
-                <option value="0">Inactif</option>
+                <option value="1">@L.T("Actif")</option>
+                <option value="0">@L.T("Inactif")</option>
             </select>
             <span class="form-error">@Err("statut")</span>
         </div>
@@ -151,17 +151,17 @@
 
     @if (_isNew)
     {
-        <p class="field-hint" style="margin:-4px 0 12px">Pour se connecter, la personne crée son compte sur le site avec son e-mail. Un administrateur le valide ensuite dans « Comptes en ligne » et peut le relier à cette fiche.</p>
+        <p class="field-hint" style="margin:-4px 0 12px">@L.T("Pour se connecter, la personne crée son compte sur le site avec son e-mail. Un administrateur le valide ensuite dans « Comptes en ligne » et peut le relier à cette fiche.")</p>
     }
 
     <div class="form-group">
-        <label for="uf-notes">Notes</label>
-        <textarea id="uf-notes" rows="3" placeholder="Ajouter une note..." value="@_model.Notes" @oninput="e => _model.Notes = e.Value?.ToString() ?? string.Empty"></textarea>
+        <label for="uf-notes">@L.T("Notes")</label>
+        <textarea id="uf-notes" rows="3" placeholder="@L.T("Ajouter une note...")" value="@_model.Notes" @oninput="e => _model.Notes = e.Value?.ToString() ?? string.Empty"></textarea>
     </div>
 
     @if (ActiveFields().Count > 0)
     {
-        <div class="divider-section">Champs personnalisés</div>
+        <div class="divider-section">@L.T("Champs personnalisés")</div>
 
         @foreach (var f in ActiveFields())
         {
@@ -202,7 +202,7 @@
                             break;
                         case FieldType.Liste:
                             <select id="cf-@fid" value="@_model.FieldText(fid)" @onchange="e => _model.SetFieldText(fid, e.Value?.ToString() ?? string.Empty)">
-                                <option value="">— Sélectionnez —</option>
+                                <option value="">— @L.T("Sélectionnez") —</option>
                                 @foreach (var opt in f.Options.Where(o => !string.IsNullOrWhiteSpace(o)))
                                 {
                                     <option value="@opt">@opt</option>
@@ -214,12 +214,12 @@
                                 <label class="radio-option">
                                     <input type="radio" name="cf-@fid" value="oui" checked="@BoolIs(fid, true)"
                                            @onchange="() => SetBool(fid, true)" />
-                                    <span>Oui</span>
+                                    <span>@L.T("Oui")</span>
                                 </label>
                                 <label class="radio-option">
                                     <input type="radio" name="cf-@fid" value="non" checked="@BoolIs(fid, false)"
                                            @onchange="() => SetBool(fid, false)" />
-                                    <span>Non</span>
+                                    <span>@L.T("Non")</span>
                                 </label>
                             </div>
                             break;
@@ -235,7 +235,7 @@
                                 }
                                 @if (!f.Options.Any(o => !string.IsNullOrWhiteSpace(o)))
                                 {
-                                    <span class="text-muted">Aucune option configurée pour ce champ.</span>
+                                    <span class="text-muted">@L.T("Aucune option configurée pour ce champ.")</span>
                                 }
                             </div>
                             break;
@@ -255,17 +255,17 @@
                                 }
                                 else
                                 {
-                                    <span class="file-info"><span class="text-muted">Aucun fichier</span></span>
+                                    <span class="file-info"><span class="text-muted">@L.T("Aucun fichier")</span></span>
                                 }
                             </div>
                             <div class="photo-actions">
-                                <button type="button" class="btn btn-secondary btn-sm" @onclick="() => PickFieldFile(fid, f.Type == FieldType.Image)">📎 Choisir un@(f.Type == FieldType.Image ? "e image (JPG/PNG/GIF, max 5 Mo)" : " fichier (PDF, image, DOCX…, max 5 Mo)")</button>
+                                <button type="button" class="btn btn-secondary btn-sm" @onclick="() => PickFieldFile(fid, f.Type == FieldType.Image)">📎 @(f.Type == FieldType.Image ? L.T("Choisir une image (JPG/PNG/GIF, max 5 Mo)") : L.T("Choisir un fichier (PDF, image, DOCX…, max 5 Mo)"))</button>
                                 @if (GetFileRef(fid) != null)
                                 {
-                                    <button type="button" class="btn btn-secondary btn-sm" @onclick="() => _model.ClearFieldFile(fid)">Retirer</button>
+                                    <button type="button" class="btn btn-secondary btn-sm" @onclick="() => _model.ClearFieldFile(fid)">@L.T("Retirer")</button>
                                 }
                             </div>
-                            <span class="field-hint">Contenu accepté : @(f.Type == FieldType.Image ? "image JPG, PNG, GIF, WEBP" : "PDF, image, DOC, DOCX, TXT, ZIP…") — taille maximale 5 Mo.</span>
+                            <span class="field-hint">@L.F("Contenu accepté : {0} — taille maximale 5 Mo.", f.Type == FieldType.Image ? L.T("image JPG, PNG, GIF, WEBP") : L.T("PDF, image, DOC, DOCX, TXT, ZIP…"))</span>
                             break;
                     }
                 }
@@ -277,31 +277,31 @@
 </div>
 
 <div class="form-actions" style="margin-top:6px;margin-bottom:8px">
-    <button class="btn btn-primary btn-block" @onclick="Save" disabled="@_saving">@(_saving ? "Enregistrement…" : "Enregistrer")</button>
+    <button class="btn btn-primary btn-block" @onclick="Save" disabled="@_saving">@(_saving ? L.T("Enregistrement…") : L.T("Enregistrer"))</button>
 </div>
 
-<Modal Title="Signature" Show="_signaturePreview != null" OnClose="() => _signaturePreview = null">
+<Modal Title="@L.T("Signature")" Show="_signaturePreview != null" OnClose="() => _signaturePreview = null">
     @if (_signaturePreview != null)
     {
         <div class="image-viewer-wrap">
-            <img class="image-viewer-img" src="@_signaturePreview" alt="Signature de l'utilisateur" />
+            <img class="image-viewer-img" src="@_signaturePreview" alt="@L.T("Signature de l'utilisateur")" />
         </div>
     }
 </Modal>
 
-<Modal Title="Dessiner la signature" Show="_showPad" OnClose="() => _showPad = false">
+<Modal Title="@L.T("Dessiner la signature")" Show="_showPad" OnClose="() => _showPad = false">
     <ChildContent>
         <SignaturePad @ref="_sigPad" />
     </ChildContent>
     <FooterContent>
-        <button class="btn btn-secondary" @onclick="() => _showPad = false">Annuler</button>
-        <button class="btn btn-primary" @onclick="ValidateSignaturePad">✓ Valider la signature</button>
+        <button class="btn btn-secondary" @onclick="() => _showPad = false">@L.T("Annuler")</button>
+        <button class="btn btn-primary" @onclick="ValidateSignaturePad">✓ @L.T("Valider la signature")</button>
     </FooterContent>
 </Modal>
 
 
-<ConfirmDialog Show="_doublons.Count > 0" Title="Ce membre existe peut-être déjà"
-               Message="@DoublonsMessage" ConfirmLabel="Ajouter quand même"
+<ConfirmDialog Show="_doublons.Count > 0" Title="@L.T("Ce membre existe peut-être déjà")"
+               Message="@DoublonsMessage" ConfirmLabel="@L.T("Ajouter quand même")"
                OnConfirm="ConfirmAjoutDoublon" OnCancel="() => _doublons.Clear()" />
 
 @code {
@@ -477,9 +477,9 @@
     private List<(UserAccount Fiche, string Raison)> _doublons = new();
     private bool _doublonConfirme;
 
-    private string DoublonsMessage => "Fiche(s) semblable(s) : "
-        + string.Join(" ; ", _doublons.Take(3).Select(d => d.Fiche.NomComplet + " (" + d.Raison + ")"))
-        + (_doublons.Count > 3 ? "…" : "") + ". Vérifiez avant d'ajouter une nouvelle fiche.";
+    private string DoublonsMessage => L.F("Fiche(s) semblable(s) : {0}. Vérifiez avant d'ajouter une nouvelle fiche.",
+        string.Join(" ; ", _doublons.Take(3).Select(d => d.Fiche.NomComplet + " (" + d.Raison + ")"))
+        + (_doublons.Count > 3 ? "…" : ""));
 
     private async Task ConfirmAjoutDoublon()
     {
@@ -508,8 +508,8 @@
                 var u = Store.FindUser(EditingId!);
                 if (u is { Role: "Administrateur" } && Store.Users.Count(x => x.Role == "Administrateur") <= 1)
                 {
-                    if (!draft.Actif) _errors.TryAdd("statut", "Impossible de désactiver le dernier administrateur.");
-                    if (draft.Role != "Administrateur") _errors.TryAdd("role", "Impossible de changer le rôle du dernier administrateur.");
+                    if (!draft.Actif) _errors.TryAdd("statut", L.T("Impossible de désactiver le dernier administrateur."));
+                    if (draft.Role != "Administrateur") _errors.TryAdd("role", L.T("Impossible de changer le rôle du dernier administrateur."));
                 }
             }
 
@@ -536,7 +536,7 @@
                     StateHasChanged();
                     return;
                 }
-                State.NotifySuccess("Utilisateur ajouté avec succès.");
+                State.NotifySuccess(L.T("Utilisateur ajouté avec succès."));
             }
             else
             {
@@ -548,7 +548,7 @@
                     StateHasChanged();
                     return;
                 }
-                State.NotifySuccess("Utilisateur modifié avec succès.");
+                State.NotifySuccess(L.T("Utilisateur modifié avec succès."));
             }
 
             await OnClose.InvokeAsync();
@@ -561,8 +561,8 @@
 
     private static string FormatSize(long bytes)
     {
-        if (bytes < 1024) return bytes + " o";
-        if (bytes < 1024 * 1024) return (bytes / 1024.0).ToString("0.0") + " Ko";
-        return (bytes / (1024.0 * 1024)).ToString("0.0") + " Mo";
+        if (bytes < 1024) return L.F("{0} o", bytes);
+        if (bytes < 1024 * 1024) return L.F("{0} Ko", (bytes / 1024.0).ToString("0.0"));
+        return L.F("{0} Mo", (bytes / (1024.0 * 1024)).ToString("0.0"));
     }
 }

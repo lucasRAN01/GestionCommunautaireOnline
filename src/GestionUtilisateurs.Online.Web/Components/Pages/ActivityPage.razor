@@ -4,32 +4,32 @@
 @implements IDisposable
 
 <div class="page-head">
-    <p>Historique des opérations effectuées (les 500 dernières).</p>
+    <p>@L.T("Historique des opérations effectuées (les 500 dernières).")</p>
 </div>
 
 <div class="search-box cal-search">
     <span class="search-icon" aria-hidden="true">&#128269;</span>
-    <input type="search" placeholder="Rechercher dans le journal (description, utilisateur)…" aria-label="Rechercher dans le journal"
+    <input type="search" placeholder="@L.T("Rechercher dans le journal (description, utilisateur)…")" aria-label="@L.T("Rechercher dans le journal")"
            value="@_search" @oninput="OnSearch" />
 </div>
 @if (!string.IsNullOrWhiteSpace(_search))
 {
-    <div class="search-summary">@_list.Count entrée(s) trouvée(s) pour « @_search.Trim() »</div>
+    <div class="search-summary">@L.F("{0} entrée(s) trouvée(s) pour « {1} »", _list.Count, _search.Trim())</div>
 }
 
 <div class="chips-row">
-    <button class="chip @(ChipCls(""))" @onclick="@(() => SetFilter(""))">Tous</button>
-    <button class="chip @(ChipCls(ActivityTypes.Login))" @onclick="@(() => SetFilter(ActivityTypes.Login))">Connexions</button>
-    <button class="chip @(ChipCls(ActivityTypes.Create))" @onclick="@(() => SetFilter(ActivityTypes.Create))">Créations</button>
-    <button class="chip @(ChipCls(ActivityTypes.Update))" @onclick="@(() => SetFilter(ActivityTypes.Update))">Modifications</button>
-    <button class="chip @(ChipCls(ActivityTypes.Delete))" @onclick="@(() => SetFilter(ActivityTypes.Delete))">Suppressions</button>
-    <button class="chip @(ChipCls(ActivityTypes.Activate))" @onclick="@(() => SetFilter(ActivityTypes.Activate))">Activations</button>
-    <button class="chip @(ChipCls(ActivityTypes.Deactivate))" @onclick="@(() => SetFilter(ActivityTypes.Deactivate))">Désactivations</button>
+    <button class="chip @(ChipCls(""))" @onclick="@(() => SetFilter(""))">@L.T("Tous")</button>
+    <button class="chip @(ChipCls(ActivityTypes.Login))" @onclick="@(() => SetFilter(ActivityTypes.Login))">@L.T("Connexions")</button>
+    <button class="chip @(ChipCls(ActivityTypes.Create))" @onclick="@(() => SetFilter(ActivityTypes.Create))">@L.T("Créations")</button>
+    <button class="chip @(ChipCls(ActivityTypes.Update))" @onclick="@(() => SetFilter(ActivityTypes.Update))">@L.T("Modifications")</button>
+    <button class="chip @(ChipCls(ActivityTypes.Delete))" @onclick="@(() => SetFilter(ActivityTypes.Delete))">@L.T("Suppressions")</button>
+    <button class="chip @(ChipCls(ActivityTypes.Activate))" @onclick="@(() => SetFilter(ActivityTypes.Activate))">@L.T("Activations")</button>
+    <button class="chip @(ChipCls(ActivityTypes.Deactivate))" @onclick="@(() => SetFilter(ActivityTypes.Deactivate))">@L.T("Désactivations")</button>
 </div>
 
 @if (_list.Count == 0)
 {
-    <EmptyState Icon="📄" Title="Aucune activité" Message="Le journal est vide pour ce filtre." />
+    <EmptyState Icon="📄" Title="@L.T("Aucune activité")" Message="@L.T("Le journal est vide pour ce filtre.")" />
 }
 else
 {
@@ -52,13 +52,13 @@ else
 }
 
 <div class="form-actions" style="margin-top:14px;margin-bottom:8px">
-    <button class="btn btn-secondary" @onclick="ExportExcel">⇩ Exporter Excel</button>
-    <button class="btn btn-danger-outline" @onclick="() => _confirmClear = true">Effacer le journal</button>
+    <button class="btn btn-secondary" @onclick="ExportExcel">⇩ @L.T("Exporter Excel")</button>
+    <button class="btn btn-danger-outline" @onclick="() => _confirmClear = true">@L.T("Effacer le journal")</button>
 </div>
 
-<ConfirmDialog Show="_confirmClear" Title="Effacer le journal"
+<ConfirmDialog Show="_confirmClear" Title="@L.T("Effacer le journal")"
                Message="@ClearMessage"
-               ConfirmLabel="Effacer" Danger="true" OnConfirm="ClearActivity" OnCancel="() => _confirmClear = false" />
+               ConfirmLabel="@L.T("Effacer")" Danger="true" OnConfirm="ClearActivity" OnCancel="() => _confirmClear = false" />
 
 @code {
     private string _filter = "";
@@ -123,8 +123,8 @@ else
     private string ChipCls(string filter) => _filter == filter ? "active" : "";
 
     private string ClearMessage => string.IsNullOrEmpty(_filter)
-        ? "Confirmez-vous la suppression de tout l'historique d'activité ?"
-        : "Confirmez-vous la suppression des entrées « " + ActivityTypes.Label(_filter) + " » uniquement ?";
+        ? L.T("Confirmez-vous la suppression de tout l'historique d'activité ?")
+        : L.F("Confirmez-vous la suppression des entrées « {0} » uniquement ?", ActivityTypes.Label(_filter));
 
     private void SetFilter(string filter)
     {
@@ -169,7 +169,7 @@ else
             Store.ClearActivityByTypes(types);
         }
         Refresh();
-        State.NotifyInfo(string.IsNullOrEmpty(_filter) ? "Journal d'activité vidé." : "Entrées sélectionnées supprimées.");
+        State.NotifyInfo(string.IsNullOrEmpty(_filter) ? L.T("Journal d'activité vidé.") : L.T("Entrées sélectionnées supprimées."));
     }
 
     private async Task ExportExcel()
@@ -179,11 +179,11 @@ else
         if (path != null)
         {
             Store.LogActivity(ActivityTypes.Export, "Export Excel du journal d'activité");
-            State.NotifySuccess("Export réussi : " + path);
+            State.NotifySuccess(L.F("Export réussi : {0}", path));
         }
         else
         {
-            State.NotifyError("L'export a échoué.");
+            State.NotifyError(L.T("L'export a échoué."));
         }
     }
 }

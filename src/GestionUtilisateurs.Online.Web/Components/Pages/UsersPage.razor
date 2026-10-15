@@ -20,12 +20,12 @@ else
         <div class="cal-toolbar">
             <div class="search-box cal-search">
                 <span class="search-icon" aria-hidden="true">&#128269;</span>
-                <input type="text" placeholder="Rechercher un utilisateur..."
-                       aria-label="Rechercher" value="@_search"
+                <input type="text" placeholder="@L.T("Rechercher un utilisateur...")"
+                       aria-label="@L.T("Rechercher")" value="@_search"
                        @oninput="e => OnSearchChange(e.Value?.ToString() ?? string.Empty)" />
             </div>
             <button class="btn btn-secondary btn-sm cal-filter-btn @(_hasActiveFilters ? "active" : "")" @onclick="() => _filtersOpen = true">
-                <span aria-hidden="true">⚲</span> Filtres
+                <span aria-hidden="true">⚲</span> @L.T("Filtres")
                 @if (_hasActiveFilters)
                 {
                     <Badge Text="@_activeFilterCount.ToString()" Kind="role" />
@@ -34,10 +34,10 @@ else
         </div>
 
         <div class="inline-actions" style="justify-content:space-between;margin-top:12px">
-            <p class="user-count">@_filtered.Count utilisateur(s)</p>
+            <p class="user-count">@L.F("{0} utilisateur(s)", _filtered.Count)</p>
             @if (CanManage)
             {
-                <button class="btn btn-secondary btn-sm" disabled="@(_filtered.Count == 0)" @onclick="ExportAsync">⇩ Exporter</button>
+                <button class="btn btn-secondary btn-sm" disabled="@(_filtered.Count == 0)" @onclick="ExportAsync">⇩ @L.T("Exporter")</button>
             }
         </div>
     </div>
@@ -45,18 +45,18 @@ else
     @if (CanMerge && _doublons.Count > 0)
     {
         <div class="dup-banner" role="status">
-            <span>⚠ @_doublons.Count groupe(s) de fiches en double possible(s).</span>
-            <button class="btn btn-secondary btn-sm" @onclick="() => _doublonsOpen = true">Vérifier</button>
+            <span>⚠ @L.F("{0} groupe(s) de fiches en double possible(s).", _doublons.Count)</span>
+            <button class="btn btn-secondary btn-sm" @onclick="() => _doublonsOpen = true">@L.T("Vérifier")</button>
         </div>
     }
 
     @if (_filtered.Count == 0)
     {
-        <EmptyState Icon="☺" Title="Aucun utilisateur trouvé" Message="Essayez de modifier vos filtres ou ajoutez un nouvel utilisateur." />
+        <EmptyState Icon="☺" Title="@L.T("Aucun utilisateur trouvé")" Message="@L.T("Essayez de modifier vos filtres ou ajoutez un nouvel utilisateur.")" />
         @if (CanManage)
         {
             <div class="empty-state-action">
-                <button class="btn btn-primary btn-block" @onclick="OpenAdd">Ajouter un utilisateur</button>
+                <button class="btn btn-primary btn-block" @onclick="OpenAdd">@L.T("Ajouter un utilisateur")</button>
             </div>
         }
     }
@@ -66,7 +66,7 @@ else
             @foreach (var u in PagedUsers)
             {
                 <div class="user-card" @onclick="() => OpenDetail(u.Id)">
-                    <button class="avatar-btn" type="button" @onclick:stopPropagation="true" @onclick="() => OpenPhoto(u)" aria-label="Agrandir la photo">
+                    <button class="avatar-btn" type="button" @onclick:stopPropagation="true" @onclick="() => OpenPhoto(u)" aria-label="@L.T("Agrandir la photo")">
                         <Avatar UserName="@u.NomComplet" Seed="@u.Identifiant" Photo="@u.Photo" />
                     </button>
                     <div class="user-card-main">
@@ -76,18 +76,18 @@ else
                             <div class="user-card-sub">@u.Email</div>
                         }
                         <div class="user-card-meta">
-                            <Badge Text="@u.Role" Kind="role" />
-                            <Badge Text="@u.Statut" Kind="@(u.Actif ? "active" : "inactive")" />
+                            <Badge Text="@L.T(u.Role)" Kind="role" />
+                            <Badge Text="@L.T(u.Statut)" Kind="@(u.Actif ? "active" : "inactive")" />
                             @if (u.EstMineur)
                             {
-                                <span class="badge badge-minor">Mineur</span>
+                                <span class="badge badge-minor">@L.T("Mineur")</span>
                             }
                         </div>
                     </div>
                     @if (CanManage)
                     {
                         <div class="user-card-actions" @onclick:stopPropagation="true">
-                            <button class="btn-icon" aria-label="Modifier" @onclick="@(() => OpenEdit(u.Id))">✎</button>
+                            <button class="btn-icon" aria-label="@L.T("Modifier")" @onclick="@(() => OpenEdit(u.Id))">✎</button>
                         </div>
                     }
                 </div>
@@ -98,28 +98,28 @@ else
 
     @if (CanManage)
     {
-        <button class="fab" aria-label="Ajouter un utilisateur" @onclick="OpenAdd">+</button>
+        <button class="fab" aria-label="@L.T("Ajouter un utilisateur")" @onclick="OpenAdd">+</button>
     }
 
-    <Modal Show="_filtersOpen" Title="Filtrer les utilisateurs" OnClose="() => _filtersOpen = false">
+    <Modal Show="_filtersOpen" Title="@L.T("Filtrer les utilisateurs")" OnClose="() => _filtersOpen = false">
         <div class="cal-filter-section">
-            <div class="divider-section">Statut</div>
+            <div class="divider-section">@L.T("Statut")</div>
             <div class="check-group">
                 @foreach (var opt in StatusOptions)
                 {
                     <label class="form-check">
                         <input type="checkbox" checked="@_statusFilter.Contains(opt.Value)" @onchange="() => ToggleStatus(opt.Value)" />
-                        @opt.Label
+                        @L.T(opt.Label)
                     </label>
                 }
             </div>
-            <div class="divider-section">Rôle</div>
+            <div class="divider-section">@L.T("Rôle")</div>
             <div class="check-group">
                 @foreach (var opt in RoleOptions)
                 {
                     <label class="form-check">
                         <input type="checkbox" checked="@_roleFilter.Contains(opt.Value)" @onchange="() => ToggleRole(opt.Value)" />
-                        @opt.Label
+                        @L.T(opt.Label)
                     </label>
                 }
             </div>
@@ -131,7 +131,7 @@ else
                 {
                     <div class="search-box cal-search cal-opt-search">
                         <span class="search-icon" aria-hidden="true">&#128269;</span>
-                        <input type="search" placeholder="Rechercher une valeur…" aria-label="Rechercher parmi les choix"
+                        <input type="search" placeholder="@L.T("Rechercher une valeur…")" aria-label="@L.T("Rechercher parmi les choix")"
                                value="@(_fieldOptionSearch.TryGetValue(cachedField.Id, out var s) ? s : "")"
                                @oninput="e => OnFieldOptionSearch(cachedField.Id, e.Value?.ToString() ?? string.Empty)" />
                     </div>
@@ -140,7 +140,7 @@ else
                         {
                             <label class="form-check">
                                 <input type="checkbox" checked="@(_fieldFilters.TryGetValue(cachedField.Id, out var set) && set.Contains(opt))" @onchange="() => ToggleFieldOption(cachedField.Id, opt)" />
-                                @opt
+                                @(cachedField.Type == FieldType.Booleen ? L.T(opt) : opt)
                             </label>
                         }
                     </div>
@@ -149,13 +149,13 @@ else
                 {
                     <div class="filter-number-row">
                         <div class="search-box cal-search">
-                            <input type="number" inputmode="decimal" placeholder="Min" aria-label="Valeur minimale"
+                            <input type="number" inputmode="decimal" placeholder="@L.T("Min")" aria-label="@L.T("Valeur minimale")"
                                    value="@(_fieldNumberMin.TryGetValue(cachedField.Id, out var nmin) && nmin.HasValue ? nmin.Value.ToString(System.Globalization.CultureInfo.InvariantCulture) : "")"
                                    @oninput="e => OnFieldNumber(cachedField.Id, true, e.Value?.ToString() ?? string.Empty)" />
                         </div>
                         <span class="filter-number-sep" aria-hidden="true">–</span>
                         <div class="search-box cal-search">
-                            <input type="number" inputmode="decimal" placeholder="Max" aria-label="Valeur maximale"
+                            <input type="number" inputmode="decimal" placeholder="@L.T("Max")" aria-label="@L.T("Valeur maximale")"
                                    value="@(_fieldNumberMax.TryGetValue(cachedField.Id, out var nmax) && nmax.HasValue ? nmax.Value.ToString(System.Globalization.CultureInfo.InvariantCulture) : "")"
                                    @oninput="e => OnFieldNumber(cachedField.Id, false, e.Value?.ToString() ?? string.Empty)" />
                         </div>
@@ -164,7 +164,7 @@ else
                 else if (cachedField.Type == FieldType.Date)
                 {
                     <div class="form-group" style="margin:2px 0 0">
-                        <input type="date" aria-label="Filtrer par date"
+                        <input type="date" aria-label="@L.T("Filtrer par date")"
                                value="@(_fieldDateFilters.TryGetValue(cachedField.Id, out var d) ? d : "")"
                                @onchange="e => OnFieldDate(cachedField.Id, e.Value?.ToString() ?? string.Empty)" />
                     </div>
@@ -175,15 +175,15 @@ else
                     <div class="radio-row">
                         <label class="radio-option">
                             <input type="radio" name="ff-@cachedField.Id" checked="@(fileChoice == null)" @onchange="() => SetFieldFile(cachedField.Id, null)" />
-                            Tous
+                            @L.T("Tous")
                         </label>
                         <label class="radio-option">
                             <input type="radio" name="ff-@cachedField.Id" checked="@(fileChoice == true)" @onchange="() => SetFieldFile(cachedField.Id, true)" />
-                            Avec fichier
+                            @L.T("Avec fichier")
                         </label>
                         <label class="radio-option">
                             <input type="radio" name="ff-@cachedField.Id" checked="@(fileChoice == false)" @onchange="() => SetFieldFile(cachedField.Id, false)" />
-                            Sans fichier
+                            @L.T("Sans fichier")
                         </label>
                     </div>
                 }
@@ -191,7 +191,7 @@ else
                 {
                     <div class="search-box cal-search cal-opt-search">
                         <span class="search-icon" aria-hidden="true">&#128269;</span>
-                        <input type="search" placeholder="Contient…" aria-label="Filtrer par texte"
+                        <input type="search" placeholder="@L.T("Contient…")" aria-label="@L.T("Filtrer par texte")"
                                value="@(_fieldTextFilters.TryGetValue(cachedField.Id, out var t) ? t : "")"
                                @oninput="e => OnFieldText(cachedField.Id, e.Value?.ToString() ?? string.Empty)" />
                     </div>
@@ -199,8 +199,8 @@ else
             }
         </div>
         <div class="form-actions filter-actions">
-            <button type="button" class="btn btn-secondary" @onclick="ResetFilters">Réinitialiser</button>
-            <button type="button" class="btn btn-primary" @onclick="() => _filtersOpen = false">Appliquer les filtres</button>
+            <button type="button" class="btn btn-secondary" @onclick="ResetFilters">@L.T("Réinitialiser")</button>
+            <button type="button" class="btn btn-primary" @onclick="() => _filtersOpen = false">@L.T("Appliquer les filtres")</button>
         </div>
     </Modal>
 
@@ -211,11 +211,11 @@ else
 
     <PhotoViewer Current="@_viewer" OnClose="@(() => _viewer = null)" />
 
-    <Modal Show="_doublonsOpen" Title="Fiches en double possibles" OnClose="() => _doublonsOpen = false">
-        <p class="text-muted dup-help">Choisissez la fiche à garder : les autres y sont fusionnées. Leurs cotisations, prêts, tâches, messages, réunions, votes, documents et événements passent sur la fiche gardée. Un compte en ligne est toujours conservé.</p>
+    <Modal Show="_doublonsOpen" Title="@L.T("Fiches en double possibles")" OnClose="() => _doublonsOpen = false">
+        <p class="text-muted dup-help">@L.T("Choisissez la fiche à garder : les autres y sont fusionnées. Leurs cotisations, prêts, tâches, messages, réunions, votes, documents et événements passent sur la fiche gardée. Un compte en ligne est toujours conservé.")</p>
         @if (_doublons.Count == 0)
         {
-            <p>Aucun doublon à vérifier.</p>
+            <p>@L.T("Aucun doublon à vérifier.")</p>
         }
         @foreach (var g in _doublons)
         {
@@ -232,13 +232,13 @@ else
                         <span class="dup-member-text">
                             <strong>@membre.NomComplet</strong>
                             <small>@membre.Identifiant@(string.IsNullOrWhiteSpace(membre.Email) ? "" : " · " + membre.Email)@(string.IsNullOrWhiteSpace(membre.Telephone) ? "" : " · " + membre.Telephone)</small>
-                            <small>Créée le @DataStore.FormatDateCourte(membre.DateCreation)@(DataStore.EstCompteEnLigne(membre) ? " · compte en ligne" : "")</small>
+                            <small>@L.F("Créée le {0}", DataStore.FormatDateCourte(membre.DateCreation))@(DataStore.EstCompteEnLigne(membre) ? " · " + L.T("compte en ligne") : "")</small>
                         </span>
                     </label>
                 }
                 <div class="inline-actions dup-actions">
-                    <button class="btn btn-secondary btn-sm" @onclick="() => PasDoublon(groupe)">Ce ne sont pas des doublons</button>
-                    <button class="btn btn-primary btn-sm" @onclick="() => AskFusion(groupe, garder)">Fusionner</button>
+                    <button class="btn btn-secondary btn-sm" @onclick="() => PasDoublon(groupe)">@L.T("Ce ne sont pas des doublons")</button>
+                    <button class="btn btn-primary btn-sm" @onclick="() => AskFusion(groupe, garder)">@L.T("Fusionner")</button>
                 </div>
             </div>
         }
@@ -658,11 +658,11 @@ else
             bytes, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
         if (path == null)
         {
-            State.NotifyError("L'export a échoué. Réessayez.");
+            State.NotifyError(L.T("L'export a échoué. Réessayez."));
             return;
         }
         Store.LogActivity(ActivityTypes.Export, "Export Excel des utilisateurs filtrés (" + _filtered.Count + ")");
-        State.NotifySuccess("Export réussi : " + path);
+        State.NotifySuccess(L.F("Export réussi : {0}", path));
     }
 
     private void OpenDetail(string id)
@@ -677,15 +677,15 @@ else
     {
         var u = Store.FindUser(id);
         if (u == null) return;
-        _confirm = new ConfirmState(true, activate ? "Activer l'utilisateur" : "Désactiver l'utilisateur",
-            $"Voulez-vous vraiment {(activate ? "activer" : "désactiver")} « {u.NomComplet} » ?",
-            activate ? "Activer" : "Désactiver", !activate, () => ExecuteToggle(id, activate));
+        _confirm = new ConfirmState(true, activate ? L.T("Activer l'utilisateur") : L.T("Désactiver l'utilisateur"),
+            activate ? L.F("Voulez-vous vraiment activer « {0} » ?", u.NomComplet) : L.F("Voulez-vous vraiment désactiver « {0} » ?", u.NomComplet),
+            activate ? L.T("Activer") : L.T("Désactiver"), !activate, () => ExecuteToggle(id, activate));
     }
 
     private void ExecuteToggle(string id, bool activate)
     {
         var res = Store.SetUserActive(id, activate);
-        State.Notify(res.Success ? (activate ? "Utilisateur activé." : "Utilisateur désactivé.") : "Erreur : " + res.Error,
+        State.Notify(res.Success ? (activate ? L.T("Utilisateur activé.") : L.T("Utilisateur désactivé.")) : L.F("Erreur : {0}", res.Error),
             res.Success ? "success" : "error");
     }
 
@@ -693,15 +693,15 @@ else
     {
         var u = Store.FindUser(id);
         if (u == null) return;
-        _confirm = new ConfirmState(true, "Réinitialiser le mot de passe",
-            $"Voulez-vous réinitialiser le mot de passe de « {u.NomComplet} » ?\nLe nouveau mot de passe sera : « {DataStore.DEFAULT_PASSWORD} ».",
-            "Réinitialiser", false, () => ExecuteReset(id));
+        _confirm = new ConfirmState(true, L.T("Réinitialiser le mot de passe"),
+            L.F("Voulez-vous réinitialiser le mot de passe de « {0} » ?\nLe nouveau mot de passe sera : « {1} ».", u.NomComplet, DataStore.DEFAULT_PASSWORD),
+            L.T("Réinitialiser"), false, () => ExecuteReset(id));
     }
 
     private void ExecuteReset(string id)
     {
         var res = Store.ResetPassword(id);
-        State.Notify(res.Success ? $"Mot de passe réinitialisé : « {DataStore.DEFAULT_PASSWORD} »." : "Erreur : " + res.Error,
+        State.Notify(res.Success ? L.F("Mot de passe réinitialisé : « {0} ».", DataStore.DEFAULT_PASSWORD) : L.F("Erreur : {0}", res.Error),
             res.Success ? "success" : "error");
     }
 
@@ -711,8 +711,8 @@ else
     private void PasDoublon(DataStore.DoublonGroupe g)
     {
         var res = Store.MarquerPasDoublon(g.Membres.Select(m => m.Id));
-        if (res.Success) State.NotifySuccess("Ces fiches ne seront plus signalées.");
-        else State.NotifyError(res.Error ?? "Action impossible.");
+        if (res.Success) State.NotifySuccess(L.T("Ces fiches ne seront plus signalées."));
+        else State.NotifyError(res.Error ?? L.T("Action impossible."));
     }
 
     private void AskFusion(DataStore.DoublonGroupe g, string garderId)
@@ -721,9 +721,9 @@ else
         if (garder == null) return;
         var autres = g.Membres.Where(m => m.Id != garderId).ToList();
         _doublonsOpen = false; // la confirmation s'affiche à la place de la liste
-        _confirm = new ConfirmState(true, "Fusionner les fiches",
-            $"Garder « {garder.NomComplet} » ({garder.Identifiant}) et y fusionner : {string.Join(", ", autres.Select(a => a.NomComplet + " (" + a.Identifiant + ")"))}.\nLes fiches fusionnées seront supprimées. Cette action est définitive.",
-            "Fusionner", true, () => ExecuteFusion(garderId, autres.Select(a => a.Id).ToList()));
+        _confirm = new ConfirmState(true, L.T("Fusionner les fiches"),
+            L.F("Garder « {0} » ({1}) et y fusionner : {2}.\nLes fiches fusionnées seront supprimées. Cette action est définitive.", garder.NomComplet, garder.Identifiant, string.Join(", ", autres.Select(a => a.NomComplet + " (" + a.Identifiant + ")"))),
+            L.T("Fusionner"), true,() => ExecuteFusion(garderId, autres.Select(a => a.Id).ToList()));
     }
 
     private void ExecuteFusion(string garderId, List<string> retirerIds)
@@ -734,12 +734,12 @@ else
         {
             var avant = Store.FindUser(id);
             var res = Store.FusionnerUtilisateurs(id, r);
-            if (!res.Success) { State.NotifyError(res.Error ?? "Fusion impossible."); return; }
+            if (!res.Success) { State.NotifyError(res.Error ?? L.T("Fusion impossible.")); return; }
             // La fiche gardée peut avoir pris l'identifiant du compte en ligne.
             if (Store.FindUser(id) == null)
                 id = Store.Users.FirstOrDefault(u => u.Identifiant == avant?.Identifiant)?.Id ?? id;
         }
-        State.NotifySuccess(retirerIds.Count > 1 ? "Fiches fusionnées." : "Fiches fusionnées en une seule.");
+        State.NotifySuccess(retirerIds.Count > 1 ? L.T("Fiches fusionnées.") : L.T("Fiches fusionnées en une seule."));
     }
 
     public void Dispose()
