@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Components.Web;
+using Microsoft.JSInterop;
 using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
 using GestionUtilisateurs.Online.Web.Components.Online;
 using GestionUtilisateurs.Online.Web.Services;
@@ -34,4 +35,15 @@ builder.Services.AddScoped<SpreadsheetPicker>();
 builder.Services.AddScoped<DocumentService>();
 builder.Services.AddScoped<AutoExportService>();
 
-await builder.Build().RunAsync();
+builder.Services.AddScoped<LangueService>();
+
+var host = builder.Build();
+// Langue de l'interface : dernier choix fait dans ce navigateur (français par défaut).
+try
+{
+    var js = (IJSInProcessRuntime)host.Services.GetRequiredService<IJSRuntime>();
+    L.Definir(js.Invoke<string?>("guLangue.get"));
+    js.InvokeVoid("guLangue.set", L.Langue);
+}
+catch { }
+await host.RunAsync();

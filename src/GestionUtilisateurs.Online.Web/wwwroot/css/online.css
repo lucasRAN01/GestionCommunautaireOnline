@@ -405,3 +405,9 @@
 .family-pick-item.active { border-color: var(--accent); background: rgba(79, 70, 229, .08); }
 .family-summary { font-size: 14px; margin: 4px 0 12px; }
 .minor-box .badge { align-self: flex-start; }
+
+/* Choix de la langue */
+.lang-picker { display: inline-flex; flex-wrap: wrap; gap: 6px; }
+.lang-chip { border: 1px solid var(--border); background: var(--surface, #fff); color: inherit; border-radius: 999px; padding: 6px 14px; font-size: 13.5px; font-weight: 600; cursor: pointer; }
+.lang-chip.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+.lang-picker-auth { justify-content: center; margin: 0 auto 14px; display: flex; }

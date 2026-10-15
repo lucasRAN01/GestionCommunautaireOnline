@@ -29,6 +29,18 @@ public partial class DataStore
         public List<string> AideVu { get; set; } = new();
         public string? Theme { get; set; }
         public bool? Conseils { get; set; }
+        public string? Langue { get; set; }
+    }
+
+    /// <summary>Langue choisie par le membre (null tant qu'il n'a rien choisi).</summary>
+    public string? GetLangue(string? identifiant)
+        => string.IsNullOrWhiteSpace(identifiant) ? null : LoadPrefs(identifiant).Langue;
+
+    /// <summary>Enregistre la langue personnelle du membre (dans son navigateur, comme le thème).</summary>
+    public void SetLangue(string? identifiant, string langue)
+    {
+        if (string.IsNullOrWhiteSpace(identifiant)) return;
+        UpdatePrefs(identifiant, p => p.Langue = L.Normaliser(langue));
     }
 
     private static string PrefsKey(string identifiant) => K_PREFS_PREFIX + identifiant.Trim().ToLowerInvariant();

@@ -1,4 +1,5 @@
 @implements IDisposable
+@inject LangueService Langues
 @inject DataStore Store
 @inject AppState State
 @inject JavascriptBridge Js
@@ -462,6 +463,7 @@
         Online.Changed += OnOnlineChanged;
         State.TourRequested += OnTourRequested;
         currentUser = Store.GetCurrentUser();
+        await Langues.AppliquerChoixDuMembreAsync();
         await ApplyEffectiveThemeAsync();
         ComputeCalDate();
         RefreshStorageAlert();

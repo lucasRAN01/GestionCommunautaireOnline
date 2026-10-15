@@ -86,6 +86,11 @@
         </div>
     }
     <div class="form-group">
+        <label>@L.T("Ma langue (personnelle)")</label>
+        <LanguePicker />
+        <span class="field-hint">@L.T("Votre choix uniquement : chaque membre choisit sa langue.")</span>
+    </div>
+    <div class="form-group">
         <label for="st-theme-perso">Mon thème (personnel)</label>
         <select id="st-theme-perso" value="@_theme" @onchange="OnPersonalThemeChanged">
             <option value="light">Clair</option>

@@ -1,4 +1,12 @@
 // Pont JS pour GestionUtilisateurs (MAUI Blazor Hybrid)
+window.guLangue = {
+    get: function () { try { return localStorage.getItem('gu2:langue'); } catch (e) { return null; } },
+    set: function (code) {
+        try { localStorage.setItem('gu2:langue', code); } catch (e) { }
+        document.documentElement.lang = code === 'mg' ? 'mg' : (code === 'en' ? 'en' : 'fr');
+    }
+};
+
 window.guTheme = {
     apply: function (theme, color, appName, logoDataUrl) {
         var root = document.documentElement;
