@@ -1,3 +1,5 @@
+using GestionUtilisateurs.Shared.Services;
+
 namespace GestionUtilisateurs.Shared.Models;
 
 public enum FieldType
@@ -18,16 +20,16 @@ public static class FieldTypeInfo
 {
     public static string Label(FieldType t) => t switch
     {
-        FieldType.Texte => "Texte libre",
-        FieldType.TexteMultiligne => "Zone de texte",
-        FieldType.Nombre => "Nombre",
-        FieldType.Liste => "Liste",
-        FieldType.Date => "Date",
-        FieldType.Email => "E-mail",
-        FieldType.Booleen => "Oui / Non",
-        FieldType.PieceJointe => "Pièce jointe",
-        FieldType.Image => "Image",
-        FieldType.ChoixMultiple => "Choix par cochage",
+        FieldType.Texte => L.T("Texte libre"),
+        FieldType.TexteMultiligne => L.T("Zone de texte"),
+        FieldType.Nombre => L.T("Nombre"),
+        FieldType.Liste => L.T("Liste"),
+        FieldType.Date => L.T("Date"),
+        FieldType.Email => L.T("E-mail"),
+        FieldType.Booleen => L.T("Oui / Non"),
+        FieldType.PieceJointe => L.T("Pièce jointe"),
+        FieldType.Image => L.T("Image"),
+        FieldType.ChoixMultiple => L.T("Choix par cochage"),
         _ => t.ToString()
     };
 
@@ -111,10 +113,10 @@ public static class LiensFamille
 
     public static string Libelle(string type) => type switch
     {
-        Parent => "Parent",
-        Enfant => "Enfant",
-        Conjoint => "Conjoint(e)",
-        Fratrie => "Frère ou sœur",
+        Parent => L.T("Parent"),
+        Enfant => L.T("Enfant"),
+        Conjoint => L.T("Conjoint(e)"),
+        Fratrie => L.T("Frère ou sœur"),
         _ => type
     };
 }
@@ -189,7 +191,10 @@ public class ActivityEntry
 /// <summary>Couleurs d'accent proposées (toutes lisibles avec un texte blanc).</summary>
 public static class CouleursAccent
 {
-    public static readonly (string Hex, string Nom)[] Toutes =
+    /// <summary>Couleurs avec leur nom traduit dans la langue choisie (lu à chaque accès).</summary>
+    public static (string Hex, string Nom)[] Toutes => Base.Select(c => (c.Hex, L.T(c.Nom))).ToArray();
+
+    private static readonly (string Hex, string Nom)[] Base =
     {
         ("#4f46e5", "Indigo"), ("#1e3a8a", "Bleu marine"), ("#2563eb", "Bleu"), ("#0284c7", "Bleu ciel"),
         ("#0891b2", "Cyan"), ("#0d9488", "Sarcelle"), ("#059669", "Émeraude"), ("#16a34a", "Vert"),
@@ -246,7 +251,12 @@ public class AppSettings
 /// <summary>Catalogue des entrées du menu « … » (utilisé pour le réordonnancement).</summary>
 public static class AppMenus
 {
-    public sealed record MenuDef(string Key, string Label, string Icon);
+    public sealed record MenuDef(string Key, string Label, string Icon)
+    {
+        private readonly string _label = Label;
+        /// <summary>Libellé traduit à la lecture (la langue peut changer après l'initialisation).</summary>
+        public string Label { get => L.T(_label); init => _label = value; }
+    }
 
     public static IReadOnlyList<MenuDef> All { get; } = new[]
     {
@@ -335,9 +345,9 @@ public static class TacheStatuts
 
     public static string Label(string statut) => statut switch
     {
-        EnCours => "En cours",
-        Terminee => "Terminée",
-        _ => "À faire"
+        EnCours => L.T("En cours"),
+        Terminee => L.T("Terminée"),
+        _ => L.T("À faire")
     };
 
     public static string Icon(string statut) => statut switch
@@ -370,8 +380,8 @@ public static class CotisationStatuts
 
     public static string Label(string statut) => statut switch
     {
-        EnAttente => "En attente",
-        _ => "Payée"
+        EnAttente => L.T("En attente"),
+        _ => L.T("Payée")
     };
 }
 
@@ -394,8 +404,8 @@ public static class TresorerieTypes
 
     public static string Label(string type) => type switch
     {
-        Sortie => "Sortie",
-        _ => "Entrée"
+        Sortie => L.T("Sortie"),
+        _ => L.T("Entrée")
     };
 
     public static string Icon(string type) => type switch
@@ -425,9 +435,9 @@ public static class MaterielEtats
 
     public static string Label(string etat) => etat switch
     {
-        Moyen => "Moyen",
-        HorsService => "Hors service",
-        _ => "Bon"
+        Moyen => L.T("Moyen"),
+        HorsService => L.T("Hors service"),
+        _ => L.T("Bon")
     };
 }
 
@@ -470,9 +480,9 @@ public static class PresenceStatuts
 
     public static string Label(string statut) => statut switch
     {
-        Absent => "Absent",
-        Excuse => "Excusé",
-        _ => "Présent"
+        Absent => L.T("Absent"),
+        Excuse => L.T("Excusé"),
+        _ => L.T("Présent")
     };
 
     public static string Icon(string statut) => statut switch
@@ -507,10 +517,10 @@ public static class SituationTypes
 
     public static string Label(string type) => type switch
     {
-        Accompagnement => "Accompagnement",
-        EvenementImportant => "Événement important",
-        Autre => "Autre",
-        _ => "Visite nécessaire"
+        Accompagnement => L.T("Accompagnement"),
+        EvenementImportant => L.T("Événement important"),
+        Autre => L.T("Autre"),
+        _ => L.T("Visite nécessaire")
     };
 
     public static string Icon(string type) => type switch
@@ -530,9 +540,9 @@ public static class SituationStatuts
 
     public static string Label(string statut) => statut switch
     {
-        EnCours => "En cours",
-        Resolu => "Résolu",
-        _ => "Ouvert"
+        EnCours => L.T("En cours"),
+        Resolu => L.T("Résolu"),
+        _ => L.T("Ouvert")
     };
 
     public static string Icon(string statut) => statut switch
@@ -582,8 +592,8 @@ public static class VoteStatuts
 
     public static string Label(string statut) => statut switch
     {
-        Clos => "Clos",
-        _ => "Ouvert"
+        Clos => L.T("Clos"),
+        _ => L.T("Ouvert")
     };
 }
 
@@ -612,9 +622,9 @@ public static class MediaTypes
 
     public static string Label(string type) => type switch
     {
-        Video => "Vidéo",
-        Audio => "Audio",
-        _ => "Photo"
+        Video => L.T("Vidéo"),
+        Audio => L.T("Audio"),
+        _ => L.T("Photo")
     };
 
     public static string Icon(string type) => type switch
@@ -692,7 +702,15 @@ public static class Permissions
     public const string VotesManage = "votes.manage";
     public const string JournalMediaUse = "journal_media.use";
 
-    public sealed record Definition(string Key, string Groupe, string Label);
+    public sealed record Definition(string Key, string Groupe, string Label)
+    {
+        private readonly string _groupe = Groupe;
+        private readonly string _label = Label;
+        /// <summary>Groupe traduit à la lecture (la langue peut changer après l'initialisation).</summary>
+        public string Groupe { get => L.T(_groupe); init => _groupe = value; }
+        /// <summary>Libellé traduit à la lecture (la langue peut changer après l'initialisation).</summary>
+        public string Label { get => L.T(_label); init => _label = value; }
+    }
 
     public static IReadOnlyList<Definition> Toutes { get; } = new[]
     {
@@ -890,47 +908,47 @@ public static class ActivityTypes
 
     public static string Label(string type) => type switch
     {
-        Login => "Connexion",
-        Logout => "Déconnexion",
-        Create => "Création",
-        Update => "Modification",
-        Activate => "Activation",
-        Deactivate => "Désactivation",
-        Delete => "Suppression",
-        Import => "Importation",
-        Export => "Exportation",
-        PasswordReset => "Réinitialisation MDP",
-        FieldsChange => "Champs du formulaire",
-        CalendarCreate => "Ajout d'événement",
-        CalendarUpdate => "Modification d'événement",
-        CalendarDelete => "Suppression d'événement",
-        DossierCreate => "Création de dossier",
-        DossierUpdate => "Modification de dossier",
-        DossierDelete => "Suppression de dossier",
-        DocumentCreate => "Ajout de document",
-        DocumentUpdate => "Modification de document",
-        DocumentDelete => "Suppression de document",
-        DocumentRestore => "Restauration de document",
-        DocumentShare => "Partage de document",
-        SyncExport => "Export de synchronisation",
-        SyncImport => "Import de synchronisation",
-        RolesChange => "Rôles et permissions",
-        MessageSend => "Envoi de message",
-        MessageDelete => "Suppression de message",
-        MessageUpdate => "Modification de message",
-        TacheCreate => "Création de tâche",
-        TacheUpdate => "Suivi de tâche",
-        TacheDelete => "Suppression de tâche",
-        FinanceCotisation => "Cotisation",
-        FinanceTresorerie => "Trésorerie",
-        MaterielChange => "Matériel",
-        PretChange => "Prêt de matériel",
-        ReunionChange => "Réunion",
-        PresenceMark => "Feuille de présence",
-        SituationChange => "Situation particulière",
-        VoteChange => "Vote interne",
-        VoteCast => "Vote exprimé",
-        MediaChange => "Journal multimédia",
+        Login => L.T("Connexion"),
+        Logout => L.T("Déconnexion"),
+        Create => L.T("Création"),
+        Update => L.T("Modification"),
+        Activate => L.T("Activation"),
+        Deactivate => L.T("Désactivation"),
+        Delete => L.T("Suppression"),
+        Import => L.T("Importation"),
+        Export => L.T("Exportation"),
+        PasswordReset => L.T("Réinitialisation MDP"),
+        FieldsChange => L.T("Champs du formulaire"),
+        CalendarCreate => L.T("Ajout d'événement"),
+        CalendarUpdate => L.T("Modification d'événement"),
+        CalendarDelete => L.T("Suppression d'événement"),
+        DossierCreate => L.T("Création de dossier"),
+        DossierUpdate => L.T("Modification de dossier"),
+        DossierDelete => L.T("Suppression de dossier"),
+        DocumentCreate => L.T("Ajout de document"),
+        DocumentUpdate => L.T("Modification de document"),
+        DocumentDelete => L.T("Suppression de document"),
+        DocumentRestore => L.T("Restauration de document"),
+        DocumentShare => L.T("Partage de document"),
+        SyncExport => L.T("Export de synchronisation"),
+        SyncImport => L.T("Import de synchronisation"),
+        RolesChange => L.T("Rôles et permissions"),
+        MessageSend => L.T("Envoi de message"),
+        MessageDelete => L.T("Suppression de message"),
+        MessageUpdate => L.T("Modification de message"),
+        TacheCreate => L.T("Création de tâche"),
+        TacheUpdate => L.T("Suivi de tâche"),
+        TacheDelete => L.T("Suppression de tâche"),
+        FinanceCotisation => L.T("Cotisation"),
+        FinanceTresorerie => L.T("Trésorerie"),
+        MaterielChange => L.T("Matériel"),
+        PretChange => L.T("Prêt de matériel"),
+        ReunionChange => L.T("Réunion"),
+        PresenceMark => L.T("Feuille de présence"),
+        SituationChange => L.T("Situation particulière"),
+        VoteChange => L.T("Vote interne"),
+        VoteCast => L.T("Vote exprimé"),
+        MediaChange => L.T("Journal multimédia"),
         _ => type
     };
 }
