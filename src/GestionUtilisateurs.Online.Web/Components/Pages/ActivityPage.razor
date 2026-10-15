@@ -1,4 +1,4 @@
-@inject DataStore Store
+﻿@inject DataStore Store
 @inject AppState State
 @inject NativeFileSaver Saver
 
@@ -7,7 +7,7 @@
 </div>
 
 <div class="search-box cal-search">
-    <span class="search-icon" aria-hidden="true">⌕</span>
+    <span class="search-icon" aria-hidden="true">&#128269;</span>
     <input type="search" placeholder="Rechercher dans le journal (description, utilisateur)…" aria-label="Rechercher dans le journal"
            value="@_search" @oninput="OnSearch" />
 </div>
@@ -104,6 +104,7 @@ else
         ActivityTypes.Update or ActivityTypes.CalendarUpdate or ActivityTypes.DossierUpdate
             or ActivityTypes.DocumentUpdate or ActivityTypes.DocumentShare
             or ActivityTypes.FieldsChange or ActivityTypes.PasswordReset
+            or ActivityTypes.MessageUpdate
             => ActivityTypes.Update,
         ActivityTypes.Delete or ActivityTypes.CalendarDelete or ActivityTypes.DossierDelete
             or ActivityTypes.DocumentDelete

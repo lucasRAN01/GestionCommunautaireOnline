@@ -1,11 +1,17 @@
-<div class="empty-state">
+﻿<div class="empty-state">
     <div class="empty-state-icon" aria-hidden="true">@Icon</div>
     <h3>@Title</h3>
     <p>@Message</p>
+    @if (ChildContent != null)
+    {
+        <div class="empty-state-actions">@ChildContent</div>
+    }
 </div>
 
 @code {
     [Parameter] public string Icon { get; set; } = "📋";
     [Parameter] public string Title { get; set; } = "Aucun élément";
     [Parameter] public string? Message { get; set; }
+    /// <summary>Actions optionnelles affichées sous le message (boutons).</summary>
+    [Parameter] public RenderFragment? ChildContent { get; set; }
 }

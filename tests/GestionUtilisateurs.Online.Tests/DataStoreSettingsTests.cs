@@ -61,4 +61,35 @@ public class DataStoreSettingsTests
 
         Assert.True(store.StorageUsedBytes() > before);
     }
+
+    [Fact]
+    public void Theme_Individuel_Prioritaire_SansToucherGlobal()
+    {
+        var store = NewStore();
+
+        Assert.Equal("light", store.GetEffectiveTheme("jdubois"));
+        store.SetUserTheme("jdubois", "dark");
+        Assert.Equal("dark", store.GetEffectiveTheme("jdubois"));
+        Assert.Equal("light", store.GetEffectiveTheme("cmoreau"));
+        Assert.Equal("light", store.Settings.Theme);
+    }
+
+    [Fact]
+    public void Conseils_Individuels_SansToucherLesAutres()
+    {
+        var store = NewStore();
+
+        Assert.True(store.GetEffectiveConseils("jdubois"));
+        store.SetUserConseils("jdubois", false);
+        Assert.False(store.GetEffectiveConseils("jdubois"));
+        Assert.True(store.GetEffectiveConseils("cmoreau"));
+        Assert.True(store.Settings.AidesContextuelles);
+    }
+
+    [Fact]
+    public void FormatDateHeure_AfficheDateEtHeure()
+    {
+        Assert.Equal("—", DataStore.FormatDateHeure(null));
+        Assert.Equal("05/09/2026 à 14:30", DataStore.FormatDateHeure("2026-09-05T14:30:00+03:00"));
+    }
 }

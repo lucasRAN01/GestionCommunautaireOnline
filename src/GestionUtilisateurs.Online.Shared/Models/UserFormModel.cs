@@ -24,6 +24,7 @@ public class UserFormModel
     public Dictionary<string, string> CustomNumberText { get; set; } = new();
     public Dictionary<string, PendingUpload> PendingFiles { get; set; } = new();
     public string Photo { get; set; } = "";
+    public string Signature { get; set; } = "";
 
     public static UserFormModel FromUser(UserAccount u)
     {
@@ -39,6 +40,7 @@ public class UserFormModel
             Actif = u.Actif,
             Notes = u.Notes,
             Photo = u.Photo ?? "",
+            Signature = u.Signature ?? "",
             DateNaissance = u.DateNaissance ?? "",
             Matricule = u.Matricule ?? "",
             ChangePasswordOnEdit = false
@@ -128,6 +130,7 @@ public class UserFormModel
         DateNaissance = DateNaissance,
         Matricule = Matricule,
         Photo = string.IsNullOrWhiteSpace(Photo) ? null : Photo,
+        Signature = string.IsNullOrWhiteSpace(Signature) ? null : Signature,
         DateCreation = "",
         Champs = Custom
     };

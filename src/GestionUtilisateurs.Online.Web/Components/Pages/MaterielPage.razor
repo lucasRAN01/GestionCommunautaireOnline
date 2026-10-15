@@ -1,4 +1,4 @@
-@implements IDisposable
+﻿@implements IDisposable
 @inject DataStore Store
 @inject AppState State
 
@@ -13,7 +13,7 @@ else
     </div>
 
     <div class="search-box cal-search">
-        <span class="search-icon" aria-hidden="true">⌕</span>
+        <span class="search-icon" aria-hidden="true">&#128269;</span>
         <input type="search" placeholder="Rechercher un matériel (nom, catégorie, responsable, état)…" aria-label="Rechercher un matériel"
                value="@_search" @oninput="OnSearch" />
     </div>
@@ -67,7 +67,10 @@ else
         var actifs = Store.PretsActifs(mat.Id);
         var passes = Store.Prets.Where(p => p.MaterielId == mat.Id && !string.IsNullOrWhiteSpace(p.DateRetour)).OrderByDescending(p => p.DateRetour).Take(10).ToList();
         <div class="card" style="margin-top:12px">
-            <h3>@mat.Nom — @Store.DisponibleMateriel(mat.Id) / @mat.QuantiteTotale disponible(s)</h3>
+            <div class="inline-actions" style="justify-content:space-between">
+                <h3 style="margin:0">@mat.Nom — @Store.DisponibleMateriel(mat.Id) / @mat.QuantiteTotale disponible(s)</h3>
+                <button class="btn btn-secondary btn-sm" @onclick="() => _selected = null">Réduire</button>
+            </div>
             @if (!string.IsNullOrWhiteSpace(mat.Description))
             {
                 <p class="muted" style="margin-top:0">@mat.Description</p>
@@ -102,6 +105,8 @@ else
             }
         </div>
     }
+
+    <button class="fab" aria-label="Ajouter un matériel" @onclick="StartAdd">+</button>
 
     <Modal Title="@(_editId == null ? "Nouveau matériel" : "Modifier le matériel")" Show="_showEditor" OnClose="CloseEditor">
         <ChildContent>

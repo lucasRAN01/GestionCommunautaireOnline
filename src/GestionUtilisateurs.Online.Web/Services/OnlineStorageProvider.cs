@@ -1,4 +1,5 @@
 using System.Text.Json.Nodes;
+using Microsoft.JSInterop;
 using GestionUtilisateurs.Shared.Services;
 
 namespace GestionUtilisateurs.Online.Web.Services;
@@ -29,7 +30,16 @@ public class OnlineStorageProvider : IStorageProvider
     private CancellationTokenSource? _flushDelay;
     private Task _flushTask = Task.CompletedTask;
 
-    public OnlineStorageProvider(OnlineApi api) => _api = api;
+    private readonly IJSInProcessRuntime? _js;
+
+    public OnlineStorageProvider(OnlineApi api, IJSRuntime js)
+    {
+        _api = api;
+        _js = js as IJSInProcessRuntime;
+    }
+
+    /// <summary>Préférences personnelles : gardées dans le navigateur (localStorage), jamais envoyées.</summary>
+    private static bool IsBrowserKey(string key) => key.StartsWith(DataStore.K_PREFS_PREFIX, StringComparison.Ordinal);
 
     /// <summary>Une collection a été refusée par le serveur (droits insuffisants, taille…).</summary>
     public event Action<string, string>? SaveRejected;
@@ -45,10 +55,24 @@ public class OnlineStorageProvider : IStorageProvider
 
     public bool HasPendingChanges { get { lock (_dirty) return _dirty.Count > 0; } }
 
-    public string? Get(string key) => _values.TryGetValue(key, out var v) ? v : null;
+    public string? Get(string key)
+    {
+        if (IsBrowserKey(key))
+        {
+            try { return _js?.Invoke<string?>("localStorage.getItem", key); }
+            catch (JSException) { return null; }
+        }
+        return _values.TryGetValue(key, out var v) ? v : null;
+    }
 
     public void Set(string key, string value)
     {
+        if (IsBrowserKey(key))
+        {
+            try { _js?.InvokeVoid("localStorage.setItem", key, value); }
+            catch (JSException) { }
+            return;
+        }
         if (_values.TryGetValue(key, out var previous) && SameJson(previous, value)) return;
         _values[key] = value;
         if (LocalOnlyKeys.Contains(key)) return;

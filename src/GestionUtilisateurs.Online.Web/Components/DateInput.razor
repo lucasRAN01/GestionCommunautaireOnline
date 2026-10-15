@@ -1,0 +1,98 @@
+@* Saisie de date en français (jour / mois / année), indépendante de la locale du navigateur. *@
+<div class="date-fr @(Disabled ? "is-disabled" : "")">
+    <select id="@Id" class="date-fr-part date-fr-day" aria-label="Jour" value="@(_day == 0 ? "" : _day.ToString())" disabled="@Disabled" @onchange="OnDayChanged">
+        <option value="">Jour</option>
+        @for (var d = 1; d <= DaysInMonth; d++)
+        {
+            <option value="@d">@d.ToString("00")</option>
+        }
+    </select>
+    <select class="date-fr-part date-fr-month" aria-label="Mois" value="@(_month == 0 ? "" : _month.ToString())" disabled="@Disabled" @onchange="OnMonthChanged">
+        <option value="">Mois</option>
+        @for (var m = 1; m <= 12; m++)
+        {
+            <option value="@m">@Months[m - 1]</option>
+        }
+    </select>
+    <select class="date-fr-part date-fr-year" aria-label="Année" value="@(_year == 0 ? "" : _year.ToString())" disabled="@Disabled" @onchange="OnYearChanged">
+        <option value="">Année</option>
+        @for (var y = MaxYear; y >= MinYear; y--)
+        {
+            <option value="@y">@y</option>
+        }
+    </select>
+</div>
+
+@code {
+    /// <summary>Date au format ISO (yyyy-MM-dd), vide si aucune date.</summary>
+    [Parameter] public string Value { get; set; } = "";
+    [Parameter] public EventCallback<string> ValueChanged { get; set; }
+    [Parameter] public bool Disabled { get; set; }
+    [Parameter] public string? Id { get; set; }
+    [Parameter] public int MinYear { get; set; } = 1900;
+    [Parameter] public int MaxYear { get; set; } = DateTime.Now.Year + 10;
+
+    private static readonly string[] Months =
+    {
+        "janvier", "février", "mars", "avril", "mai", "juin",
+        "juillet", "août", "septembre", "octobre", "novembre", "décembre"
+    };
+
+    private int _day, _month, _year;
+    private string _lastValue = "";
+
+    protected override void OnParametersSet()
+    {
+        var v = Value ?? "";
+        if (v == _lastValue) return;
+        _lastValue = v;
+        Parse(v);
+    }
+
+    private void Parse(string iso)
+    {
+        if (DateTime.TryParseExact(iso, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var dt))
+        {
+            _year = dt.Year; _month = dt.Month; _day = dt.Day;
+        }
+        else
+        {
+            _year = 0; _month = 0; _day = 0;
+        }
+    }
+
+    private int DaysInMonth => _month is >= 1 and <= 12 && _year > 0 ? DateTime.DaysInMonth(_year, _month) : 31;
+
+    private async Task OnDayChanged(ChangeEventArgs e)
+    {
+        _day = int.TryParse(e.Value?.ToString(), out var d) ? d : 0;
+        await Emit();
+    }
+
+    private async Task OnMonthChanged(ChangeEventArgs e)
+    {
+        _month = int.TryParse(e.Value?.ToString(), out var m) ? m : 0;
+        await Emit();
+    }
+
+    private async Task OnYearChanged(ChangeEventArgs e)
+    {
+        _year = int.TryParse(e.Value?.ToString(), out var y) ? y : 0;
+        await Emit();
+    }
+
+    private async Task Emit()
+    {
+        if (_day > 0 && _month > 0 && _year > 0)
+        {
+            var day = Math.Min(_day, DateTime.DaysInMonth(_year, _month));
+            Value = new DateTime(_year, _month, day).ToString("yyyy-MM-dd");
+        }
+        else
+        {
+            Value = "";
+        }
+        _lastValue = Value;
+        await ValueChanged.InvokeAsync(Value);
+    }
+}

@@ -4,7 +4,7 @@
 
 <div class="page-head dash-head">
     <h1>Bienvenue, @(Store.GetCurrentUser()?.Prenom ?? "invité")</h1>
-    <p>Voici un aperçu de votre annuaire.</p>
+    <p>Tableau de bord : un aperçu de votre communauté.</p>
 </div>
 
 <div class="stats-grid">
@@ -47,6 +47,132 @@
     }
 </div>
 
+@if (Store.Can(Permissions.FinancesManage))
+{
+    <div class="card dash-collapse-card @(IsCollapsed("finances") ? "collapsed" : "")">
+        <div class="dash-card-head">
+            <h3>💰 Finances</h3>
+            <div class="dash-head-actions">
+                <button type="button" class="dash-collapse-btn" aria-label="@(IsCollapsed("finances") ? "Déplier" : "Replier") la section Finances"
+                        @onclick='() => ToggleCollapse("finances")'>
+                    <span class="dash-chevron" aria-hidden="true">▾</span>
+                </button>
+                <button type="button" class="btn btn-secondary btn-sm" @onclick='() => State.Navigate("finances")'>Ouvrir</button>
+            </div>
+        </div>
+        <div class="dash-collapse-body">
+            <div class="dash-kpis">
+                <div class="dash-kpi" @onclick='() => State.Navigate("finances")'>
+                    <span class="dash-kpi-value">@FormatMoney(soldeTresorerie)</span>
+                    <span class="dash-kpi-label">Solde trésorerie</span>
+                </div>
+                <div class="dash-kpi" @onclick='() => State.Navigate("finances")'>
+                    <span class="dash-kpi-value">@FormatMoney(totalCotisations)</span>
+                    <span class="dash-kpi-label">Cotisations encaissées</span>
+                </div>
+                <div class="dash-kpi @(impayes > 0 ? "dash-kpi-warn" : "")" @onclick='() => State.Navigate("finances")'>
+                    <span class="dash-kpi-value">@impayes</span>
+                    <span class="dash-kpi-label">Membres en attente</span>
+                </div>
+            </div>
+            <ChartBars Items="@financeChart" />
+        </div>
+    </div>
+}
+
+@if (Store.Can(Permissions.TachesUse) || Store.Can(Permissions.RappelsUse))
+{
+    <div class="card dash-collapse-card @(IsCollapsed("taches") ? "collapsed" : "")">
+        <div class="dash-card-head">
+            <h3>☑ Tâches &amp; rappels</h3>
+            <div class="dash-head-actions">
+                <button type="button" class="dash-collapse-btn" aria-label="@(IsCollapsed("taches") ? "Déplier" : "Replier") la section Tâches"
+                        @onclick='() => ToggleCollapse("taches")'>
+                    <span class="dash-chevron" aria-hidden="true">▾</span>
+                </button>
+                @if (Store.Can(Permissions.TachesUse))
+                {
+                    <button type="button" class="btn btn-secondary btn-sm" @onclick='() => State.Navigate("taches")'>Ouvrir</button>
+                }
+            </div>
+        </div>
+        <div class="dash-collapse-body">
+            <div class="dash-kpis">
+                <div class="dash-kpi" @onclick='() => State.Navigate("taches")'>
+                    <span class="dash-kpi-value">@tachesEnCours</span>
+                    <span class="dash-kpi-label">En cours</span>
+                </div>
+                <div class="dash-kpi @(tachesEnRetard > 0 ? "dash-kpi-danger" : "")" @onclick='() => State.Navigate("taches")'>
+                    <span class="dash-kpi-value">@tachesEnRetard</span>
+                    <span class="dash-kpi-label">En retard</span>
+                </div>
+                <div class="dash-kpi @(rappelsCount > 0 ? "dash-kpi-warn" : "")" @onclick='() => State.Navigate("rappels")'>
+                    <span class="dash-kpi-value">@rappelsCount</span>
+                    <span class="dash-kpi-label">Rappels actifs</span>
+                </div>
+            </div>
+            <ChartBars Items="@tacheChart" />
+        </div>
+    </div>
+}
+
+@if (Store.Can(Permissions.PresenceManage) && ReunionsCount > 0)
+{
+    <div class="card">
+        <div class="dash-card-head">
+            <h3>👥 Réunions &amp; présence</h3>
+            <button type="button" class="btn btn-secondary btn-sm" @onclick='() => State.Navigate("reunions")'>Ouvrir</button>
+        </div>
+        @if (PresenceTotal > 0)
+        {
+            <div class="dash-presence-rate">
+                <strong>@PresenceRate.ToString("0") %</strong>
+                <span>taux de présence global · @ReunionsCount réunion(s)</span>
+            </div>
+        }
+        <ChartBars Items="@presenceChart" />
+    </div>
+}
+
+@if (Store.Can(Permissions.MaterielManage) || Store.Can(Permissions.JournalMediaUse))
+{
+    <div class="card dash-collapse-card @(IsCollapsed("materiel") ? "collapsed" : "")">
+        <div class="dash-card-head">
+            <h3>🧰 Matériel &amp; médias</h3>
+            <div class="dash-head-actions">
+                <button type="button" class="dash-collapse-btn" aria-label="@(IsCollapsed("materiel") ? "Déplier" : "Replier") la section Matériel"
+                        @onclick='() => ToggleCollapse("materiel")'>
+                    <span class="dash-chevron" aria-hidden="true">▾</span>
+                </button>
+                @if (Store.Can(Permissions.MaterielManage))
+                {
+                    <button type="button" class="btn btn-secondary btn-sm" @onclick='() => State.Navigate("materiel")'>Ouvrir</button>
+                }
+            </div>
+        </div>
+        <div class="dash-collapse-body">
+            <div class="dash-kpis">
+                <div class="dash-kpi" @onclick='() => State.Navigate("materiel")'>
+                    <span class="dash-kpi-value">@materielsCount</span>
+                    <span class="dash-kpi-label">Matériels</span>
+                </div>
+                <div class="dash-kpi" @onclick='() => State.Navigate("materiel")'>
+                    <span class="dash-kpi-value">@pretsActifs</span>
+                    <span class="dash-kpi-label">Prêts en cours</span>
+                </div>
+                <div class="dash-kpi @(pretsRetard > 0 ? "dash-kpi-danger" : "")" @onclick='() => State.Navigate("materiel")'>
+                    <span class="dash-kpi-value">@pretsRetard</span>
+                    <span class="dash-kpi-label">Retours en retard</span>
+                </div>
+                <div class="dash-kpi" @onclick='() => State.Navigate("journal")'>
+                    <span class="dash-kpi-value">@mediaCount</span>
+                    <span class="dash-kpi-label">Médias</span>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
 <div class="card">
     <h3>Dernière activité</h3>
     @if (Store.Activity.Count == 0)
@@ -76,10 +202,37 @@
 <PhotoViewer Current="@_viewer" OnClose="@(() => _viewer = null)" />
 
 @code {
+    private static readonly CultureInfo Fr = CultureInfo.GetCultureInfo("fr-FR");
+
     private int total, actifs, inactifs, admins, archives, gestionnaires;
     private IReadOnlyList<ChartBars.ChartItem> roleChart = Array.Empty<ChartBars.ChartItem>();
     private List<UserAccount> RecentUsers = new();
     private UserAccount? _viewer;
+
+    private double soldeTresorerie, totalCotisations;
+    private int impayes;
+    private IReadOnlyList<ChartBars.ChartItem> financeChart = Array.Empty<ChartBars.ChartItem>();
+
+    private int tachesEnCours, tachesEnRetard, rappelsCount;
+    private IReadOnlyList<ChartBars.ChartItem> tacheChart = Array.Empty<ChartBars.ChartItem>();
+
+    private int presencePresent, presenceAbsent, presenceExcuse, presenceNonPointe;
+    private IReadOnlyList<ChartBars.ChartItem> presenceChart = Array.Empty<ChartBars.ChartItem>();
+    private int ReunionsCount;
+    private int PresenceTotal => presencePresent + presenceAbsent + presenceExcuse + presenceNonPointe;
+    private double PresenceRate => PresenceTotal == 0 ? 0 : presencePresent * 100.0 / PresenceTotal;
+
+    private int materielsCount, pretsActifs, pretsRetard, mediaCount;
+
+    private readonly HashSet<string> _collapsed = new() { "finances", "taches", "materiel" };
+
+    private bool IsCollapsed(string key) => _collapsed.Contains(key);
+
+    private void ToggleCollapse(string key)
+    {
+        if (!_collapsed.Add(key)) _collapsed.Remove(key);
+        StateHasChanged();
+    }
 
     protected override void OnInitialized()
     {
@@ -97,6 +250,9 @@
     private void GoToUser(string id) => State.NavigateToUser(id);
 
     private void OpenPhoto(UserAccount u) => _viewer = u;
+
+    private static string FormatMoney(double value)
+        => value.ToString("N0", Fr) + " Ar";
 
     private void Compute()
     {
@@ -119,6 +275,61 @@
         RecentUsers = users.OrderByDescending(u => u.DateCreation)
             .Take(5)
             .ToList();
+
+        // Finances
+        totalCotisations = Store.TotalCotisations();
+        soldeTresorerie = Store.SoldeTresorerie();
+        impayes = Store.ImpayesCotisations().Count;
+        financeChart = new List<ChartBars.ChartItem>
+        {
+            new("Cotisations payées", Store.Cotisations.Count(c => c.Statut == CotisationStatuts.Payee), "#059669"),
+            new("Cotisations en attente", impayes, "#d97706"),
+            new("Entrées trésorerie", Store.Tresorerie.Count(t => t.Type == TresorerieTypes.Entree), "#0891b2"),
+            new("Sorties trésorerie", Store.Tresorerie.Count(t => t.Type == TresorerieTypes.Sortie), "#dc2626")
+        };
+
+        // Tâches & rappels
+        var today = DateTime.Today;
+        tachesEnCours = Store.Taches.Count(t => t.Statut == TacheStatuts.EnCours);
+        tachesEnRetard = Store.Taches.Count(t => t.Statut != TacheStatuts.Terminee
+            && DataStore.TryParseYmd(t.Echeance, out var d) && d.Date < today);
+        rappelsCount = Store.GetRappels().Count;
+        tacheChart = new List<ChartBars.ChartItem>
+        {
+            new("À faire", Store.Taches.Count(t => t.Statut == TacheStatuts.AFaire), "#4f46e5"),
+            new("En cours", tachesEnCours, "#0891b2"),
+            new("En retard", tachesEnRetard, "#dc2626"),
+            new("Terminées", Store.Taches.Count(t => t.Statut == TacheStatuts.Terminee), "#059669")
+        };
+
+        // Réunions & présence
+        ReunionsCount = Store.Reunions.Count;
+        presencePresent = presenceAbsent = presenceExcuse = presenceNonPointe = 0;
+        foreach (var r in Store.Reunions)
+        {
+            foreach (var p in r.Participants)
+            {
+                if (!r.Presences.TryGetValue(p, out var s)) presenceNonPointe++;
+                else if (s == PresenceStatuts.Present) presencePresent++;
+                else if (s == PresenceStatuts.Absent) presenceAbsent++;
+                else if (s == PresenceStatuts.Excuse) presenceExcuse++;
+                else presenceNonPointe++;
+            }
+        }
+        presenceChart = new List<ChartBars.ChartItem>
+        {
+            new("Présents", presencePresent, "#059669"),
+            new("Excusés", presenceExcuse, "#d97706"),
+            new("Absents", presenceAbsent, "#dc2626"),
+            new("Non pointés", presenceNonPointe, "#64748b")
+        };
+
+        // Matériel & médias
+        materielsCount = Store.Materiels.Count;
+        pretsActifs = Store.Prets.Count(p => string.IsNullOrWhiteSpace(p.DateRetour));
+        pretsRetard = Store.Prets.Count(p => string.IsNullOrWhiteSpace(p.DateRetour)
+            && DataStore.TryParseYmd(p.DatePret, out var dep) && (today - dep.Date).TotalDays > 30);
+        mediaCount = Store.JournalMedia.Count;
     }
 
     private static string ActivityIcon(string type) => type switch

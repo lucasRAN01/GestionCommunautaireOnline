@@ -1,14 +1,15 @@
-@implements IDisposable
+﻿@implements IDisposable
 @inject DataStore Store
 @inject AppState State
 @inject PhotoService Photos
+@inject JavascriptBridge Js
 
 <div class="page-head">
     <p>@(string.IsNullOrWhiteSpace(Store.Community.SousTitre) ? "Le récit vivant de notre communauté, chapitre par chapitre." : Store.Community.SousTitre)</p>
 </div>
 
 <div class="search-box cal-search">
-    <span class="search-icon" aria-hidden="true">⌕</span>
+    <span class="search-icon" aria-hidden="true">&#128269;</span>
     <input type="search" placeholder="Rechercher dans l'histoire (chapitre, texte)…" aria-label="Rechercher un chapitre"
            value="@_search" @oninput="OnSearch" />
 </div>
@@ -42,8 +43,8 @@
             <input id="cm-ch-titre" type="text" placeholder="Ex : La fondation" value="@_cTitre" @oninput="e => _cTitre = e.Value?.ToString() ?? string.Empty" />
         </div>
         <div class="form-group">
-            <label for="cm-ch-date">Date (JJ/MM/AAAA)</label>
-            <input id="cm-ch-date" type="date" value="@_cDateIso" @onchange="OnChapterDate" />
+            <label for="cm-ch-date">Date</label>
+            <DateInput Id="cm-ch-date" Value="@_cDateIso" ValueChanged="@(v => _cDateIso = v)" />
             <span class="field-hint">Affichée au format JJ/MM/AAAA.</span>
         </div>
         <div class="form-group">
@@ -93,6 +94,11 @@
         }
     </div>
 </div>
+
+@if (CanEdit)
+{
+    <button class="fab" aria-label="Ajouter un chapitre" @onclick="FabAddChapter">+</button>
+}
 
 @if (Store.Community.Chapitres.Count == 0)
 {
@@ -298,6 +304,14 @@ else
         if (_editing) { ResetStoryDraft(); CancelChapter(); }
     }
 
+    private void FabAddChapter()
+    {
+        if (!CanEdit) return;
+        if (!_editing) { _editing = true; ResetStoryDraft(); }
+        CancelChapter();
+        _ = Js.ScrollToIdAsync("cm-ch-titre");
+    }
+
     private void CancelStory() => ResetStoryDraft();
 
     private void SaveStory()
@@ -326,8 +340,6 @@ else
         _cImage = c.Image ?? "";
         _chapterError = "";
     }
-
-    private void OnChapterDate(ChangeEventArgs e) => _cDateIso = e.Value?.ToString() ?? "";
 
     private async Task PickChapterImage()
     {
@@ -375,6 +387,27 @@ else
     private void Next() { if (_index < Store.Community.Chapitres.Count - 1) { _index++; _expanded = false; } }
     private void GoTo(int idx) { _index = idx; _expanded = false; }
 
+    // --- Balayage horizontal (glisser vers la gauche/la droite pour changer de chapitre) ---
+    private DotNetObjectReference<CommunityPage>? _swipeRef;
+    private bool _swipeStarted;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            _swipeRef = DotNetObjectReference.Create(this);
+            await Js.EnableCommunitySwipeAsync(_swipeRef);
+            _swipeStarted = true;
+        }
+    }
+
+    [JSInvokable]
+    public void OnSwipeChapter(int dir)
+    {
+        if (dir < 0) Prev();
+        else Next();
+    }
+
     private static string ChapterDate(CommunityChapter c)
     {
         if (string.IsNullOrWhiteSpace(c.Date)) return "Date à venir";
@@ -403,5 +436,13 @@ else
         return isoOrAny;
     }
 
-    public void Dispose() => Store.DataChanged -= Refresh;
+    public void Dispose()
+    {
+        if (_swipeStarted)
+        {
+            try { _ = Js.DisableCommunitySwipeAsync(); } catch { }
+            _swipeRef?.Dispose();
+        }
+        Store.DataChanged -= Refresh;
+    }
 }

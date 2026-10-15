@@ -7,7 +7,10 @@
         <div class="modal @CssClass" @onmousedown="NoOp" @onmousedown:stopPropagation="true" @onclick="NoOp" @onclick:stopPropagation="true">
             <div class="modal-grabber"></div>
             <div class="modal-header">
-                <h3>@Title</h3>
+                @if (!string.IsNullOrWhiteSpace(Title))
+                {
+                    <h3>@Title</h3>
+                }
                 <button type="button" class="modal-close" aria-label="Fermer" @onclick="() => _ = OnClose.InvokeAsync()">&times;</button>
             </div>
             <div class="modal-body">

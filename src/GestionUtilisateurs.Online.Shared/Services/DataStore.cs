@@ -46,11 +46,60 @@ public partial class DataStore
     public const string DEFAULT_PASSWORD = "motdepasse";
     /// <summary>Taille maximale d'une image ou d'une pièce jointe (5 Mo).</summary>
     public const long MAX_FILE_BYTES = 5L * 1024L * 1024L;
-    /// <summary>Quota de stockage local suivi par l'alerte de saturation (50 Mo).</summary>
+    /// <summary>Quota de stockage par défaut suivi par l'alerte de saturation (50 Mo).</summary>
     public const long StorageQuotaBytes = 50L * 1024L * 1024L;
+
+    /// <summary>Quota effectif (configurable dans les paramètres, en Mo). Défaut : 5 Go.</summary>
+    public long CurrentStorageQuotaBytes
+    {
+        get
+        {
+            var mb = _settings.StorageQuotaMb;
+            if (mb <= 0) mb = 5120;
+            return mb * 1024L * 1024L;
+        }
+    }
+
+    /// <summary>Limite basse/haute du quota configurable (Mo).</summary>
+    public const int StorageQuotaMbMin = 10;
+    public const int StorageQuotaMbMax = 2048;
     /// <summary>Seuil d'avertissement (80 %) et critique (95 %) de saturation.</summary>
     public const double StorageWarningPercent = 80.0;
     public const double StorageCriticalPercent = 95.0;
+
+    /// <summary>Enregistre l'ordre personnalisé des entrées du menu « … ».</summary>
+    public void ReorderMenu(IReadOnlyList<string> order)
+    {
+        _settings.MenuOrder = order == null ? new List<string>() : order.Where(k => !string.IsNullOrWhiteSpace(k)).ToList();
+        SaveSettings();
+        DataChanged?.Invoke();
+    }
+
+    /// <summary>Masque ou ré-affiche une entrée du menu « … » (Paramètres › Ordre du menu).</summary>
+    public void SetMenuHidden(string key, bool hidden)
+    {
+        if (string.IsNullOrWhiteSpace(key)) return;
+        _settings.MenuHidden ??= new List<string>();
+        var has = _settings.MenuHidden.Any(k => k.Equals(key, StringComparison.Ordinal));
+        if (hidden && !has) _settings.MenuHidden.Add(key);
+        if (!hidden && has) _settings.MenuHidden.RemoveAll(k => k.Equals(key, StringComparison.Ordinal));
+        SaveSettings();
+        DataChanged?.Invoke();
+    }
+
+    /// <summary>Entrée masquée dans le menu « … » ?</summary>
+    public bool IsMenuHidden(string key)
+        => !string.IsNullOrWhiteSpace(key)
+            && (_settings.MenuHidden ?? new List<string>()).Any(k => k.Equals(key, StringComparison.Ordinal));
+
+    /// <summary>Réinitialise l'ordre et l'affichage du menu « … » (ordre d'origine, tout visible).</summary>
+    public void ResetMenu()
+    {
+        _settings.MenuOrder = new List<string>();
+        _settings.MenuHidden = new List<string>();
+        SaveSettings();
+        DataChanged?.Invoke();
+    }
 
     private readonly IStorageProvider _storage;
     private readonly List<UserAccount> _users = new();
@@ -84,7 +133,10 @@ public partial class DataStore
     {
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
         PropertyNameCaseInsensitive = true,
-        WriteIndented = false
+        WriteIndented = false,
+        // Accents conservés tels quels (é/è/à…) dans le stockage local et les
+        // paquets .gusync.json, au lieu d'échappements \u00e9.
+        Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping
     };
 
     /// <summary>Les collections stockées localement, exposées à l'éditeur DBA.</summary>
@@ -132,6 +184,12 @@ new ManagedDataSet("archives", "Archives des utilisateurs", "Comptes supprimés 
         // Paramètres
         var settingsRaw = _storage.Get(K_SETTINGS);
         _settings = settingsRaw == null ? new AppSettings() : Deserialize<AppSettings>(settingsRaw) ?? new AppSettings();
+        _settings.MenuOrder ??= new List<string>();
+        _settings.MenuHidden ??= new List<string>();
+        _settings.GuideVu ??= new List<string>();
+        _settings.AideVu ??= new List<string>();
+        _settings.ThemesUtilisateurs ??= new Dictionary<string, string>();
+        _settings.ConseilsUtilisateurs ??= new Dictionary<string, bool>();
 
         if (string.IsNullOrWhiteSpace(_settings.AppName) || _settings.AppName == "GestionUtilisateurs")
         {
@@ -163,6 +221,7 @@ new ManagedDataSet("archives", "Archives des utilisateurs", "Comptes supprimés 
             {
                 m.Destinataires ??= new List<string>();
                 m.LuPar ??= new List<string>();
+                m.DateModification ??= "";
             }
             _taches.Clear();
             _taches.AddRange(Deserialize<List<Tache>>(_storage.Get(K_TACHES)) ?? new List<Tache>());
@@ -245,6 +304,9 @@ var usersNormalized = false;
         _sync.Hashes ??= new Dictionary<string, string>();
         _sync.Dismissed ??= new Dictionary<string, string>();
         if (string.IsNullOrWhiteSpace(_sync.DeviceId)) _sync.DeviceId = deviceId;
+
+        // Anniversaires et dates des fiches membres -> calendrier (création/mise à jour automatique).
+        try { SyncAllUserDateEvents(); } catch { }
     }
 
     /// <summary>
@@ -540,6 +602,7 @@ var usersNormalized = false;
                         user.Telephone = (user.Telephone ?? "").Trim();
                         user.DateNaissance = NormalizeYmd(user.DateNaissance);
                         user.Matricule = (user.Matricule ?? "").Trim();
+                        if (string.IsNullOrWhiteSpace(user.Signature)) user.Signature = null;
                         user.Champs ??= new Dictionary<string, FieldValue>();
                         if (string.IsNullOrWhiteSpace(user.Prenom) || string.IsNullOrWhiteSpace(user.Nom) || string.IsNullOrWhiteSpace(user.Identifiant))
                             return OperationResult.Fail("Chaque utilisateur doit avoir un prénom, un nom et un identifiant.");
@@ -699,6 +762,7 @@ case "settings":
                         m.Destinataires ??= new List<string>();
                         m.Texte ??= "";
                         m.LuPar ??= new List<string>();
+                        m.DateModification ??= "";
                         if (string.IsNullOrWhiteSpace(m.Date)) m.Date = DateTimeOffset.Now.ToString("O");
                     }
                     _messages.Clear();
@@ -866,6 +930,7 @@ case "settings":
             draft.DateCreation = DateTimeOffset.Now.ToString("O");
         _users.Add(draft);
         SaveUsers();
+        try { SyncUserDateEvents(draft); } catch { }
         LogActivity(ActivityTypes.Create, "Création de l'utilisateur " + draft.Identifiant);
         DataChanged?.Invoke();
         return new UserOperationResult { Success = true, UserId = draft.Id };
@@ -937,6 +1002,7 @@ case "settings":
         existing.Notes = draft.Notes;
         existing.Champs = draft.Champs;
         existing.Photo = draft.Photo;
+        existing.Signature = draft.Signature;
         existing.DateNaissance = NormalizeYmd(draft.DateNaissance);
         var matricule = (draft.Matricule ?? "").Trim();
         if (matricule.Length > 0 && _users.Any(u => u.Id != userId && (u.Matricule ?? "").Trim().Equals(matricule, StringComparison.OrdinalIgnoreCase)))
@@ -949,6 +1015,7 @@ case "settings":
         }
 
         SaveUsers();
+        try { SyncUserDateEvents(existing); } catch { }
         LogActivity(ActivityTypes.Update, "Modification de l'utilisateur " + existing.Identifiant);
         DataChanged?.Invoke();
         return new UserOperationResult { Success = true, UserId = userId };
@@ -1273,6 +1340,7 @@ public OperationResult SetUserActive(string userId, bool active)
             .Distinct(StringComparer.OrdinalIgnoreCase).ToList();
         existing.UtilisateurId = string.IsNullOrWhiteSpace(draft.UtilisateurId) ? null : draft.UtilisateurId.Trim();
         existing.DateModification = DateTimeOffset.Now.ToString("O");
+        existing.ModifiePar = GetCurrentUser()?.Identifiant ?? "inconnu";
 
         SaveDocuments();
         LogActivity(ActivityTypes.DocumentUpdate, "Modification du document « " + oldTitle + " »");
@@ -1303,6 +1371,7 @@ public OperationResult SetUserActive(string userId, bool active)
             if (doc == null || doc.Supprime) continue;
             doc.FolderId = folderId;
             doc.DateModification = DateTimeOffset.Now.ToString("O");
+            doc.ModifiePar = GetCurrentUser()?.Identifiant ?? "inconnu";
             count++;
         }
         if (count == 0) return OperationResult.Fail("Aucun document à déplacer.");
@@ -1685,6 +1754,15 @@ if (string.IsNullOrWhiteSpace(draft.Prenom)) Add("prenom", "Le prénom est oblig
         return iso;
     }
 
+    /// <summary>Formate une date ISO en JJ/MM/AAAA à HH:mm (ex. 05/09/2026 à 14:30). Retourne "—" si vide.</summary>
+    public static string FormatDateHeure(string? iso)
+    {
+        if (string.IsNullOrWhiteSpace(iso)) return "—";
+        if (DateTimeOffset.TryParse(iso, out var d)) return d.ToString("dd/MM/yyyy à HH:mm");
+        if (DateTime.TryParse(iso, out var dt)) return dt.ToString("dd/MM/yyyy à HH:mm");
+        return iso;
+    }
+
     private static string FieldCsvValue(FieldDefinition f, FieldValue? val)
     {
         if (val == null) return "";
@@ -1734,6 +1812,181 @@ if (string.IsNullOrWhiteSpace(draft.Prenom)) Add("prenom", "Le prénom est oblig
             rows.Add(new[] { FormatExportDate(e.Date), e.User, ActivityTypes.Label(e.Type), e.Description });
         }
         return ExcelExporter.Build("Activite", headers, rows);
+    }
+
+    /// <summary>
+    /// Export Excel complet : toutes les données locales dans un même classeur,
+    /// une feuille par type de données (utilisé par l'export automatique mensuel).
+    /// </summary>
+    public byte[] ExportAllDataExcel()
+    {
+        string Name(string? identifiant)
+        {
+            if (string.IsNullOrWhiteSpace(identifiant)) return "";
+            var u = FindUserByIdentifier(identifiant);
+            return u?.NomComplet ?? identifiant;
+        }
+
+        string MatName(string id)
+        {
+            var m = _materiels.FirstOrDefault(x => x.Id == id);
+            return m?.Nom ?? id;
+        }
+
+        var sheets = new List<ExcelExporter.Sheet>();
+
+        // 1) Utilisateurs
+        var usersHeaders = new List<string>
+        {
+            "Nom", "Prénom", "Identifiant", "Matricule", "Email", "Téléphone", "Rôle",
+            "Statut", "Date de naissance", "Date de création", "Dernière connexion", "Notes"
+        };
+        var custom = Fields.Where(f => f.Actif && !f.SystemField).ToList();
+        var usersHeadersFull = new List<string>(usersHeaders);
+        usersHeadersFull.AddRange(custom.Select(f => f.Label));
+        var usersRows = new List<string[]>();
+        foreach (var u in _users.OrderBy(u => u.Nom).ThenBy(u => u.Prenom))
+        {
+            var row = new List<string>
+            {
+                u.Nom, u.Prenom, u.Identifiant, u.Matricule ?? "", u.Email, u.Telephone, u.Role,
+                u.Actif ? "Actif" : "Inactif", FormatExportDate(u.DateNaissance), FormatExportDate(u.DateCreation), FormatExportDate(u.DerniereConnexion), u.Notes
+            };
+            foreach (var f in custom) row.Add(FieldExcelValue(f, u.GetChamp(f.Id)));
+            usersRows.Add(row.ToArray());
+        }
+        sheets.Add(new ExcelExporter.Sheet("Utilisateurs", usersHeadersFull, usersRows));
+
+        // 2) Champs personnalisés
+        var fieldsSheets = new List<string[]>();
+        foreach (var f in _fields.Where(f => !f.SystemField))
+        {
+            fieldsSheets.Add(new[] { f.Label, FieldTypeLabel(f.Type), f.Actif ? "Actif" : "Inactif", f.Requis ? "Oui" : "Non", string.Join(", ", f.Options), f.Ordre.ToString() });
+        }
+        sheets.Add(new ExcelExporter.Sheet("Champs", new[] { "Libellé", "Type", "Statut", "Obligatoire", "Options", "Ordre" }, fieldsSheets));
+
+        // 3) Journal d'activité
+        var activityRows = new List<string[]>();
+        foreach (var e in _activity)
+            activityRows.Add(new[] { FormatExportDate(e.Date), e.User, ActivityTypes.Label(e.Type), e.Description });
+        sheets.Add(new ExcelExporter.Sheet("Activite", new[] { "Date", "Utilisateur", "Type", "Description" }, activityRows));
+
+        // 4) Archives
+        var archiveRows = new List<string[]>();
+        foreach (var a in _archive)
+            archiveRows.Add(new[] { a.User.NomComplet, a.User.Identifiant, a.User.Role, FormatExportDate(a.DeletedAt), a.DeletedBy });
+        sheets.Add(new ExcelExporter.Sheet("Archives", new[] { "Nom", "Identifiant", "Rôle", "Supprimé le", "Supprimé par" }, archiveRows));
+
+        // 5) Événements du calendrier
+        var eventRows = new List<string[]>();
+        foreach (var e in _events)
+            eventRows.Add(new[] { e.Titre, CalendarEventTypes.Label(e.Type), FormatExportDate(e.Date), e.HeureDebut ?? "", e.HeureFin ?? "", e.Statut, string.Join(", ", e.PersonnesConcernees), e.Notes });
+        sheets.Add(new ExcelExporter.Sheet("Calendrier", new[] { "Titre", "Type", "Date", "Début", "Fin", "Statut", "Personnes concernées", "Notes" }, eventRows));
+
+        // 6) Dossiers documentaires
+        var folderRows = new List<string[]>();
+        foreach (var f in _folders)
+        {
+            var parent = string.IsNullOrWhiteSpace(f.ParentId) ? "" : _folders.FirstOrDefault(x => x.Id == f.ParentId)?.Nom ?? "";
+            folderRows.Add(new[] { f.Nom, parent, FormatExportDate(f.DateCreation), f.CreatedBy });
+        }
+        sheets.Add(new ExcelExporter.Sheet("Dossiers", new[] { "Nom", "Dossier parent", "Créé le", "Créé par" }, folderRows));
+
+        // 7) Documents (métadonnées, sans le contenu)
+        var docRows = new List<string[]>();
+        foreach (var d in _documents)
+        {
+            var folder = string.IsNullOrWhiteSpace(d.FolderId) ? "" : _folders.FirstOrDefault(x => x.Id == d.FolderId)?.Nom ?? "";
+            docRows.Add(new[] { d.Titre, folder, DocumentCategories.Label(d.Categorie), d.FileName, d.Mime, FormatBytes(d.Taille), d.Supprime ? "Corbeille" : "En ligne", FormatExportDate(d.DateCreation), d.CreatedBy });
+        }
+        sheets.Add(new ExcelExporter.Sheet("Documents", new[] { "Titre", "Dossier", "Catégorie", "Fichier", "Type", "Taille", "État", "Créé le", "Créé par" }, docRows));
+
+        // 8) Communauté
+        var chapterRows = new List<string[]>();
+        foreach (var ch in _community.Chapitres)
+            chapterRows.Add(new[] { ch.Titre, ch.Date, ch.Texte });
+        sheets.Add(new ExcelExporter.Sheet("Communaute", new[] { "Chapitre", "Date", "Texte" }, chapterRows));
+
+        // 9) Messages
+        var msgRows = new List<string[]>();
+        foreach (var m in _messages)
+            msgRows.Add(new[] { FormatExportDate(m.Date), m.Expediteur, string.Join(", ", m.Destinataires), m.Texte });
+        sheets.Add(new ExcelExporter.Sheet("Messages", new[] { "Date", "Expéditeur", "Destinataires", "Texte" }, msgRows));
+
+        // 10) Tâches
+        var tacheRows = new List<string[]>();
+        foreach (var t in _taches)
+            tacheRows.Add(new[] { t.Titre, TacheStatuts.Label(t.Statut), t.Priorite, string.Join(", ", t.Assignes), FormatExportDate(t.Echeance), FormatExportDate(t.DateCreation), t.Description });
+        sheets.Add(new ExcelExporter.Sheet("Taches", new[] { "Titre", "Statut", "Priorité", "Assignés", "Échéance", "Créée le", "Description" }, tacheRows));
+
+        // 11) Cotisations
+        var cotRows = new List<string[]>();
+        foreach (var c in _cotisations)
+            cotRows.Add(new[] { Name(c.MembreIdentifiant), c.Periode, c.Montant.ToString(System.Globalization.CultureInfo.InvariantCulture), c.Motif, FormatExportDate(c.Date), CotisationStatuts.Label(c.Statut), c.CreatedBy });
+        sheets.Add(new ExcelExporter.Sheet("Cotisations", new[] { "Membre", "Période", "Montant (Ar)", "Motif", "Date", "Statut", "Saisi par" }, cotRows));
+
+        // 12) Trésorerie
+        var tresRows = new List<string[]>();
+        foreach (var t in _tresorerie)
+            tresRows.Add(new[] { TresorerieTypes.Label(t.Type), t.Montant.ToString(System.Globalization.CultureInfo.InvariantCulture), t.Motif, FormatExportDate(t.Date), t.CreatedBy });
+        sheets.Add(new ExcelExporter.Sheet("Tresorerie", new[] { "Type", "Montant (Ar)", "Motif", "Date", "Saisi par" }, tresRows));
+
+        // 13) Matériels
+        var matRows = new List<string[]>();
+        foreach (var m in _materiels)
+            matRows.Add(new[] { m.Nom, m.Categorie, m.QuantiteTotale.ToString(), MaterielEtats.Label(m.Etat), m.Responsable, m.Description });
+        sheets.Add(new ExcelExporter.Sheet("Materiels", new[] { "Nom", "Catégorie", "Quantité", "État", "Responsable", "Description" }, matRows));
+
+        // 14) Prêts de matériel
+        var pretRows = new List<string[]>();
+        foreach (var p in _prets)
+            pretRows.Add(new[] { MatName(p.MaterielId), Name(p.MembreIdentifiant), p.Quantite.ToString(), FormatExportDate(p.DatePret), FormatExportDate(p.DateRetour) });
+        sheets.Add(new ExcelExporter.Sheet("Prets", new[] { "Matériel", "Membre", "Quantité", "Prêt le", "Retour le" }, pretRows));
+
+        // 15) Réunions
+        var reunionRows = new List<string[]>();
+        foreach (var r in _reunions)
+            reunionRows.Add(new[] { r.Titre, FormatExportDate(r.Date), r.HeureDebut ?? "", r.HeureFin ?? "", r.Lieu, r.Participants.Count.ToString(), string.Join(", ", r.Presences.Select(p => Name(p.Key) + "=" + PresenceStatuts.Label(p.Value))), r.CompteRendu });
+        sheets.Add(new ExcelExporter.Sheet("Reunions", new[] { "Titre", "Date", "Début", "Fin", "Lieu", "Participants", "Présences", "Compte-rendu" }, reunionRows));
+
+        // 16) Situations
+        var sitRows = new List<string[]>();
+        foreach (var s in _situations)
+            sitRows.Add(new[] { Name(s.MembreIdentifiant), SituationTypes.Label(s.Type), s.Titre, SituationStatuts.Label(s.Statut), s.Priorite, FormatExportDate(s.DateCreation), FormatExportDate(s.DateResolution), s.Description });
+        sheets.Add(new ExcelExporter.Sheet("Situations", new[] { "Membre", "Type", "Titre", "Statut", "Priorité", "Créée le", "Résolue le", "Description" }, sitRows));
+
+        // 17) Votes
+        var voteRows = new List<string[]>();
+        foreach (var v in _votes)
+            voteRows.Add(new[] { v.Titre, VoteStatuts.Label(v.Statut), string.Join(", ", v.Options), v.Bulletins.Count.ToString(), FormatExportDate(v.DateCloture), v.CreatedBy });
+        sheets.Add(new ExcelExporter.Sheet("Votes", new[] { "Titre", "Statut", "Options", "Bulletins", "Clôture", "Créé par" }, voteRows));
+
+        // 18) Journal multimédia
+        var mediaRows = new List<string[]>();
+        foreach (var md in _journalMedia)
+            mediaRows.Add(new[] { md.Titre, MediaTypes.Label(md.Type), md.Mime, FormatBytes(md.Taille), FormatExportDate(md.Date), md.CreatedBy, md.Description });
+        sheets.Add(new ExcelExporter.Sheet("Journal media", new[] { "Titre", "Type", "Format", "Taille", "Date", "Ajouté par", "Description" }, mediaRows));
+
+        return ExcelExporter.BuildMulti(sheets);
+
+        static string FieldTypeLabel(FieldType t) => t switch
+        {
+            FieldType.Texte => "Texte",
+            FieldType.Nombre => "Nombre",
+            FieldType.Booleen => "Case à cocher",
+            FieldType.Date => "Date",
+            FieldType.Liste => "Liste",
+            FieldType.PieceJointe => "Pièce jointe",
+            FieldType.Image => "Image",
+            _ => "Texte"
+        };
+
+        static string FormatBytes(long obyte)
+        {
+            if (obyte < 1024) return obyte + " o";
+            if (obyte < 1024 * 1024) return (obyte / 1024.0).ToString("0.0") + " Ko";
+            return (obyte / (1024.0 * 1024)).ToString("0.0") + " Mo";
+        }
     }
 
     /// <summary>Import depuis un classeur Excel exporté par l'application.</summary>
@@ -1795,6 +2048,7 @@ if (string.IsNullOrWhiteSpace(draft.Prenom)) Add("prenom", "Le prénom est oblig
                     MotDePasse = Get(el, "motDePasse") ?? Get(el, "password") ?? DEFAULT_PASSWORD,
                     DateNaissance = NormalizeYmd(Get(el, "dateNaissance")),
                     Matricule = (Get(el, "matricule") ?? "").Trim(),
+                    Signature = Get(el, "signature"),
                     DateCreation = Get(el, "dateCreation") ?? DateTimeOffset.Now.ToString("O"),
                     DerniereConnexion = Get(el, "derniereConnexion"),
                     Photo = Get(el, "photo")
@@ -1895,6 +2149,7 @@ if (string.IsNullOrWhiteSpace(draft.Prenom)) Add("prenom", "Le prénom est oblig
             return (OperationResult.Fail("L'import supprimerait le dernier administrateur actif : opération annulée."), 0);
 
         SaveUsers();
+        try { SyncAllUserDateEvents(); } catch { }
         LogActivity(ActivityTypes.Import, "Importation de " + added + " nouvel(aux) utilisateur(s) depuis un fichier Excel");
         DataChanged?.Invoke();
         return (OperationResult.Ok(), added);
@@ -1915,6 +2170,7 @@ if (string.IsNullOrWhiteSpace(draft.Prenom)) Add("prenom", "Le prénom est oblig
         Photo = src.Photo,
         DateNaissance = src.DateNaissance,
         Matricule = src.Matricule,
+        Signature = src.Signature,
         DateCreation = src.DateCreation,
         DerniereConnexion = src.DerniereConnexion,
         Champs = src.Champs.ToDictionary(kv => kv.Key, kv => kv.Value)
@@ -1984,6 +2240,116 @@ if (string.IsNullOrWhiteSpace(draft.Prenom)) Add("prenom", "Le prénom est oblig
         DataChanged?.Invoke();
     }
 
+    // ---------- Guide et aides contextuelles ----------
+
+    /// <summary>Le mini-guide de démarrage a-t-il déjà été montré à ce compte ?</summary>
+    public bool HasSeenOnboarding(string identifiant)
+    {
+        if (string.IsNullOrWhiteSpace(identifiant)) return true;
+        if (OnlineMode) return LoadPrefs(identifiant).GuideVu;
+        return _settings.GuideVu.Contains(identifiant, StringComparer.OrdinalIgnoreCase);
+    }
+
+    /// <summary>Marque le mini-guide de démarrage comme vu pour ce compte.</summary>
+    public void MarkOnboardingSeen(string identifiant)
+    {
+        if (string.IsNullOrWhiteSpace(identifiant)) return;
+        if (OnlineMode)
+        {
+            UpdatePrefs(identifiant, p => p.GuideVu = true);
+            return;
+        }
+        if (_settings.GuideVu.Contains(identifiant, StringComparer.OrdinalIgnoreCase)) return;
+        _settings.GuideVu.Add(identifiant);
+        SaveSettings();
+        DataChanged?.Invoke();
+    }
+
+    /// <summary>L'aide contextuelle de ce module a-t-elle déjà été affichée à ce compte ?</summary>
+    public bool HasSeenModuleHelp(string identifiant, string module)
+    {
+        if (string.IsNullOrWhiteSpace(identifiant) || string.IsNullOrWhiteSpace(module)) return true;
+        var key = identifiant + "|" + module;
+        if (OnlineMode) return LoadPrefs(identifiant).AideVu.Contains(module, StringComparer.OrdinalIgnoreCase);
+        return _settings.AideVu.Contains(key, StringComparer.OrdinalIgnoreCase);
+    }
+
+    /// <summary>Marque l'aide contextuelle de ce module comme vue pour ce compte.</summary>
+    public void MarkModuleHelpSeen(string identifiant, string module)
+    {
+        if (string.IsNullOrWhiteSpace(identifiant) || string.IsNullOrWhiteSpace(module)) return;
+        var key = identifiant + "|" + module;
+        if (OnlineMode)
+        {
+            UpdatePrefs(identifiant, p =>
+            {
+                if (!p.AideVu.Contains(module, StringComparer.OrdinalIgnoreCase)) p.AideVu.Add(module);
+            });
+            return;
+        }
+        if (_settings.AideVu.Contains(key, StringComparer.OrdinalIgnoreCase)) return;
+        _settings.AideVu.Add(key);
+        SaveSettings();
+        DataChanged?.Invoke();
+    }
+
+    /// <summary>Thème effectif d'un compte : choix individuel, sinon thème global.</summary>
+    public string GetEffectiveTheme(string? identifiant)
+    {
+        if (OnlineMode && !string.IsNullOrWhiteSpace(identifiant))
+        {
+            var theme = LoadPrefs(identifiant).Theme;
+            if (theme == "dark" || theme == "light") return theme;
+        }
+        else if (!string.IsNullOrWhiteSpace(identifiant)
+            && _settings.ThemesUtilisateurs.TryGetValue(identifiant, out var perso)
+            && (perso == "dark" || perso == "light"))
+            return perso;
+        return _settings.Theme == "dark" ? "dark" : "light";
+    }
+
+    /// <summary>Enregistre le thème individuel d'un compte (sans toucher au thème global).</summary>
+    public void SetUserTheme(string identifiant, string theme)
+    {
+        if (string.IsNullOrWhiteSpace(identifiant)) return;
+        if (OnlineMode)
+        {
+            UpdatePrefs(identifiant, p => p.Theme = theme == "dark" ? "dark" : "light");
+            return;
+        }
+        _settings.ThemesUtilisateurs[identifiant] = theme == "dark" ? "dark" : "light";
+        SaveSettings();
+        DataChanged?.Invoke();
+    }
+
+    /// <summary>Conseil contextuel effectif d'un compte : choix individuel, sinon réglage global.</summary>
+    public bool GetEffectiveConseils(string? identifiant)
+    {
+        if (OnlineMode && !string.IsNullOrWhiteSpace(identifiant))
+        {
+            var choix = LoadPrefs(identifiant).Conseils;
+            if (choix.HasValue) return choix.Value;
+        }
+        else if (!string.IsNullOrWhiteSpace(identifiant)
+            && _settings.ConseilsUtilisateurs.TryGetValue(identifiant, out var perso))
+            return perso;
+        return _settings.AidesContextuelles;
+    }
+
+    /// <summary>Enregistre le choix individuel du conseil contextuel (sans toucher aux autres comptes).</summary>
+    public void SetUserConseils(string identifiant, bool afficher)
+    {
+        if (string.IsNullOrWhiteSpace(identifiant)) return;
+        if (OnlineMode)
+        {
+            UpdatePrefs(identifiant, p => p.Conseils = afficher);
+            return;
+        }
+        _settings.ConseilsUtilisateurs[identifiant] = afficher;
+        SaveSettings();
+        DataChanged?.Invoke();
+    }
+
     public long StorageUsedBytes()
     {
         long total = 0;
@@ -2041,7 +2407,7 @@ if (string.IsNullOrWhiteSpace(draft.Prenom)) Add("prenom", "Le prénom est oblig
     /// <summary>Pourcentage du quota de stockage utilisé (0-100).</summary>
     public double StorageQuotaPercent()
     {
-        return Math.Min((double)StorageUsedBytes() / StorageQuotaBytes * 100.0, 100.0);
+        return Math.Min((double)StorageUsedBytes() / CurrentStorageQuotaBytes * 100.0, 100.0);
     }
 
     /// <summary>Niveau d'alerte de saturation : ok, warning (≥80 %), critical (≥95 %).</summary>
@@ -2316,7 +2682,7 @@ if (string.IsNullOrWhiteSpace(draft.Prenom)) Add("prenom", "Le prénom est oblig
             Categorie = d.Categorie, Tags = d.Tags.ToList(), Favori = d.Favori,
             FileName = d.FileName, Mime = d.Mime, Taille = d.Taille, Data = "",
             UtilisateurId = d.UtilisateurId, DateCreation = d.DateCreation,
-            DateModification = d.DateModification, CreatedBy = d.CreatedBy,
+            DateModification = d.DateModification, CreatedBy = d.CreatedBy, ModifiePar = d.ModifiePar,
             Supprime = d.Supprime, DateSuppression = d.DateSuppression
         }).ToList();
     }
@@ -2642,7 +3008,7 @@ if (string.IsNullOrWhiteSpace(draft.Prenom)) Add("prenom", "Le prénom est oblig
         return Serialize(new
         {
             u.Id, u.Prenom, u.Nom, u.Identifiant, u.Email, u.Telephone, u.Role, u.Actif,
-            u.MotDePasse, u.Notes, u.DateCreation, u.DerniereConnexion, u.Photo, u.DateNaissance, u.Matricule, Champs = champs
+            u.MotDePasse, u.Notes, u.DateCreation, u.DerniereConnexion, u.Photo, u.DateNaissance, u.Matricule, u.Signature, Champs = champs
         });
     }
 
@@ -3335,7 +3701,7 @@ if (string.IsNullOrWhiteSpace(draft.Prenom)) Add("prenom", "Le prénom est oblig
                 || m.Destinataires.Any(d => d.Equals(me, StringComparison.OrdinalIgnoreCase)))
             .GroupBy(m => m.ConversationId)
             .Select(g => (g.Key, Dernier: g.OrderByDescending(m => m.Date).First(),
-                NonLus: g.Count(m => !m.LuPar.Any(l => l.Equals(me, StringComparison.OrdinalIgnoreCase)))))
+                NonLus: g.Count(m => !m.Supprime && !m.LuPar.Any(l => l.Equals(me, StringComparison.OrdinalIgnoreCase)))))
             .OrderByDescending(x => x.Dernier.Date)
             .ToList();
     }
@@ -3347,7 +3713,8 @@ if (string.IsNullOrWhiteSpace(draft.Prenom)) Add("prenom", "Le prénom est oblig
     {
         var me = (identifiant ?? "").Trim();
         return _messages.Count(m =>
-            (m.ConversationId == ConversationAnnonces
+            !m.Supprime
+            && (m.ConversationId == ConversationAnnonces
                 || m.Expediteur.Equals(me, StringComparison.OrdinalIgnoreCase)
                 || m.Destinataires.Any(d => d.Equals(me, StringComparison.OrdinalIgnoreCase)))
             && !m.LuPar.Any(l => l.Equals(me, StringComparison.OrdinalIgnoreCase)));
@@ -3369,18 +3736,67 @@ if (string.IsNullOrWhiteSpace(draft.Prenom)) Add("prenom", "Le prénom est oblig
         if (changed) { SaveMessages(); DataChanged?.Invoke(); }
     }
 
-    /// <summary>Supprime un message (expéditeur ou administrateur).</summary>
+    /// <summary>Supprime un message (expéditeur ou administrateur). Le contenu est masqué
+    /// mais un petit journal reste visible dans la conversation.</summary>
     public OperationResult DeleteMessage(string messageId)
     {
         var idx = _messages.FindIndex(m => m.Id == messageId);
         if (idx < 0) return OperationResult.Fail("Message introuvable.");
+        var target = _messages[idx];
+        if (target.Supprime) return OperationResult.Fail("Message déjà supprimé.");
         var me = GetCurrentUser();
-        var own = me != null && _messages[idx].Expediteur.Equals(me.Identifiant, StringComparison.OrdinalIgnoreCase);
+        var own = me != null && target.Expediteur.Equals(me.Identifiant, StringComparison.OrdinalIgnoreCase);
         if (!own && !IsAdmin)
             return OperationResult.Fail("Seul l'expéditeur ou un administrateur peut supprimer ce message.");
-        _messages.RemoveAt(idx);
+        var author = me?.Identifiant ?? "inconnu";
+        target.Supprime = true;
+        target.SupprimePar = author;
+        target.SupprimeLe = DateTimeOffset.Now.ToString("O");
+        if (!target.LuPar.Any(l => l.Equals(author, StringComparison.OrdinalIgnoreCase)))
+            target.LuPar.Add(author);
         SaveMessages();
-        LogActivity(Models.ActivityTypes.MessageDelete, "Suppression d'un message");
+        LogActivity(Models.ActivityTypes.MessageDelete,
+            "Message de « " + target.Expediteur + " » supprimé par « " + author + " » : « " + Truncate(target.Texte, 80) + " »");
+        DataChanged?.Invoke();
+        return OperationResult.Ok();
+    }
+
+    /// <summary>Délai pendant lequel l'expéditeur peut modifier son message.</summary>
+    public static readonly TimeSpan MessageEditWindow = TimeSpan.FromMinutes(5);
+
+    /// <summary>Indique si le message peut encore être modifié (expéditeur, 5 min, non supprimé).</summary>
+    public bool CanEditMessage(string messageId)
+    {
+        var m = _messages.FirstOrDefault(x => x.Id == messageId);
+        if (m == null || m.Supprime) return false;
+        var me = GetCurrentUser()?.Identifiant;
+        if (string.IsNullOrEmpty(me) || !m.Expediteur.Equals(me, StringComparison.OrdinalIgnoreCase)) return false;
+        if (!DateTimeOffset.TryParse(m.Date, out var sent)) return false;
+        return DateTimeOffset.Now - sent <= MessageEditWindow;
+    }
+
+    /// <summary>Modifie un message déjà envoyé (expéditeur uniquement, dans les 5 minutes).</summary>
+    public OperationResult UpdateMessage(string messageId, string nouveauTexte)
+    {
+        var idx = _messages.FindIndex(m => m.Id == messageId);
+        if (idx < 0) return OperationResult.Fail("Message introuvable.");
+        var target = _messages[idx];
+        if (target.Supprime) return OperationResult.Fail("Message supprimé.");
+        var me = GetCurrentUser()?.Identifiant ?? "";
+        if (string.IsNullOrEmpty(me) || !target.Expediteur.Equals(me, StringComparison.OrdinalIgnoreCase))
+            return OperationResult.Fail("Seul l'expéditeur peut modifier ce message.");
+        if (!DateTimeOffset.TryParse(target.Date, out var sent))
+            return OperationResult.Fail("Modification impossible.");
+        if (DateTimeOffset.Now - sent > MessageEditWindow)
+            return OperationResult.Fail("Le délai de modification (5 min) est dépassé.");
+        if (string.IsNullOrWhiteSpace(nouveauTexte))
+            return OperationResult.Fail("Le message est vide.");
+        target.Texte = nouveauTexte.Trim();
+        target.DateModification = DateTimeOffset.Now.ToString("O");
+        if (!target.LuPar.Any(l => l.Equals(me, StringComparison.OrdinalIgnoreCase)))
+            target.LuPar.Add(me);
+        SaveMessages();
+        LogActivity(Models.ActivityTypes.MessageUpdate, "Message modifié : « " + Truncate(target.Texte, 80) + " »");
         DataChanged?.Invoke();
         return OperationResult.Ok();
     }
@@ -3548,6 +3964,220 @@ if (string.IsNullOrWhiteSpace(draft.Prenom)) Add("prenom", "Le prénom est oblig
             Repetition = Models.CalendarEventTypes.RepetitionAnnuelle,
             PersonnesConcernees = new List<string> { user.Identifiant }
         });
+    }
+
+    /// <summary>
+    /// Synchronise automatiquement un utilisateur vers le calendrier :
+    /// anniversaire (DateNaissance) + chaque champ personnalisé de type Date.
+    /// Création si absent, mise à jour (titre/date/personne) si le membre change.
+    /// Retourne true si un événement a été créé ou mis à jour.
+    /// </summary>
+    public bool SyncUserDateEvents(UserAccount user)
+    {
+        if (user == null) return false;
+        var changed = false;
+        var ident = (user.Identifiant ?? "").Trim();
+        var nomComplet = user.NomComplet?.Trim() ?? "";
+
+        // 1) Anniversaire issu de la fiche membre.
+        if (TryParseYmd(user.DateNaissance, out _))
+        {
+            var wantDate = ToYmd(user.DateNaissance);
+            var wantTitle = "Anniversaire de " + nomComplet;
+            var existing = GetBirthdayEventsForUser(ident, nomComplet);
+            if (existing.Count == 0)
+            {
+                _events.Add(new CalendarEvent
+                {
+                    Id = Guid.NewGuid().ToString("N"),
+                    Type = Models.CalendarEventTypes.Anniversaire,
+                    Titre = wantTitle,
+                    Date = wantDate,
+                    TouteLaJournee = true,
+                    Repetition = Models.CalendarEventTypes.RepetitionAnnuelle,
+                    PersonnesConcernees = string.IsNullOrWhiteSpace(ident) ? new List<string>() : new List<string> { ident },
+                    DateCreation = DateTimeOffset.Now.ToString("O"),
+                    CreatedBy = "auto"
+                });
+                changed = true;
+            }
+            else
+            {
+                foreach (var e in existing)
+                {
+                    var needSave = false;
+                    if (e.Titre != wantTitle) { e.Titre = wantTitle; needSave = true; }
+                    if (e.Date != wantDate) { e.Date = wantDate; needSave = true; }
+                    if (e.Repetition != Models.CalendarEventTypes.RepetitionAnnuelle) { e.Repetition = Models.CalendarEventTypes.RepetitionAnnuelle; needSave = true; }
+                    if (!string.IsNullOrWhiteSpace(ident) && !(e.PersonnesConcernees ?? new List<string>()).Any(p => p.Equals(ident, StringComparison.OrdinalIgnoreCase)))
+                    {
+                        e.PersonnesConcernees ??= new List<string>();
+                        e.PersonnesConcernees.Add(ident);
+                        needSave = true;
+                    }
+                    if (needSave) changed = true;
+                }
+            }
+        }
+
+        // 2) Autres dates de la fiche : chaque champ personnalisé de type Date
+        // (ex. date d'adhésion, échéance, rappel personnel) devient un événement.
+        try
+        {
+            var dateFields = _fields.Where(f => f != null && f.Actif && f.Type == Models.FieldType.Date).ToList();
+            foreach (var f in dateFields)
+            {
+                if (f == null || string.IsNullOrWhiteSpace(f.Id)) continue;
+                if (user.Champs == null || !user.Champs.TryGetValue(f.Id, out var val)) continue;
+                var raw = (val?.Texte ?? "").Trim();
+                if (string.IsNullOrWhiteSpace(raw)) continue;
+                if (!TryParseYmd(raw, out _)) continue;
+                var ymd = ToYmd(raw);
+                if (string.IsNullOrWhiteSpace(ymd)) continue;
+                var title = (f.Label ?? "Date").Trim() + " de " + nomComplet;
+                if (string.IsNullOrWhiteSpace(title)) continue;
+                var exists = _events.Any(e =>
+                    (e.Titre ?? "").Equals(title, StringComparison.OrdinalIgnoreCase)
+                    && ((e.PersonnesConcernees ?? new List<string>()).Any(p => p.Equals(ident, StringComparison.OrdinalIgnoreCase))
+                        || (!string.IsNullOrWhiteSpace(nomComplet) && (e.Titre ?? "").Contains(nomComplet, StringComparison.OrdinalIgnoreCase))));
+                if (!exists)
+                {
+                    _events.Add(new CalendarEvent
+                    {
+                        Id = Guid.NewGuid().ToString("N"),
+                        Type = Models.CalendarEventTypes.Evenement,
+                        Titre = title,
+                        Date = ymd,
+                        TouteLaJournee = true,
+                        Repetition = Models.CalendarEventTypes.RepetitionAucune,
+                        PersonnesConcernees = string.IsNullOrWhiteSpace(ident) ? new List<string>() : new List<string> { ident },
+                        Notes = "[auto] " + (f.Label ?? ""),
+                        DateCreation = DateTimeOffset.Now.ToString("O"),
+                        CreatedBy = "auto"
+                    });
+                    changed = true;
+                }
+            }
+        }
+        catch { }
+
+        if (changed)
+        {
+            _events.Sort((a, b) => SortKey(a).CompareTo(SortKey(b)));
+            SaveEvents();
+        }
+        return changed;
+    }
+
+    /// <summary>Synchronise tous les utilisateurs vers le calendrier (appel au démarrage + après import).</summary>
+    public int SyncAllUserDateEvents()
+    {
+        var count = 0;
+        try
+        {
+            foreach (var u in _users.ToList())
+            {
+                try { if (SyncUserDateEventsSilent(u)) count++; }
+                catch { }
+            }
+            if (count > 0)
+            {
+                _events.Sort((a, b) => SortKey(a).CompareTo(SortKey(b)));
+                SaveEvents();
+                DataChanged?.Invoke();
+            }
+        }
+        catch { }
+        return count;
+    }
+
+    private bool SyncUserDateEventsSilent(UserAccount user)
+    {
+        if (user == null) return false;
+        var before = _events.Count;
+        var snapshot = _events.Count;
+        // Réutilise la logique sans sauvegarder à chaque membre (sauvegarde groupée par l'appelant).
+        var ident = (user.Identifiant ?? "").Trim();
+        var nomComplet = user.NomComplet?.Trim() ?? "";
+        var changed = false;
+
+        if (TryParseYmd(user.DateNaissance, out _))
+        {
+            var wantDate = ToYmd(user.DateNaissance);
+            var wantTitle = "Anniversaire de " + nomComplet;
+            var existing = _events
+                .Where(e => e.Type == Models.CalendarEventTypes.Anniversaire
+                    && ((e.PersonnesConcernees ?? new List<string>()).Any(p => p.Equals(ident, StringComparison.OrdinalIgnoreCase))
+                        || (!string.IsNullOrWhiteSpace(nomComplet) && (e.Titre ?? "").Contains(nomComplet, StringComparison.OrdinalIgnoreCase))))
+                .ToList();
+            if (existing.Count == 0)
+            {
+                _events.Add(new CalendarEvent
+                {
+                    Id = Guid.NewGuid().ToString("N"),
+                    Type = Models.CalendarEventTypes.Anniversaire,
+                    Titre = wantTitle,
+                    Date = wantDate,
+                    TouteLaJournee = true,
+                    Repetition = Models.CalendarEventTypes.RepetitionAnnuelle,
+                    PersonnesConcernees = string.IsNullOrWhiteSpace(ident) ? new List<string>() : new List<string> { ident },
+                    DateCreation = DateTimeOffset.Now.ToString("O"),
+                    CreatedBy = "auto"
+                });
+                changed = true;
+            }
+            else
+            {
+                foreach (var e in existing)
+                {
+                    if (e.Titre != wantTitle) { e.Titre = wantTitle; changed = true; }
+                    if (e.Date != wantDate) { e.Date = wantDate; changed = true; }
+                    if (e.Repetition != Models.CalendarEventTypes.RepetitionAnnuelle) { e.Repetition = Models.CalendarEventTypes.RepetitionAnnuelle; changed = true; }
+                    if (!string.IsNullOrWhiteSpace(ident) && !(e.PersonnesConcernees ?? new List<string>()).Any(p => p.Equals(ident, StringComparison.OrdinalIgnoreCase)))
+                    {
+                        e.PersonnesConcernees ??= new List<string>();
+                        e.PersonnesConcernees.Add(ident);
+                        changed = true;
+                    }
+                }
+            }
+        }
+
+        try
+        {
+            var dateFields = _fields.Where(f => f != null && f.Actif && f.Type == Models.FieldType.Date).ToList();
+            foreach (var f in dateFields)
+            {
+                if (user.Champs == null || !user.Champs.TryGetValue(f.Id, out var val)) continue;
+                var raw = (val?.Texte ?? "").Trim();
+                if (string.IsNullOrWhiteSpace(raw) || !TryParseYmd(raw, out _)) continue;
+                var ymd = ToYmd(raw);
+                var title = (f.Label ?? "Date").Trim() + " de " + nomComplet;
+                var exists = _events.Any(e =>
+                    (e.Titre ?? "").Equals(title, StringComparison.OrdinalIgnoreCase)
+                    && ((e.PersonnesConcernees ?? new List<string>()).Any(p => p.Equals(ident, StringComparison.OrdinalIgnoreCase))
+                        || (!string.IsNullOrWhiteSpace(nomComplet) && (e.Titre ?? "").Contains(nomComplet, StringComparison.OrdinalIgnoreCase))));
+                if (!exists)
+                {
+                    _events.Add(new CalendarEvent
+                    {
+                        Id = Guid.NewGuid().ToString("N"),
+                        Type = Models.CalendarEventTypes.Evenement,
+                        Titre = title,
+                        Date = ymd,
+                        TouteLaJournee = true,
+                        Repetition = Models.CalendarEventTypes.RepetitionAucune,
+                        PersonnesConcernees = string.IsNullOrWhiteSpace(ident) ? new List<string>() : new List<string> { ident },
+                        Notes = "[auto] " + (f.Label ?? ""),
+                        DateCreation = DateTimeOffset.Now.ToString("O"),
+                        CreatedBy = "auto"
+                    });
+                    changed = true;
+                }
+            }
+        }
+        catch { }
+        return changed || _events.Count != snapshot;
     }
 
     // ---------- Finances (cotisations, trésorerie — montants en Ariary) ----------
@@ -4388,5 +5018,320 @@ if (string.IsNullOrWhiteSpace(draft.Prenom)) Add("prenom", "Le prénom est oblig
     {
         if (OnlineMode) ResetAllOnline();
         else SeedDemoData();
+    }
+
+    /// <summary>Réinitialise l'application puis génère un jeu de données de démonstration réaliste (captures du guide).</summary>
+    public void ResetWithDemoData()
+    {
+        ResetAll();
+
+        var today = DateTime.Today;
+        string Ymd(DateTime d) => d.ToString("yyyy-MM-dd");
+        static string TextData(string text)
+        {
+            var bytes = System.Text.Encoding.UTF8.GetBytes(text);
+            return "data:text/plain;base64," + Convert.ToBase64String(bytes);
+        }
+        static string SvgData(string txt, int w, int h, string bg1, string bg2)
+        {
+            var doc = string.Format(
+                "<svg xmlns='http://www.w3.org/2000/svg' width='{0}' height='{1}'>" +
+                "<defs><linearGradient id='g' x1='0' y1='0' x2='1' y2='1'>" +
+                "<stop offset='0' stop-color='{2}'/><stop offset='1' stop-color='{3}'/>" +
+                "</linearGradient></defs>" +
+                "<rect width='{0}' height='{1}' fill='url(#g)'/>" +
+                "<circle cx='{4}' cy='{5}' r='{6}' fill='#ffffff22'/>" +
+                "<text x='{7}' y='{8}' font-size='{9}' font-family='Arial, sans-serif' font-weight='bold' fill='#fff'>{10}</text>" +
+                "</svg>",
+                w, h, bg1, bg2,
+                (int)(w * 0.78), (int)(h * 0.22), (int)(w * 0.2),
+                (int)(w * 0.05), (int)(h * 0.6), Math.Max(18, (int)(h * 0.13)),
+                System.Net.WebUtility.HtmlEncode(txt));
+            var bytes = System.Text.Encoding.UTF8.GetBytes(doc);
+            return "data:image/svg+xml;base64," + Convert.ToBase64String(bytes);
+        }
+
+        if (_settings != null)
+        {
+            _settings.Logo = SvgData("GU", 256, 256, "#4f46e5", "#7c3aed");
+            SaveSettings();
+        }
+
+        var ids = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        void DemoUser(string prenom, string nom, string role, string tel, string email, string matricule)
+        {
+            var res = AddUser(new UserAccount
+            {
+                Prenom = prenom,
+                Nom = nom,
+                Role = role,
+                Actif = true,
+                Telephone = tel,
+                Email = email,
+                Matricule = matricule,
+                DateNaissance = today.AddYears(-(20 + _users.Count % 24)).AddDays(-(3 + _users.Count % 20)).ToString("yyyy-MM-dd"),
+                Notes = role == Roles.Gestionnaire ? "Référent du groupe." : ""
+            });
+            if (res.Success && res.UserId != null)
+            {
+                var acc = _users.FirstOrDefault(u => u.Id == res.UserId);
+                if (acc != null) ids[acc.Identifiant] = acc.Id;
+            }
+        }
+
+        DemoUser("Tiana", "RAKOTO", Roles.Gestionnaire, "+261 34 12 345 67", "tiana.rakoto@exemple.org", "M-2026-001");
+        DemoUser("Andry", "RASOA", Roles.Utilisateur, "+261 32 45 678 90", "andry.rasoa@exemple.org", "M-2026-002");
+        DemoUser("Mialy", "VOAHANGY", Roles.Utilisateur, "", "mialy.voahangy@exemple.org", "M-2026-003");
+        DemoUser("Haja", "RAZAFY", Roles.Gestionnaire, "+261 33 10 203 04", "haja.razafy@exemple.org", "M-2026-014");
+        DemoUser("Noro", "RAVELO", Roles.Utilisateur, "", "noro.ravelo@exemple.org", "M-2026-005");
+        DemoUser("Lova", "RANDRIAMAMPIANINA", Roles.Utilisateur, "", "lova.randria@exemple.org", "M-2026-006");
+        DemoUser("Tovo", "ANDRIANJAFY", Roles.Utilisateur, "+261 34 98 765 43", "", "M-2026-007");
+        DemoUser("Soa", "RABEMANANJARA", Roles.Utilisateur, "", "soa.rabema@exemple.org", "M-2026-008");
+        DemoUser("Mirado", "RANARIVELO", Roles.Utilisateur, "", "mirado.rana@exemple.org", "M-2026-009");
+        DemoUser("Fy", "SOLOFO", Roles.Utilisateur, "", "fy.solofo@exemple.org", "M-2026-010");
+
+        AddEvent(new CalendarEvent
+        {
+            Type = CalendarEventTypes.Reunion,
+            Titre = "Réunion mensuelle de la communauté",
+            Date = Ymd(today),
+            HeureDebut = "18:00",
+            HeureFin = "20:00",
+            Lieu = "Salle polyvalente",
+            Description = "Ordre du jour : bilan du mois, préparation de la kermesse et nouvelles cotisations.",
+            Statut = CalendarEventTypes.StatutAFaire,
+            CreatedBy = "admin"
+        });
+        AddEvent(new CalendarEvent
+        {
+            Type = CalendarEventTypes.Anniversaire,
+            Titre = "Anniversaire de Tiana",
+            Date = Ymd(today.AddDays(6)),
+            TouteLaJournee = true,
+            PersonnesConcernees = new List<string> { "tiana.rakoto" }
+        });
+        AddEvent(new CalendarEvent
+        {
+            Type = CalendarEventTypes.Evenement,
+            Titre = "Kermesse de fin d'année",
+            Date = Ymd(today.AddDays(20)),
+            HeureDebut = "09:00",
+            HeureFin = "17:00",
+            Lieu = "Terrain communal",
+            Description = "Jeux, stands et tombola. Le bénéfice financera les activités de l'année prochaine.",
+            Statut = CalendarEventTypes.StatutAFaire,
+            CreatedBy = "admin"
+        });
+        AddEvent(new CalendarEvent
+        {
+            Type = CalendarEventTypes.Echeance,
+            Titre = "Règlement cotisation trimestrielle",
+            Date = Ymd(today.AddDays(9)),
+            Priorite = CalendarEventTypes.PrioriteImportante,
+            CreatedBy = "admin"
+        });
+
+        AddCotisation(new Cotisation { MembreIdentifiant = "tiana.rakoto", Montant = 50000, Motif = "Cotisation annuelle", Periode = "2026", Date = Ymd(today.AddMonths(-3)), Statut = CotisationStatuts.Payee, CreatedBy = "admin" });
+        AddCotisation(new Cotisation { MembreIdentifiant = "haja.razafy", Montant = 20000, Motif = "Cotisation semestrielle", Periode = "2026 / 1", Date = Ymd(today.AddMonths(-2)), Statut = CotisationStatuts.Payee, CreatedBy = "admin" });
+        AddCotisation(new Cotisation { MembreIdentifiant = "tovo.andrianjafy", Montant = 10000, Motif = "Cotisation trimestrielle", Periode = "2026 / 1", Date = Ymd(today.AddMonths(-1)), Statut = CotisationStatuts.Payee, CreatedBy = "admin" });
+        AddCotisation(new Cotisation { MembreIdentifiant = "andry.rasoa", Montant = 10000, Motif = "Cotisation trimestrielle", Periode = "2026 / 1", Date = Ymd(today.AddMonths(-1)), Statut = CotisationStatuts.EnAttente, CreatedBy = "admin" });
+
+        AddTransaction(new TransactionTresorerie { Type = TresorerieTypes.Entree, Montant = 250000, Motif = "Recettes kermesse 2025", Date = Ymd(today.AddMonths(-2)), CreatedBy = "admin" });
+        AddTransaction(new TransactionTresorerie { Type = TresorerieTypes.Entree, Montant = 80000, Motif = "Cotisations — Janvier 2026", Date = Ymd(today.AddMonths(-1)), CreatedBy = "admin" });
+        AddTransaction(new TransactionTresorerie { Type = TresorerieTypes.Sortie, Montant = 60000, Motif = "Achat de matériel (sonorisation)", Date = Ymd(today.AddDays(-14)), CreatedBy = "admin" });
+        AddTransaction(new TransactionTresorerie { Type = TresorerieTypes.Sortie, Montant = 35000, Motif = "Goûter de la réunion", Date = Ymd(today.AddDays(-5)), CreatedBy = "admin" });
+        AddTransaction(new TransactionTresorerie { Type = TresorerieTypes.Entree, Montant = 12000, Motif = "Cotisation — Tovo", Date = Ymd(today.AddDays(-3)), CreatedBy = "admin" });
+
+        AddTache(new Tache
+        {
+            Titre = "Préparer la salle pour la réunion",
+            Description = "Chaises, tables, vérification du vidéoprojecteur et de la sonorisation.",
+            Assignes = new List<string> { "tiana.rakoto", "haja.razafy" },
+            Statut = TacheStatuts.EnCours,
+            Priorite = CalendarEventTypes.PrioriteImportante,
+            Echeance = Ymd(today.AddDays(2)),
+            CreatedBy = "admin"
+        });
+        AddTache(new Tache
+        {
+            Titre = "Commander les tee-shirts du groupe",
+            Description = "42 tee-shirts, tailles et couleurs à confirmer auprès des membres.",
+            Assignes = new List<string> { "mialy.voahangy" },
+            Statut = TacheStatuts.Terminee,
+            Priorite = CalendarEventTypes.PrioriteNormale,
+            Echeance = Ymd(today.AddDays(-2)),
+            CreatedBy = "admin"
+        });
+        AddTache(new Tache
+        {
+            Titre = "Relancer les cotisations en attente",
+            Description = "Contacter Andry pour sa cotisation trimestrielle.",
+            Assignes = new List<string> { "admin" },
+            Statut = TacheStatuts.AFaire,
+            Priorite = CalendarEventTypes.PrioriteUrgente,
+            Echeance = Ymd(today.AddDays(1)),
+            CreatedBy = "admin"
+        });
+
+        AddMateriel(new Materiel { Nom = "Vidéoprojecteur Epson EB-X06", Categorie = "Équipement", QuantiteTotale = 1, Etat = MaterielEtats.Bon, Responsable = "haja.razafy" });
+        AddMateriel(new Materiel { Nom = "Tente de mobilisation (8 places)", Categorie = "Équipement", QuantiteTotale = 4, Etat = MaterielEtats.Bon, Responsable = "tovo.andrianjafy" });
+        AddMateriel(new Materiel { Nom = "Kit de sonorisation", Categorie = "Équipement", QuantiteTotale = 1, Etat = MaterielEtats.Moyen, Responsable = "andry.rasoa" });
+        AddMateriel(new Materiel { Nom = "Lot de tables pliantes", Categorie = "Mobilier", QuantiteTotale = 12, Etat = MaterielEtats.Bon, Responsable = "" });
+        var projo = _materiels.FirstOrDefault(m => m.Nom.StartsWith("Vidéoprojecteur"));
+        if (projo != null)
+            AddPret(projo.Id, "andry.rasoa", 1);
+
+        AddReunion(new Reunion
+        {
+            Titre = "Préparation de la kermesse",
+            Date = Ymd(today.AddDays(7)),
+            HeureDebut = "16:00",
+            HeureFin = "18:30",
+            Lieu = "Maison des jeunes",
+            Participants = new List<string> { "tiana.rakoto", "haja.razafy", "mialy.voahangy", "noro.ravelo" },
+            Presences = new Dictionary<string, string>
+            {
+                ["tiana.rakoto"] = PresenceStatuts.Present,
+                ["haja.razafy"] = PresenceStatuts.Present,
+                ["mialy.voahangy"] = PresenceStatuts.Excuse,
+                ["noro.ravelo"] = PresenceStatuts.Absent
+            },
+            CompteRendu = "Repartition des stands validée. La sonorisation sera testée la veille.",
+            CreatedBy = "admin"
+        });
+
+        AddSituation(new Situation
+        {
+            MembreIdentifiant = "noro.ravelo",
+            Type = SituationTypes.Accompagnement,
+            Titre = "Accompagnement démarches administratives",
+            Description = "Aide pour le renouvellement des documents d'identité. Rendez-vous pris au bureau.",
+            Statut = SituationStatuts.EnCours,
+            Priorite = CalendarEventTypes.PrioriteImportante,
+            CreatedBy = "admin"
+        });
+        AddSituation(new Situation
+        {
+            MembreIdentifiant = "soa.rabemananjara",
+            Type = SituationTypes.EvenementImportant,
+            Titre = "Mariage de Soa",
+            Description = "Mobilisation du groupe pour l'organisation de la cérémonie.",
+            Statut = SituationStatuts.Ouvert,
+            Priorite = CalendarEventTypes.PrioriteNormale,
+            CreatedBy = "admin"
+        });
+
+        AddVote(new Vote
+        {
+            Titre = "Date de la prochaine sortie de groupe",
+            Description = "Proposez votre date préférée pour la sortie annuelle.",
+            Options = new List<string> { "Samedi 20 juillet", "Dimanche 21 juillet", "Samedi 27 juillet" },
+            Statut = VoteStatuts.Ouvert,
+            DateCloture = Ymd(today.AddDays(14)),
+            CreatedBy = "admin"
+        });
+        AddVote(new Vote
+        {
+            Titre = "Couleur des tee-shirts 2026",
+            Description = "Choisissez la couleur des tee-shirts de l'équipe.",
+            Options = new List<string> { "Indigo", "Vert forêt", "Gris anthracite" },
+            Statut = VoteStatuts.Clos,
+            DateCloture = Ymd(today.AddDays(-6)),
+            CreatedBy = "admin"
+        });
+        var voteOuvert = _votes.FirstOrDefault(v => v.Statut == VoteStatuts.Ouvert);
+        if (voteOuvert != null && voteOuvert.Options.Count > 0)
+        {
+            CastVote(voteOuvert.Id, "tiana.rakoto", voteOuvert.Options[0]);
+            CastVote(voteOuvert.Id, "haja.razafy", voteOuvert.Options[1]);
+            CastVote(voteOuvert.Id, "mialy.voahangy", voteOuvert.Options[voteOuvert.Options.Count - 1]);
+        }
+
+        AddFolder(new DocumentFolder { Nom = "Comptes rendus", Couleur = "#4f46e5", CreatedBy = "admin" });
+        AddFolder(new DocumentFolder { Nom = "Kermesse 2026", Couleur = "#7c3aed", CreatedBy = "admin" });
+        var folderCR = _folders.FirstOrDefault(f => f.Nom == "Comptes rendus");
+        var folderKermesse = _folders.FirstOrDefault(f => f.Nom == "Kermesse 2026");
+        AddDocument(new DocumentItem
+        {
+            Titre = "Compte rendu — Réunion de janvier",
+            Description = "Bilan de la réunion mensuelle de janvier.",
+            FolderId = folderCR?.Id,
+            Categorie = DocumentCategories.Travail,
+            FileName = "cr-janvier-2026.txt",
+            Mime = "text/plain",
+            Taille = 412,
+            Data = TextData("Compte rendu de la réunion de janvier 2026..."),
+            CreatedBy = "admin"
+        });
+        AddDocument(new DocumentItem
+        {
+            Titre = "Devis sonorisation",
+            Description = "Devis du kit de sonorisation pour la kermesse.",
+            FolderId = folderKermesse?.Id,
+            Categorie = DocumentCategories.Factures,
+            FileName = "devis-sonorisation.txt",
+            Mime = "text/plain",
+            Taille = 289,
+            Data = TextData("Montant : 600 000 MGA - Prestataire : Sonor Pro"),
+            Favori = true,
+            CreatedBy = "admin"
+        });
+        AddDocument(new DocumentItem
+        {
+            Titre = "Règlement intérieur",
+            Description = "Document de référence du groupe.",
+            Categorie = DocumentCategories.Contrats,
+            FileName = "reglement-interieur.txt",
+            Mime = "text/plain",
+            Taille = 905,
+            Data = TextData("Règlement intérieur de la communauté..."),
+            CreatedBy = "admin"
+        });
+
+        SaveCommunityStory("Communauté d'Ambatondrazaka", "Ensemble depuis 2018");
+        AddCommunityChapter("Les débuts", "Notre communauté est née d'un petit groupe de voisins décidés à se rendre les services les uns aux autres.", Ymd(today.AddYears(-3)), null);
+        AddCommunityChapter("La première kermesse", "Organisée en 2024, elle a rassemblé plus de 200 personnes et financé les premières activités.", Ymd(today.AddYears(-1)), null);
+        AddCommunityChapter("Aujourd'hui", "Une équipe de 12 membres actifs et de nombreux projets : préparation de la kermesse 2026 !", Ymd(today.AddMonths(-1)), null);
+
+        SendMessage(new List<string>(), "Bienvenue ! Ce canal centralise les annonces importantes du groupe. N'hésitez pas à l'utiliser pour partager les informations essentielles.");
+        SendMessage(new List<string>(), "Rappel : réunion mensuelle ce soir à 18h dans la salle polyvalente.");
+        SendMessage(new List<string> { "tiana.rakoto" }, "Tiana, peux-tu confirmer la disponibilité de la salle pour la kermesse ?");
+
+        AddMedia(new MediaItem
+        {
+            Titre = "Mobilisation — Kermesse 2025",
+            Description = "Toute l'équipe présente au terrain communal.",
+            Type = MediaTypes.Photo,
+            Mime = "image/svg+xml",
+            Taille = 0,
+            Data = SvgData("Kermesse 2025", 800, 450, "#4f46e5", "#7c3aed"),
+            Date = Ymd(today.AddMonths(-2)),
+            CreatedBy = "admin"
+        });
+        AddMedia(new MediaItem
+        {
+            Titre = "After-work de l'équipe",
+            Type = MediaTypes.Photo,
+            Mime = "image/svg+xml",
+            Taille = 0,
+            Data = SvgData("After-work", 800, 450, "#0e7490", "#155e75"),
+            Date = Ymd(today.AddDays(-8)),
+            CreatedBy = "admin"
+        });
+        AddMedia(new MediaItem
+        {
+            Titre = "Enregistrement — Réunion de janvier",
+            Description = "Extrait audio de la réunion.",
+            Type = MediaTypes.Audio,
+            Mime = "audio/mpeg",
+            Taille = 2457600,
+            Date = Ymd(today.AddDays(-15)),
+            CreatedBy = "admin"
+        });
+
+        var dba = _users.FirstOrDefault(u => u.Identifiant.Equals("dba", StringComparison.OrdinalIgnoreCase));
+        if (dba != null)
+            _session = new SessionInfo { UserId = dba.Id, ExpiryUtcTicks = DateTimeOffset.UtcNow.AddHours(8).UtcTicks };
+        SaveSession();
     }
 }

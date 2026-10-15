@@ -1,8 +1,8 @@
-@inject DataStore Store
+﻿@inject DataStore Store
 
 <div class="mpicker">
     <div class="search-box cal-search cal-opt-search" style="margin-bottom:0">
-        <span class="search-icon" aria-hidden="true">⌕</span>
+        <span class="search-icon" aria-hidden="true">&#128269;</span>
         <input type="search" placeholder="@Placeholder" aria-label="Chercher un membre"
                value="@_search" @oninput="OnSearch" @onfocus="() => _open = true" />
         @if (!string.IsNullOrWhiteSpace(Value) || _open)

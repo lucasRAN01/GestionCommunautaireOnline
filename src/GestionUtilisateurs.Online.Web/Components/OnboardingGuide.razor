@@ -1,0 +1,285 @@
+@inject DataStore Store
+@inject JavascriptBridge Js
+@inject IJSRuntime JSRuntime
+
+@* Mini-guide de démarrage : visite fléchée ancrée aux éléments (spotlight).
+   Chaque étape vise un repère réel (barre du bas, menu ⋮, avatar, logo, aide)
+   avec flèche et texte adaptés à l'emplacement ; accueil et fin centrés.
+   Responsive téléphone / tablette. *@
+@if (Show)
+{
+    <div class="ob-overlay @(_place != null ? "ob-popmode" : "")" @ontouchstart="OnTouchStart" @ontouchend="OnTouchEnd">
+        @if (_place == null)
+        {
+            <div class="ob-card" id="ob-card" role="dialog" aria-modal="true" aria-label="Mini-guide de démarrage"
+                 tabindex="0" @ref="_cardRef" @onkeydown="OnKeyDown">
+                <button type="button" class="ob-skip" @onclick="Skip">Passer</button>
+                <div class="ob-anim" @key="_index">
+                    <div class="ob-illus" aria-hidden="true">
+                        <div class="ob-float">@Illustration(Steps[_index].Art)</div>
+                    </div>
+                    <div class="ob-body">
+                        <h2 class="ob-title">@Steps[_index].Title</h2>
+                        <p class="ob-text">@Steps[_index].Text</p>
+                    </div>
+                </div>
+                @NavDots()
+                @NavRow()
+            </div>
+        }
+        else
+        {
+            <div class="ob-card ob-pop" id="ob-card" role="dialog" aria-modal="true" aria-label="Mini-guide de démarrage"
+                 tabindex="0" @ref="_cardRef" @onkeydown="OnKeyDown"
+                 style="left:@Px(_place.Left);top:@Px(_place.Top);width:@Px(_place.Width)">
+                <div class="ob-arrow @(_place.ArrowDown ? "ob-down" : "ob-up")" aria-hidden="true"
+                     style="left:@Px(_place.ArrowX - 11)"></div>
+                <button type="button" class="ob-skip" @onclick="Skip">Passer</button>
+                <div class="ob-anim" @key="_index">
+                    <h2 class="ob-title ob-title-pop">@Steps[_index].Title</h2>
+                    <p class="ob-text">@Steps[_index].Text</p>
+                </div>
+                @NavDots()
+                @NavRow()
+            </div>
+        }
+    </div>
+}
+
+@code {
+    [Parameter] public bool Show { get; set; }
+    [Parameter] public EventCallback OnClose { get; set; }
+
+    private sealed record Step(string Art, string Title, string Text, string? Target);
+    private sealed record Rect(double X, double Y, double W, double H, double Vw, double Vh);
+    private sealed record Place(bool Below, double Left, double Top, double Width, double ArrowX, bool ArrowDown);
+
+    private List<Step> Steps = new();
+    private int _index;
+    private bool _wasShown;
+    private bool _openAck;
+    private bool _busy;
+    private Place? _place;
+    private ElementReference _cardRef;
+    private double? _touchX;
+
+    protected override void OnInitialized()
+    {
+        var appName = string.IsNullOrWhiteSpace(Store.Settings.AppName)
+            ? "Gestion des utilisateurs" : Store.Settings.AppName;
+        Steps = new()
+        {
+            new("welcome", "Bienvenue sur " + appName,
+                "Votre gestion communautaire en ligne, partagée avec tous les membres. Laissez-vous guider en 6 étapes.", null),
+            new("", "Tout se passe en bas",
+                "Regardez la barre du bas : Accueil, Utilisateurs, Calendrier, Activité et Paramètres, toujours à portée de pouce.", ".bottom-nav"),
+            new("", "Ici, le menu « ⋮ »",
+                "En haut à droite : Finances, matériel, messagerie, carte de membre, votes… Tout le reste se trouve derrière ce bouton.", "[aria-label=\"Plus d'options\"]"),
+            new("", "Juste à côté : votre avatar",
+                "Touchez votre photo en haut à droite pour ouvrir Mes informations, ou vous déconnecter.", ".avatar-button"),
+            new("", "En haut à gauche : le logo",
+                "Touchez le logo pour afficher l'image en grand et parcourir l'histoire de votre communauté.", ".logo-btn"),
+            new("", "Sur chaque écran : l'aide ⓘ",
+                "Ce bouton ouvre l'aide de la page en cours. En cas de doute, il sait quoi faire.", ".topbar-help-btn"),
+            new("ready", "Vous êtes prêt·e !",
+                "Astuce : glissez du bord gauche vers la droite pour revenir en arrière. Bon usage !", null),
+        };
+    }
+
+    protected override void OnParametersSet()
+    {
+        if (Show && !_wasShown) { _index = 0; _place = null; }
+        _wasShown = Show;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (Show && !_openAck)
+        {
+            _openAck = true;
+            try { await Js.LockBodyScrollAsync(); } catch { }
+            try { await JSRuntime.InvokeVoidAsync("guOnboarding.focus", "ob-card"); } catch { }
+            await RefreshSpotAsync();
+        }
+        else if (!Show && _openAck)
+        {
+            _openAck = false;
+            try { await JSRuntime.InvokeVoidAsync("guCoach.unspot"); } catch { }
+            try { await Js.UnlockBodyScrollAsync(); } catch { }
+        }
+    }
+
+    private async Task RefreshSpotAsync()
+    {
+        try
+        {
+            _place = null;
+            if (_index < 0 || _index >= Steps.Count) _index = Math.Clamp(_index, 0, Steps.Count - 1);
+            var target = Steps[_index].Target;
+            if (!string.IsNullOrWhiteSpace(target))
+            {
+                try
+                {
+                    var rect = await JSRuntime.InvokeAsync<Rect?>("guCoach.spot", target);
+                    if (rect != null && rect.W > 0 && rect.H > 0 && rect.Vw > 0 && rect.Vh > 0)
+                        _place = ComputePlace(rect);
+                    else
+                        try { await JSRuntime.InvokeVoidAsync("guCoach.unspot"); } catch { }
+                }
+                catch { _place = null; }
+            }
+            else
+            {
+                try { await JSRuntime.InvokeVoidAsync("guCoach.unspot"); } catch { }
+            }
+        }
+        finally
+        {
+            await InvokeAsync(StateHasChanged);
+            try { await JSRuntime.InvokeVoidAsync("guOnboarding.focus", "ob-card"); } catch { }
+        }
+    }
+
+    private static Place? ComputePlace(Rect r)
+    {
+        // Hauteur réelle d'une bulle (titre + texte + points + boutons) : ~340-380 px
+        // sur téléphone étroit. Marge large pour ne jamais chevaucher la cible
+        // (la cible est au-dessus du voile : tout chevauchement vole les clics).
+        const double estH = 380;
+        if (r.Vw <= 0 || r.Vh <= 0) return null;
+        // Écran trop petit pour une bulle ancrée : carte centrée (toujours cliquable).
+        if (r.Vh < estH + 60) return null;
+        var phone = r.Vw < 720;
+        var popW = phone ? r.Vw - 24 : 380;
+        if (popW < 240) popW = Math.Max(200, r.Vw - 24);
+        if (popW > r.Vw - 24) popW = Math.Max(200, r.Vw - 24);
+        var cx = r.X + r.W / 2;
+        var left = Math.Min(Math.Max(cx - popW / 2, 12), Math.Max(12, r.Vw - popW - 12));
+        var arrowX = Math.Min(Math.Max(cx - left, 30), popW - 30);
+        if (r.Y + r.H + 12 + estH <= r.Vh)
+        {
+            var top = r.Y + r.H + 12;
+            // Repli : la bulle ne doit jamais dépasser le bas de l'écran.
+            top = Math.Min(top, Math.Max(12, r.Vh - estH - 12));
+            return new Place(true, left, top, popW, arrowX, false);
+        }
+        if (r.Y - 12 - estH >= 0)
+        {
+            var top = r.Y - 12 - estH;
+            top = Math.Max(12, Math.Min(top, Math.Max(12, r.Vh - estH - 12)));
+            return new Place(false, left, top, popW, arrowX, true);
+        }
+        return null;
+    }
+
+    private static string Px(double v) => v.ToString("0", System.Globalization.CultureInfo.InvariantCulture) + "px";
+
+    private RenderFragment NavDots() => @<div class="ob-dots" role="tablist" aria-label="Étapes du guide">
+        @for (var i = 0; i < Steps.Count; i++)
+        {
+            var idx = i;
+            <button type="button" role="tab" aria-selected="@(idx == _index)"
+                    aria-label="Aller à l'étape @(idx + 1) sur @Steps.Count"
+                    class="ob-dot @(idx == _index ? "active" : "")" @onclick="() => Go(idx)"></button>
+        }
+    </div>;
+
+    private RenderFragment NavRow() => @<div class="ob-nav">
+        @if (_index > 0)
+        {
+            <button type="button" class="btn btn-secondary ob-btn" @onclick="Prev">← Précédent</button>
+        }
+        else
+        {
+            <span class="ob-nav-spacer"></span>
+        }
+        @if (_index < Steps.Count - 1)
+        {
+            <button type="button" class="ob-btn ob-primary" @onclick="Next">Suivant →</button>
+        }
+        else
+        {
+            <button type="button" class="ob-btn ob-primary" @onclick="Finish">Terminer ✓</button>
+        }
+    </div>;
+
+    private async Task Next()
+    {
+        if (_busy || _index >= Steps.Count - 1) return;
+        _busy = true;
+        try { _index++; await RefreshSpotAsync(); }
+        finally { _busy = false; }
+    }
+    private async Task Prev()
+    {
+        if (_busy || _index <= 0) return;
+        _busy = true;
+        try { _index--; await RefreshSpotAsync(); }
+        finally { _busy = false; }
+    }
+    private async Task Go(int idx)
+    {
+        if (_busy || idx < 0 || idx >= Steps.Count || idx == _index) return;
+        _busy = true;
+        try { _index = idx; await RefreshSpotAsync(); }
+        finally { _busy = false; }
+    }
+    private async Task Finish() => await OnClose.InvokeAsync();
+    private async Task Skip() => await OnClose.InvokeAsync();
+
+    private void OnKeyDown(KeyboardEventArgs e)
+    {
+        switch (e.Key)
+        {
+            case "ArrowRight": _ = Next(); break;
+            case "ArrowLeft": _ = Prev(); break;
+            case "Home": _ = Go(0); break;
+            case "End": _ = Go(Steps.Count - 1); break;
+            case "Escape": _ = Skip(); break;
+        }
+    }
+
+    private void OnTouchStart(TouchEventArgs e)
+    {
+        if (e.Touches.Length > 0) _touchX = e.Touches[0].ClientX;
+    }
+
+    private void OnTouchEnd(TouchEventArgs e)
+    {
+        if (_touchX == null || e.ChangedTouches.Length == 0) { _touchX = null; return; }
+        var dx = e.ChangedTouches[0].ClientX - _touchX.Value;
+        _touchX = null;
+        if (dx <= -60) _ = Next();
+        else if (dx >= 60) _ = Prev();
+    }
+
+    private static RenderFragment Illustration(string art) => art switch
+    {
+        "ready" => @<svg viewBox="0 0 240 160" role="presentation">
+            <rect x="8" y="8" width="224" height="144" rx="24" fill="#EEF2FF" />
+            <ellipse cx="120" cy="142" rx="66" ry="7" fill="#4F46E5" opacity="0.10" />
+            <circle cx="120" cy="78" r="36" fill="#4F46E5" />
+            <circle cx="120" cy="78" r="36" fill="none" stroke="#C7D2FE" stroke-width="3" opacity="0.55" />
+            <path d="M103 78l12 12 23 -25" fill="none" stroke="#FFFFFF" stroke-width="7" stroke-linecap="round" stroke-linejoin="round" />
+            <circle cx="66" cy="48" r="4" fill="#A5B4FC" />
+            <circle cx="176" cy="52" r="5" fill="#C7D2FE" />
+            <circle cx="188" cy="104" r="4" fill="#4F46E5" opacity="0.55" />
+            <circle cx="54" cy="100" r="3.4" fill="#4F46E5" opacity="0.45" />
+            <path d="M70 122h12M76 116v12" stroke="#A5B4FC" stroke-width="3" stroke-linecap="round" />
+            <path d="M168 122h12M174 116v12" stroke="#C7D2FE" stroke-width="3" stroke-linecap="round" />
+        </svg>,
+        _ => @<svg viewBox="0 0 240 160" role="presentation">
+            <rect x="8" y="8" width="224" height="144" rx="24" fill="#EEF2FF" />
+            <ellipse cx="120" cy="142" rx="66" ry="7" fill="#4F46E5" opacity="0.10" />
+            <rect x="52" y="36" width="136" height="88" rx="12" fill="#FFFFFF" stroke="#E2E8F0" stroke-width="2" />
+            <circle cx="64" cy="48" r="3" fill="#C7D2FE" />
+            <circle cx="74" cy="48" r="3" fill="#A5B4FC" />
+            <circle cx="84" cy="48" r="3" fill="#4F46E5" />
+            <rect x="64" y="62" width="56" height="9" rx="4.5" fill="#E2E8F0" />
+            <rect x="64" y="76" width="84" height="9" rx="4.5" fill="#C7D2FE" />
+            <rect x="64" y="90" width="44" height="9" rx="4.5" fill="#E2E8F0" />
+            <circle cx="164" cy="96" r="17" fill="#4F46E5" />
+            <path d="M157 96l5 5 10 -11" fill="none" stroke="#FFFFFF" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" />
+        </svg>,
+    };
+}

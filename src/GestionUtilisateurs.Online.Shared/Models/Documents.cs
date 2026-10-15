@@ -34,6 +34,8 @@ public class DocumentItem
     public string DateCreation { get; set; } = "";
     public string DateModification { get; set; } = "";
     public string CreatedBy { get; set; } = "";
+    /// <summary>Identifiant du dernier utilisateur ayant modifié le document (métadonnées, déplacement…).</summary>
+    public string ModifiePar { get; set; } = "";
     /// <summary>Document placé dans la corbeille (restaurable).</summary>
     public bool Supprime { get; set; }
     public string? DateSuppression { get; set; }

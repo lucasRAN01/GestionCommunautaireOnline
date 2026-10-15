@@ -1,4 +1,4 @@
-@implements IDisposable
+﻿@implements IDisposable
 @inject DataStore Store
 @inject AppState State
 
@@ -13,7 +13,7 @@ else
     </div>
 
     <div class="search-box cal-search">
-        <span class="search-icon" aria-hidden="true">⌕</span>
+        <span class="search-icon" aria-hidden="true">&#128269;</span>
         <input type="search" placeholder="Rechercher une tâche (titre, description, membre)…" aria-label="Rechercher une tâche"
                value="@_search" @oninput="OnSearch" />
     </div>
@@ -43,7 +43,7 @@ else
             @foreach (var t in Filtered)
             {
                 var task = t;
-                <div class="user-card">
+                <div class="user-card @(_selectedId == task.Id ? "selected" : "")" role="button" tabindex="0" @onclick="() => SelectTask(task.Id)" @onkeydown="(k) => OnSelectKey(k, task.Id)">
                     <span class="field-type-icon" style="background:@SoftColor(PriorityColor(task.Priorite));color:@PriorityColor(task.Priorite)" aria-hidden="true">@TacheStatuts.Icon(task.Statut)</span>
                     <div class="user-card-main">
                         <div class="user-card-name">@task.Titre</div>
@@ -82,6 +82,26 @@ else
         </div>
     }
 
+    @if (SelectedTask != null)
+    {
+        var t = SelectedTask;
+        <div class="card" style="margin-top:12px">
+            <div class="inline-actions" style="justify-content:space-between">
+                <h3 style="margin:0">@t.Titre</h3>
+                <button class="btn btn-secondary btn-sm" @onclick="() => _selectedId = null">Réduire</button>
+            </div>
+            @if (!string.IsNullOrWhiteSpace(t.Description))
+            {
+                <div class="cal-detail-notes">@t.Description</div>
+            }
+            <div class="storage-line"><span>Statut</span><strong>@TacheStatuts.Label(t.Statut)</strong></div>
+            <div class="storage-line"><span>Priorité</span><strong>@PriorityLabel(t.Priorite)</strong></div>
+            <div class="storage-line"><span>Échéance</span><strong>@(string.IsNullOrWhiteSpace(t.Echeance) ? "—" : DataStore.FormatDateCourte(t.Echeance))</strong></div>
+            <div class="storage-line"><span>Assignés</span><strong>@(t.Assignes.Count == 0 ? "—" : string.Join(", ", t.Assignes))</strong></div>
+            <div class="storage-line"><span>Créée</span><strong>@DataStore.FormatDateCourte(t.DateCreation)</strong></div>
+        </div>
+    }
+
     <button class="fab" aria-label="Nouvelle tâche" @onclick="StartAdd">+</button>
 
     <Modal Title="@(_editId == null ? "Nouvelle tâche" : "Modifier la tâche")" Show="_showEditor" OnClose="CloseEditor">
@@ -97,7 +117,7 @@ else
             <div class="form-group">
                 <label>Assignés</label>
                 <div class="search-box cal-search cal-opt-search">
-                    <span class="search-icon" aria-hidden="true">⌕</span>
+                    <span class="search-icon" aria-hidden="true">&#128269;</span>
                     <input type="search" placeholder="Écrire pour chercher un membre…" aria-label="Chercher un membre"
                            value="@_assigneSearch" @oninput="e => _assigneSearch = e.Value?.ToString() ?? string.Empty" />
                 </div>
@@ -124,8 +144,8 @@ else
                 </select>
             </div>
             <div class="form-group">
-                <label for="ta-echeance">Échéance (JJ/MM/AAAA)</label>
-                <input id="ta-echeance" type="date" value="@_echeanceIso" @onchange="e => _echeanceIso = e.Value?.ToString() ?? string.Empty" />
+                <label for="ta-echeance">Échéance</label>
+                <DateInput Id="ta-echeance" Value="@_echeanceIso" ValueChanged="@(v => _echeanceIso = v)" />
             </div>
             <span class="form-error">@_error</span>
         </ChildContent>
@@ -151,6 +171,7 @@ else
     private bool _mineOnly = true;
     private string _search = "";
     private List<Tache> _list = new();
+    private string? _selectedId;
 
     private bool _showEditor;
     private string? _editId;
@@ -199,6 +220,15 @@ else
     }
 
     private void OnSearch(ChangeEventArgs e) => _search = e.Value?.ToString() ?? string.Empty;
+
+    private Tache? SelectedTask => string.IsNullOrWhiteSpace(_selectedId) ? null : _list.FirstOrDefault(t => t.Id == _selectedId);
+
+    private void SelectTask(string id) => _selectedId = _selectedId == id ? null : id;
+
+    private void OnSelectKey(KeyboardEventArgs e, string id)
+    {
+        if (e.Key is "Enter" or " ") SelectTask(id);
+    }
 
     protected override void OnInitialized()
     {
