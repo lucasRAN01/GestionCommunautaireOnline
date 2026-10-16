@@ -4,7 +4,116 @@
 
 <div class="page-head dash-head">
     <h1>@L.F("Bienvenue, {0}", Store.GetCurrentUser()?.Prenom ?? L.T("invité"))</h1>
-    <p>@L.T("Tableau de bord : un aperçu de votre communauté.")</p>
+    <p>@L.Majuscule(L.DateLongue(DateTime.Today)) · @L.T("Tableau de bord : un aperçu de votre communauté.")</p>
+</div>
+
+@* Pour vous : ce qui attend le membre connecté *@
+<div class="card dash-mine">
+    <h3>@L.T("Pour vous")</h3>
+    <div class="dash-kpis">
+        @if (Voit("messagerie", Permissions.MessagerieUse))
+        {
+            <div class="dash-kpi @(mesMessages > 0 ? "dash-kpi-warn" : "")" role="button" tabindex="0" @onclick='() => State.Navigate("messagerie")'>
+                <span class="dash-kpi-value">✉ @mesMessages</span>
+                <span class="dash-kpi-label">@L.T("Messages non lus")</span>
+            </div>
+        }
+        @if (Voit("votes"))
+        {
+            <div class="dash-kpi @(mesVotes > 0 ? "dash-kpi-warn" : "")" role="button" tabindex="0" @onclick='() => State.Navigate("votes")'>
+                <span class="dash-kpi-value">🗳 @mesVotes</span>
+                <span class="dash-kpi-label">@L.T("Votes qui attendent votre voix")</span>
+            </div>
+        }
+        @if (Voit("taches", Permissions.TachesUse))
+        {
+            <div class="dash-kpi @(mesTachesRetard > 0 ? "dash-kpi-danger" : "")" role="button" tabindex="0" @onclick='() => State.Navigate("taches")'>
+                <span class="dash-kpi-value">☑ @mesTaches</span>
+                <span class="dash-kpi-label">@(mesTachesRetard > 0 ? L.F("Mes tâches ({0} en retard)", mesTachesRetard) : L.T("Mes tâches à faire"))</span>
+            </div>
+        }
+        <div class="dash-kpi" role="button" tabindex="0" @onclick='() => State.Navigate("calendar")'>
+            <span class="dash-kpi-value">📅 @evenementsAujourdhui</span>
+            <span class="dash-kpi-label">@L.T("Événements aujourd'hui")</span>
+        </div>
+        @if (mesImpayes > 0)
+        {
+            <div class="dash-kpi dash-kpi-warn dash-kpi-static">
+                <span class="dash-kpi-value">💰 @FormatMoney(mesImpayes)</span>
+                <span class="dash-kpi-label">@L.T("Ma cotisation à régler")</span>
+            </div>
+        }
+    </div>
+</div>
+
+<div class="dash-two">
+    <div class="card dash-week">
+        <div class="dash-card-head">
+            <h3>📅 @L.T("Les 7 prochains jours")</h3>
+            <button type="button" class="btn btn-secondary btn-sm" @onclick='() => State.Navigate("calendar")'>@L.T("Calendrier")</button>
+        </div>
+        @if (Semaine.Count == 0)
+        {
+            <p class="muted dash-empty-line">@L.T("Rien de prévu cette semaine.")</p>
+        }
+        else
+        {
+            <ul class="dash-list">
+                @foreach (var (jour, ev) in Semaine)
+                {
+                    <li class="dash-list-item" @onclick='() => State.Navigate("calendar")'>
+                        <span class="dash-list-day @(jour == DateTime.Today ? "is-today" : "")">@JourCourt(jour)</span>
+                        <span class="dash-list-main">
+                            <span class="dash-list-title">@CalendarEventTypes.Icon(ev.Type) @ev.Titre</span>
+                            <span class="dash-list-sub">@Horaire(ev)@(string.IsNullOrWhiteSpace(ev.Lieu) ? "" : " · " + ev.Lieu)</span>
+                        </span>
+                    </li>
+                }
+            </ul>
+        }
+    </div>
+
+    @if (Voit("rappels", Permissions.RappelsUse) || Store.Can(Permissions.UsersManage))
+    {
+        <div class="card dash-todo">
+            <div class="dash-card-head">
+                <h3>🔔 @L.T("À traiter")</h3>
+                @if (Voit("rappels", Permissions.RappelsUse))
+                {
+                    <button type="button" class="btn btn-secondary btn-sm" @onclick='() => State.Navigate("rappels")'>@L.F("Tout voir ({0})", rappelsCount)</button>
+                }
+            </div>
+            @if (doublons == 0 && Rappels.Count == 0)
+            {
+                <p class="muted dash-empty-line">✅ @L.T("Rien à traiter pour le moment.")</p>
+            }
+            else
+            {
+                <ul class="dash-list">
+                    @if (doublons > 0)
+                    {
+                        <li class="dash-list-item" @onclick='() => State.Navigate("users")'>
+                            <span class="dash-dot prio-importante" aria-hidden="true"></span>
+                            <span class="dash-list-main">
+                                <span class="dash-list-title">@L.F("{0} fiche(s) en double à vérifier", doublons)</span>
+                                <span class="dash-list-sub">@L.T("Utilisateurs › fusionner les doublons")</span>
+                            </span>
+                        </li>
+                    }
+                    @foreach (var r in Rappels)
+                    {
+                        <li class="dash-list-item" @onclick='() => State.Navigate(string.IsNullOrWhiteSpace(r.PageCible) ? "rappels" : r.PageCible)'>
+                            <span class="dash-dot prio-@r.Priorite" aria-hidden="true"></span>
+                            <span class="dash-list-main">
+                                <span class="dash-list-title">@r.Titre</span>
+                                <span class="dash-list-sub">@r.Detail</span>
+                            </span>
+                        </li>
+                    }
+                </ul>
+            }
+        </div>
+    }
 </div>
 
 <div class="stats-grid">
@@ -47,75 +156,6 @@
     }
 </div>
 
-@if (Store.Can(Permissions.FinancesManage))
-{
-    <div class="card dash-collapse-card @(IsCollapsed("finances") ? "collapsed" : "")">
-        <div class="dash-card-head">
-            <h3>💰 @L.T("Finances")</h3>
-            <div class="dash-head-actions">
-                <button type="button" class="dash-collapse-btn" aria-label="@(IsCollapsed("finances") ? L.T("Déplier la section Finances") : L.T("Replier la section Finances"))"
-                        @onclick='() => ToggleCollapse("finances")'>
-                    <span class="dash-chevron" aria-hidden="true">▾</span>
-                </button>
-                <button type="button" class="btn btn-secondary btn-sm" @onclick='() => State.Navigate("finances")'>@L.T("Ouvrir")</button>
-            </div>
-        </div>
-        <div class="dash-collapse-body">
-            <div class="dash-kpis">
-                <div class="dash-kpi" @onclick='() => State.Navigate("finances")'>
-                    <span class="dash-kpi-value">@FormatMoney(soldeTresorerie)</span>
-                    <span class="dash-kpi-label">@L.T("Solde trésorerie")</span>
-                </div>
-                <div class="dash-kpi" @onclick='() => State.Navigate("finances")'>
-                    <span class="dash-kpi-value">@FormatMoney(totalCotisations)</span>
-                    <span class="dash-kpi-label">@L.T("Cotisations encaissées")</span>
-                </div>
-                <div class="dash-kpi @(impayes > 0 ? "dash-kpi-warn" : "")" @onclick='() => State.Navigate("finances")'>
-                    <span class="dash-kpi-value">@impayes</span>
-                    <span class="dash-kpi-label">@L.T("Membres en attente")</span>
-                </div>
-            </div>
-            <ChartBars Items="@financeChart" />
-        </div>
-    </div>
-}
-
-@if (Store.Can(Permissions.TachesUse) || Store.Can(Permissions.RappelsUse))
-{
-    <div class="card dash-collapse-card @(IsCollapsed("taches") ? "collapsed" : "")">
-        <div class="dash-card-head">
-            <h3>☑ @L.T("Tâches & rappels")</h3>
-            <div class="dash-head-actions">
-                <button type="button" class="dash-collapse-btn" aria-label="@(IsCollapsed("taches") ? L.T("Déplier la section Tâches") : L.T("Replier la section Tâches"))"
-                        @onclick='() => ToggleCollapse("taches")'>
-                    <span class="dash-chevron" aria-hidden="true">▾</span>
-                </button>
-                @if (Store.Can(Permissions.TachesUse))
-                {
-                    <button type="button" class="btn btn-secondary btn-sm" @onclick='() => State.Navigate("taches")'>@L.T("Ouvrir")</button>
-                }
-            </div>
-        </div>
-        <div class="dash-collapse-body">
-            <div class="dash-kpis">
-                <div class="dash-kpi" @onclick='() => State.Navigate("taches")'>
-                    <span class="dash-kpi-value">@tachesEnCours</span>
-                    <span class="dash-kpi-label">@L.T("En cours")</span>
-                </div>
-                <div class="dash-kpi @(tachesEnRetard > 0 ? "dash-kpi-danger" : "")" @onclick='() => State.Navigate("taches")'>
-                    <span class="dash-kpi-value">@tachesEnRetard</span>
-                    <span class="dash-kpi-label">@L.T("En retard")</span>
-                </div>
-                <div class="dash-kpi @(rappelsCount > 0 ? "dash-kpi-warn" : "")" @onclick='() => State.Navigate("rappels")'>
-                    <span class="dash-kpi-value">@rappelsCount</span>
-                    <span class="dash-kpi-label">@L.T("Rappels actifs")</span>
-                </div>
-            </div>
-            <ChartBars Items="@tacheChart" />
-        </div>
-    </div>
-}
-
 @if (Store.Can(Permissions.PresenceManage) && ReunionsCount > 0)
 {
     <div class="card">
@@ -131,45 +171,6 @@
             </div>
         }
         <ChartBars Items="@presenceChart" />
-    </div>
-}
-
-@if (Store.Can(Permissions.MaterielManage) || Store.Can(Permissions.JournalMediaUse))
-{
-    <div class="card dash-collapse-card @(IsCollapsed("materiel") ? "collapsed" : "")">
-        <div class="dash-card-head">
-            <h3>🧰 @L.T("Matériel & médias")</h3>
-            <div class="dash-head-actions">
-                <button type="button" class="dash-collapse-btn" aria-label="@(IsCollapsed("materiel") ? L.T("Déplier la section Matériel") : L.T("Replier la section Matériel"))"
-                        @onclick='() => ToggleCollapse("materiel")'>
-                    <span class="dash-chevron" aria-hidden="true">▾</span>
-                </button>
-                @if (Store.Can(Permissions.MaterielManage))
-                {
-                    <button type="button" class="btn btn-secondary btn-sm" @onclick='() => State.Navigate("materiel")'>@L.T("Ouvrir")</button>
-                }
-            </div>
-        </div>
-        <div class="dash-collapse-body">
-            <div class="dash-kpis">
-                <div class="dash-kpi" @onclick='() => State.Navigate("materiel")'>
-                    <span class="dash-kpi-value">@materielsCount</span>
-                    <span class="dash-kpi-label">@L.T("Matériels")</span>
-                </div>
-                <div class="dash-kpi" @onclick='() => State.Navigate("materiel")'>
-                    <span class="dash-kpi-value">@pretsActifs</span>
-                    <span class="dash-kpi-label">@L.T("Prêts en cours")</span>
-                </div>
-                <div class="dash-kpi @(pretsRetard > 0 ? "dash-kpi-danger" : "")" @onclick='() => State.Navigate("materiel")'>
-                    <span class="dash-kpi-value">@pretsRetard</span>
-                    <span class="dash-kpi-label">@L.T("Retours en retard")</span>
-                </div>
-                <div class="dash-kpi" @onclick='() => State.Navigate("journal")'>
-                    <span class="dash-kpi-value">@mediaCount</span>
-                    <span class="dash-kpi-label">@L.T("Médias")</span>
-                </div>
-            </div>
-        </div>
     </div>
 }
 
@@ -209,12 +210,10 @@
     private List<UserAccount> RecentUsers = new();
     private UserAccount? _viewer;
 
-    private double soldeTresorerie, totalCotisations;
-    private int impayes;
-    private IReadOnlyList<ChartBars.ChartItem> financeChart = Array.Empty<ChartBars.ChartItem>();
-
-    private int tachesEnCours, tachesEnRetard, rappelsCount;
-    private IReadOnlyList<ChartBars.ChartItem> tacheChart = Array.Empty<ChartBars.ChartItem>();
+    private int mesMessages, mesVotes, mesTaches, mesTachesRetard, evenementsAujourdhui, rappelsCount, doublons;
+    private double mesImpayes;
+    private List<(DateTime Jour, CalendarEvent Ev)> Semaine = new();
+    private List<Rappel> Rappels = new();
 
     private int presencePresent, presenceAbsent, presenceExcuse, presenceNonPointe;
     private IReadOnlyList<ChartBars.ChartItem> presenceChart = Array.Empty<ChartBars.ChartItem>();
@@ -222,17 +221,23 @@
     private int PresenceTotal => presencePresent + presenceAbsent + presenceExcuse + presenceNonPointe;
     private double PresenceRate => PresenceTotal == 0 ? 0 : presencePresent * 100.0 / PresenceTotal;
 
-    private int materielsCount, pretsActifs, pretsRetard, mediaCount;
+    /// <summary>Le menu est accessible au membre (permission) et n'a pas été masqué dans les paramètres.</summary>
+    private bool Voit(string menu, string? permission = null) =>
+        (permission == null || Store.Can(permission)) && !Store.IsMenuHidden(menu);
 
-    private readonly HashSet<string> _collapsed = new() { "finances", "taches", "materiel" };
-
-    private bool IsCollapsed(string key) => _collapsed.Contains(key);
-
-    private void ToggleCollapse(string key)
+    /// <summary>« Aujourd'hui », « Demain » ou le jour abrégé (Lundi 20).</summary>
+    private static string JourCourt(DateTime d)
     {
-        if (!_collapsed.Add(key)) _collapsed.Remove(key);
-        StateHasChanged();
+        if (d == DateTime.Today) return L.T("Aujourd'hui");
+        if (d == DateTime.Today.AddDays(1)) return L.T("Demain");
+        // Nom complet : en malgache, les jours commencent presque tous par « Ala… ».
+        return L.Majuscule(L.Jour(d.DayOfWeek)) + " " + d.Day;
     }
+
+    private static string Horaire(CalendarEvent e)
+        => e.TouteLaJournee || string.IsNullOrWhiteSpace(e.HeureDebut)
+            ? L.T("Toute la journée")
+            : string.IsNullOrWhiteSpace(e.HeureFin) ? e.HeureDebut! : e.HeureDebut + " – " + e.HeureFin;
 
     protected override void OnInitialized()
     {
@@ -276,31 +281,31 @@
             .Take(5)
             .ToList();
 
-        // Finances
-        totalCotisations = Store.TotalCotisations();
-        soldeTresorerie = Store.SoldeTresorerie();
-        impayes = Store.ImpayesCotisations().Count;
-        financeChart = new List<ChartBars.ChartItem>
-        {
-            new(L.T("Cotisations payées"), Store.Cotisations.Count(c => c.Statut == CotisationStatuts.Payee), "#059669"),
-            new(L.T("Cotisations en attente"), impayes, "#d97706"),
-            new(L.T("Entrées trésorerie"), Store.Tresorerie.Count(t => t.Type == TresorerieTypes.Entree), "#0891b2"),
-            new(L.T("Sorties trésorerie"),Store.Tresorerie.Count(t => t.Type == TresorerieTypes.Sortie), "#dc2626")
-        };
-
-        // Tâches & rappels
+        // Pour vous
         var today = DateTime.Today;
-        tachesEnCours = Store.Taches.Count(t => t.Statut == TacheStatuts.EnCours);
-        tachesEnRetard = Store.Taches.Count(t => t.Statut != TacheStatuts.Terminee
-            && DataStore.TryParseYmd(t.Echeance, out var d) && d.Date < today);
-        rappelsCount = Store.GetRappels().Count;
-        tacheChart = new List<ChartBars.ChartItem>
-        {
-            new(L.T("À faire"), Store.Taches.Count(t => t.Statut == TacheStatuts.AFaire), "#4f46e5"),
-            new(L.T("En cours"), tachesEnCours, "#0891b2"),
-            new(L.T("En retard"), tachesEnRetard, "#dc2626"),
-            new(L.T("Terminées"),Store.Taches.Count(t => t.Statut == TacheStatuts.Terminee), "#059669")
-        };
+        var me = Store.GetCurrentUser()?.Identifiant ?? "";
+        bool EstMoi(string? id) => !string.IsNullOrEmpty(me) && string.Equals(id, me, StringComparison.OrdinalIgnoreCase);
+        mesMessages = me.Length > 0 && Store.Can(Permissions.MessagerieUse) ? Store.UnreadCount(me) : 0;
+        mesVotes = Store.Votes.Count(v => v.EstOuvert && !v.Bulletins.Any(b => EstMoi(b.VotantIdentifiant)));
+        var mes = Store.Taches.Where(t => t.Statut != TacheStatuts.Terminee && t.Assignes.Any(EstMoi)).ToList();
+        mesTaches = mes.Count;
+        mesTachesRetard = mes.Count(t => DataStore.TryParseYmd(t.Echeance, out var d) && d.Date < today);
+        mesImpayes = Store.Cotisations.Where(c => c.Statut == CotisationStatuts.EnAttente && EstMoi(c.MembreIdentifiant)).Sum(c => c.Montant);
+
+        // Les 7 prochains jours
+        Semaine = Enumerable.Range(0, 7).Select(i => today.AddDays(i))
+            .SelectMany(d => Store.Events.Where(e => CalendarPage.OccursOn(e, d))
+                .OrderBy(e => e.TouteLaJournee ? "" : e.HeureDebut ?? "")
+                .Select(e => (d, e)))
+            .Take(8).ToList();
+        evenementsAujourdhui = Store.Events.Count(e => CalendarPage.OccursOn(e, today));
+
+        // À traiter
+        var tous = Voit("rappels", Permissions.RappelsUse) ? Store.GetRappels() : Array.Empty<Rappel>();
+        rappelsCount = tous.Count;
+        static int Rang(string p) => p == CalendarEventTypes.PrioriteUrgente ? 0 : p == CalendarEventTypes.PrioriteImportante ? 1 : 2;
+        Rappels = tous.OrderBy(r => Rang(r.Priorite)).Take(5).ToList();
+        doublons = Store.Can(Permissions.UsersManage) ? Store.GroupesDeDoublons().Count : 0;
 
         // Réunions & présence
         ReunionsCount = Store.Reunions.Count;
@@ -323,13 +328,6 @@
             new(L.T("Absents"), presenceAbsent, "#dc2626"),
             new(L.T("Non pointés"),presenceNonPointe, "#64748b")
         };
-
-        // Matériel & médias
-        materielsCount = Store.Materiels.Count;
-        pretsActifs = Store.Prets.Count(p => string.IsNullOrWhiteSpace(p.DateRetour));
-        pretsRetard = Store.Prets.Count(p => string.IsNullOrWhiteSpace(p.DateRetour)
-            && DataStore.TryParseYmd(p.DatePret, out var dep) && (today - dep.Date).TotalDays > 30);
-        mediaCount = Store.JournalMedia.Count;
     }
 
     private static string ActivityIcon(string type) => type switch

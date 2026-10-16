@@ -46,15 +46,15 @@ public static class HelpCatalog
     private static List<HelpEntry> Build() => new()
     {
         new("dashboard", "Accueil", "🏠",
-            "Votre tableau de bord personnel : les chiffres clés, les dernières arrivées et les modules que vous ouvrez le plus.",
+            "Votre tableau de bord personnel : ce qui vous attend, la semaine à venir, ce qui reste à traiter et les chiffres clés.",
             new[]
             {
                 new HelpSection("Comprendre", new[]
                 {
-                    "Le haut de page résume : membres actifs, nouvelles inscriptions et rappels urgents.",
+                    "« Pour vous » montre vos messages non lus, les votes qui attendent votre voix, vos tâches et les événements du jour : touchez une case pour ouvrir le menu.",
                     "La courbe « Répartition par rôle » s'appuie sur les statuts définis dans « Rôles et permissions ».",
                     "« Derniers utilisateurs ajoutés » liste les comptes créés le plus récemment.",
-                    "Finances, tâches et matériel sont repliés par défaut : touchez le titre pour les déplier."
+                    "« Les 7 prochains jours » liste les événements du calendrier ; « À traiter » reprend les rappels les plus urgents et les fiches en double."
                 }),
                 new HelpSection("Bon à savoir", new[]
                 {

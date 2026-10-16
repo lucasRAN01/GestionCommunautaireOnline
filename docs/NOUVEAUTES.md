@@ -19,6 +19,19 @@ disponible » : un clic sur **Mettre à jour** suffit.
 - Nécessite le script `supabase/migrations/0003_mot_de_passe_oublie.sql`
   (voir `docs/MISE-EN-LIGNE.md`).
 
+## 16 octobre 2026 (accueil)
+
+**Page d'accueil**
+- Les cartes repliables Finances, Tâches & rappels et Matériel & médias
+  ont disparu de l'accueil (ces informations restent dans leurs menus).
+- Nouvelle carte « Pour vous » : messages non lus, votes qui attendent votre
+  voix, vos tâches (et celles en retard), événements du jour et votre
+  cotisation à régler. Chaque case ouvre le menu correspondant.
+- « Les 7 prochains jours » : les événements du calendrier de la semaine.
+- « À traiter » : les rappels les plus urgents et les fiches en double.
+- Une case n'apparaît que si le menu est accessible au membre et n'est pas
+  masqué dans les paramètres.
+
 ## 16 octobre 2026
 
 **Écran de connexion**
