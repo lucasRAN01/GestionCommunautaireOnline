@@ -2483,9 +2483,16 @@ if (string.IsNullOrWhiteSpace(draft.Prenom)) Add("prenom", L.T("Le prénom est o
     {
         var nom = (_settings.AppName ?? "").Trim();
         if (nom.Length == 0 || nom == new AppSettings().AppName) return L.T("Histoire de la communauté");
-        return "aeiouyhàâäéèêëîïôöùûüAEIOUYHÀÂÄÉÈÊËÎÏÔÖÙÛÜ".Contains(nom[0])
+        return L.Elision(nom)
             ? L.F("Histoire d'{0}", nom)
             : L.F("Histoire de {0}", nom);
+    }
+
+    /// <summary>Titre de l'histoire à afficher : le titre par défaut est remplacé par « Histoire de [nom] ».</summary>
+    public string TitreHistoireAffiche()
+    {
+        var titre = (_community.Titre ?? "").Trim();
+        return titre.Length == 0 || titre == new CommunityStory().Titre ? LibelleHistoire() : titre;
     }
 
     public OperationResult SaveCommunityStory(string titre, string sousTitre)

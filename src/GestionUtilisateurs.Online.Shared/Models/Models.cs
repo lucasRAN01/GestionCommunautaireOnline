@@ -258,25 +258,26 @@ public static class AppMenus
         public string Label { get => L.T(_label); init => _label = value; }
     }
 
+    /// <summary>Ordre par défaut : d'abord ce que les membres utilisent chaque jour, puis les outils d'administration.</summary>
     public static IReadOnlyList<MenuDef> All { get; } = new[]
     {
-        new MenuDef("archive", "Archives des utilisateurs", "🗃"),
-        new MenuDef("comptes", "Comptes en ligne", "👤"),
-        new MenuDef("capacite", "Capacité du serveur", "📊"),
-        new MenuDef("documents", "Gestion documentaire", "📄"),
-        new MenuDef("community", "Histoire de la communauté", "📖"),
-        new MenuDef("roles", "Rôles et permissions", "🛡"),
         new MenuDef("messagerie", "Messagerie", "✉"),
         new MenuDef("taches", "Tâches et suivi", "☑"),
+        new MenuDef("rappels", "Rappels intelligents", "⏰"),
+        new MenuDef("votes", "Votes et décisions", "🗳"),
+        new MenuDef("reunions", "Présence et réunions", "👥"),
+        new MenuDef("documents", "Gestion documentaire", "📄"),
+        new MenuDef("journal", "Journal multimédia", "🎞"),
+        new MenuDef("community", "Histoire de la communauté", "📖"),
+        new MenuDef("carte", "Carte de membre", "🪪"),
         new MenuDef("finances", "Finances", "💰"),
         new MenuDef("materiel", "Matériel", "🧰"),
-        new MenuDef("reunions", "Présence et réunions", "👥"),
-        new MenuDef("rappels", "Rappels intelligents", "⏰"),
         new MenuDef("situations", "Situations particulières", "🤝"),
-        new MenuDef("carte", "Carte de membre", "🪪"),
-        new MenuDef("votes", "Votes et décisions", "🗳"),
-        new MenuDef("journal", "Journal multimédia", "🎞"),
-        new MenuDef("guide", "Guide utilisateur", "🧭")
+        new MenuDef("guide", "Guide utilisateur", "🧭"),
+        new MenuDef("comptes", "Comptes en ligne", "👤"),
+        new MenuDef("roles", "Rôles et permissions", "🛡"),
+        new MenuDef("archive", "Archives des utilisateurs", "🗃"),
+        new MenuDef("capacite", "Capacité du serveur", "📊")
     };
 }
 

@@ -4,6 +4,26 @@ Les nouveautés de la version en ligne, de la plus récente à la plus ancienne.
 Après chaque mise à jour, le site affiche un bandeau « Nouvelle version
 disponible » : un clic sur **Mettre à jour** suffit.
 
+## 16 octobre 2026 (nom de l'application, ordre des menus)
+
+**Nom de l'application partout**
+- Dès qu'un nom est choisi (Paramètres › Apparence), les textes qui parlaient
+  de « la communauté » citent ce nom : « Tableau de bord d'Avotra… »,
+  « Histoire d'Avotra… », « Logo d'Avotra… », aide, guide, écran de
+  chargement… dans les trois langues.
+- Le titre par défaut de l'histoire (« Histoire de notre communauté ») devient
+  aussi « Histoire de [nom] ».
+- L'historique d'activité déjà enregistré ne change pas.
+
+**Ordre des menus par défaut**
+- D'abord ce que les membres utilisent chaque jour (Messagerie, Tâches,
+  Rappels, Votes, Réunions, Documents, Journal, Histoire, Carte de membre),
+  puis la gestion (Finances, Matériel, Situations), le Guide, et enfin les
+  outils d'administration (Comptes en ligne, Rôles, Archives, Gestion de
+  données, Capacité du serveur).
+- Un ordre déjà réglé dans Paramètres › Ordre du menu est conservé. Pour
+  adopter le nouvel ordre : « Réinitialiser l'ordre d'origine ».
+
 ## 16 octobre 2026 (mot de passe oublié)
 
 **Mot de passe oublié**
