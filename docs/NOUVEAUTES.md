@@ -4,6 +4,17 @@ Les nouveautés de la version en ligne, de la plus récente à la plus ancienne.
 Après chaque mise à jour, le site affiche un bandeau « Nouvelle version
 disponible » : un clic sur **Mettre à jour** suffit.
 
+## 16 octobre 2026 (icône de l'application installée)
+
+- Le nom et le logo réglés dans Paramètres › Apparence deviennent le nom et
+  l'icône de l'application installée sur le téléphone ou l'ordinateur, et le
+  titre de l'onglet. Sous l'icône, un nom long est raccourci à son premier mot
+  (« Avotra »). Après un changement, le site est republié automatiquement dans
+  l'heure ; une application déjà installée se met à jour quand Chrome vérifie
+  le site (cela peut prendre quelques jours), ou en la réinstallant.
+- Champ mot de passe : un seul œil pour afficher le mot de passe (Edge en
+  ajoutait un second).
+
 ## 16 octobre 2026 (identifiants, connexion, geste retour)
 
 **Identifiants par prénom**
