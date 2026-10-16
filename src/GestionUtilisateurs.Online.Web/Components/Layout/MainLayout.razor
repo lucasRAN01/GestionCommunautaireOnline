@@ -430,6 +430,7 @@
     private bool _logoOpen;
     private DotNetObjectReference<MainLayout>? _swipeRef;
     private bool _swipeStarted;
+    private bool _retourSignale;
     private string _calWeekday = "";
     private string _calDay = "";
     private int _calEventsToday;
@@ -502,11 +503,18 @@
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
+        // Le geste « retour » du système revient à la page précédente tant qu'il y en a une.
+        if (_swipeStarted && State.HasHistory != _retourSignale)
+        {
+            _retourSignale = State.HasHistory;
+            await Js.SetHasPreviousPageAsync(_retourSignale);
+        }
         if (firstRender)
         {
             _swipeRef = DotNetObjectReference.Create(this);
             await Js.EnableSwipeBackAsync(_swipeRef);
             _swipeStarted = true;
+            await Js.EnableSystemBackAsync(_swipeRef);
             // Première connexion : lance le mini-guide de démarrage une seule fois par compte.
             // Le compte technique « admin dba » (BaseAdmin) n'a pas de mini-guide.
             if (Store.IsBaseAdmin)
@@ -1089,6 +1097,7 @@
         if (_swipeStarted)
         {
             try { await Js.DisableSwipeBackAsync(); } catch { }
+            try { await Js.DisableSystemBackAsync(); } catch { }
             _swipeRef?.Dispose();
         }
         Store.DataChanged -= OnChanged;

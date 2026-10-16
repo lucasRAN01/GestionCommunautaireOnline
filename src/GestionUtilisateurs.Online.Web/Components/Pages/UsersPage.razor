@@ -50,6 +50,14 @@ else
         </div>
     }
 
+    @if (IsAdmin && _renommages.Count > 0)
+    {
+        <div class="dup-banner" role="status">
+            <span>⚠ @L.F("{0} identifiant(s) à mettre à la règle du prénom.", _renommages.Count)</span>
+            <button class="btn btn-secondary btn-sm" @onclick="() => _renommagesOpen = true">@L.T("Vérifier")</button>
+        </div>
+    }
+
     @if (_filtered.Count == 0)
     {
         <EmptyState Icon="☺" Title="@L.T("Aucun utilisateur trouvé")" Message="@L.T("Essayez de modifier vos filtres ou ajoutez un nouvel utilisateur.")" />
@@ -211,6 +219,20 @@ else
 
     <PhotoViewer Current="@_viewer" OnClose="@(() => _viewer = null)" />
 
+    <Modal Show="_renommagesOpen" Title="@L.T("Identifiants par prénom")" OnClose="() => _renommagesOpen = false">
+        <p class="text-muted dup-help">@L.T("Chaque identifiant devient le prénom du membre (deux prénoms : jean.pierre). Les homonymes reçoivent un numéro dans l'ordre d'inscription : lucas, lucas1, lucas2. Cotisations, messages, tâches et autres données suivent le nouvel identifiant.")</p>
+        <ul class="ident-plan">
+            @foreach (var (membre, nouveau) in _renommages)
+            {
+                <li><strong>@membre.NomComplet</strong> <span class="text-muted">@membre.Identifiant → </span><strong>@nouveau</strong></li>
+            }
+        </ul>
+        <div class="inline-actions dup-actions">
+            <button class="btn btn-secondary btn-sm" @onclick="() => _renommagesOpen = false">@L.T("Annuler")</button>
+            <button class="btn btn-primary btn-sm" @onclick="AppliquerRenommages">@L.F("Renommer {0} identifiant(s)", _renommages.Count)</button>
+        </div>
+    </Modal>
+
     <Modal Show="_doublonsOpen" Title="@L.T("Fiches en double possibles")" OnClose="() => _doublonsOpen = false">
         <p class="text-muted dup-help">@L.T("Choisissez la fiche à garder : les autres y sont fusionnées. Leurs cotisations, prêts, tâches, messages, réunions, votes, documents et événements passent sur la fiche gardée. Un compte en ligne est toujours conservé.")</p>
         @if (_doublons.Count == 0)
@@ -264,6 +286,8 @@ else
     private IReadOnlyList<DataStore.DoublonGroupe> _doublons = Array.Empty<DataStore.DoublonGroupe>();
     private readonly Dictionary<string, string> _garder = new();
     private bool _doublonsOpen;
+    private IReadOnlyList<(UserAccount Membre, string Nouveau)> _renommages = Array.Empty<(UserAccount, string)>();
+    private bool _renommagesOpen;
 
     private string _search = "";
     private readonly HashSet<string> _statusFilter = new();
@@ -384,6 +408,8 @@ else
     {
         _doublons = CanMerge ? Store.GroupesDeDoublons() : Array.Empty<DataStore.DoublonGroupe>();
         if (_doublons.Count == 0) _doublonsOpen = false;
+        _renommages = IsAdmin ? Store.IdentifiantsARenommer() : Array.Empty<(UserAccount, string)>();
+        if (_renommages.Count == 0) _renommagesOpen = false;
         var q = _search.Trim().ToLowerInvariant();
         IEnumerable<UserAccount> query = Store.Users;
 
@@ -707,6 +733,15 @@ else
 
     private static string CleGroupe(DataStore.DoublonGroupe g)
         => string.Join("|", g.Membres.Select(m => m.Id).OrderBy(i => i, StringComparer.Ordinal));
+
+    private void AppliquerRenommages()
+    {
+        var n = _renommages.Count;
+        var res = Store.AppliquerIdentifiantsParPrenom();
+        _renommagesOpen = false;
+        if (res.Success) State.NotifySuccess(L.F("{0} identifiant(s) renommé(s).", n));
+        else State.NotifyError(res.Error ?? L.T("Action impossible."));
+    }
 
     private void PasDoublon(DataStore.DoublonGroupe g)
     {

@@ -47,7 +47,20 @@ public partial class DataStore
 
     private OnlinePrefs LoadPrefs(string identifiant)
     {
-        var prefs = Deserialize<OnlinePrefs>(_storage.Get(PrefsKey(identifiant))) ?? new OnlinePrefs();
+        var brut = _storage.Get(PrefsKey(identifiant));
+        if (string.IsNullOrEmpty(brut))
+        {
+            // Identifiant renommé : les préférences rangées sous l'ancien suivent le membre.
+            var membre = _users.FirstOrDefault(u => u.Identifiant.Equals(identifiant.Trim(), StringComparison.OrdinalIgnoreCase));
+            foreach (var ancien in membre?.AnciensIdentifiants ?? new List<string>())
+            {
+                brut = _storage.Get(PrefsKey(ancien));
+                if (string.IsNullOrEmpty(brut)) continue;
+                _storage.Set(PrefsKey(identifiant), brut);
+                break;
+            }
+        }
+        var prefs = Deserialize<OnlinePrefs>(brut) ?? new OnlinePrefs();
         prefs.AideVu ??= new List<string>();
         return prefs;
     }
@@ -156,14 +169,7 @@ public partial class DataStore
 
         var cleanNom = (nom ?? "").Trim().ToUpperInvariant();
         var cleanPrenom = (prenom ?? "").Trim();
-        var identifiant = GenerateIdentifiant(cleanPrenom, cleanNom);
-        if (_users.Any(u => u.Identifiant.Equals(identifiant, StringComparison.OrdinalIgnoreCase)))
-        {
-            var suffix = 2;
-            while (_users.Any(u => u.Identifiant.Equals(identifiant + "." + suffix, StringComparison.OrdinalIgnoreCase)))
-                suffix++;
-            identifiant = identifiant + "." + suffix;
-        }
+        var identifiant = IdentifiantLibre(GenerateIdentifiant(cleanPrenom, cleanNom));
 
         var user = new UserAccount
         {

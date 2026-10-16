@@ -273,5 +273,11 @@
   "Mot de passe oublié": "Forgotten password",
   "Retour à la connexion": "Back to sign-in",
   "Traiter": "Handle",
-  "{0} demande(s) de mot de passe oublié": "{0} forgotten password request(s)"
+  "{0} demande(s) de mot de passe oublié": "{0} forgotten password request(s)",
+  "Identifiant ou e-mail": "Username or email",
+  "lucas ou vous@exemple.fr": "lucas or you@example.com",
+  "Saisissez votre identifiant ou votre e-mail.": "Enter your username or email.",
+  "Trop d'essais avec cet identifiant. Réessayez dans 15 minutes, ou connectez-vous avec votre e-mail.": "Too many attempts with this username. Try again in 15 minutes, or sign in with your email.",
+  "La connexion par identifiant n'est pas encore activée : utilisez votre e-mail.": "Signing in with a username is not enabled yet: use your email.",
+  "E-mail ou mot de passe incorrect.": "Incorrect email or password."
 }

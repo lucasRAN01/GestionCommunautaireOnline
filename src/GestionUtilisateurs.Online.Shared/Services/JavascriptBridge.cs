@@ -27,6 +27,14 @@ public class JavascriptBridge
     public Task DisableSwipeBackAsync()
         => InvokeAsync("guNav.disable");
 
+    /// <summary>Geste « retour » du système (Android, navigateur) : voir guRetour dans app.js.</summary>
+    public Task EnableSystemBackAsync<T>(DotNetObjectReference<T> reference) where T : class
+        => InvokeAsync("guRetour.enable", reference);
+    public Task SetHasPreviousPageAsync(bool hasPrevious)
+        => InvokeAsync("guRetour.pagePrecedente", hasPrevious);
+    public Task DisableSystemBackAsync()
+        => InvokeAsync("guRetour.disable");
+
     /// <summary>Balayage horizontal dans l'histoire de la communauté (lecteur de chapitres).</summary>
     public Task EnableCommunitySwipeAsync<T>(DotNetObjectReference<T> reference) where T : class
         => InvokeAsync("guCommunity.enable", reference);

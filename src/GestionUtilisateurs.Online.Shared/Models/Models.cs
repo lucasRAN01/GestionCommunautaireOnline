@@ -127,6 +127,8 @@ public class UserAccount
     public string Prenom { get; set; } = "";
     public string Nom { get; set; } = "";
     public string Identifiant { get; set; } = "";
+    /// <summary>Identifiants portés auparavant (préférences du navigateur, connexion).</summary>
+    public List<string> AnciensIdentifiants { get; set; } = new();
     public string Email { get; set; } = "";
     public string Telephone { get; set; } = "";
     public string Role { get; set; } = "Utilisateur";

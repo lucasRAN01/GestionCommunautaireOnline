@@ -192,9 +192,23 @@ window.guOnline = (function () {
             return s ? { id: s.user.id, email: s.user.email || '' } : null;
         },
 
-        signIn: async function (email, password) {
+        // « login » : e-mail, ou identifiant (sans @). L'identifiant est traduit en
+        // e-mail par le serveur seulement si le mot de passe est juste (script 0004).
+        signIn: async function (login, password) {
+            var email = login;
+            if (login.indexOf('@') < 0) {
+                var q = await client.rpc('login_email', { p_identifiant: login, p_password: password });
+                if (q.error) {
+                    var m = err(q.error);
+                    if (/trop_de_tentatives/.test(m)) return { ok: false, error: 'Trop d\'essais avec cet identifiant. Réessayez dans 15 minutes, ou connectez-vous avec votre e-mail.' };
+                    if (/login_email|function|schema cache/i.test(m)) return { ok: false, error: 'La connexion par identifiant n\'est pas encore activée : utilisez votre e-mail.' };
+                    return { ok: false, error: m };
+                }
+                if (!q.data) return { ok: false, error: 'Identifiant ou mot de passe incorrect.' };
+                email = q.data;
+            }
             var r = await client.auth.signInWithPassword({ email: email, password: password });
-            if (r.error) return { ok: false, error: /invalid login/i.test(err(r.error)) ? 'E-mail ou mot de passe incorrect.' : err(r.error) };
+            if (r.error) return { ok: false, error: /invalid login/i.test(err(r.error)) ? (email === login ? 'E-mail ou mot de passe incorrect.' : 'Identifiant ou mot de passe incorrect.') : err(r.error) };
             return { ok: true };
         },
 

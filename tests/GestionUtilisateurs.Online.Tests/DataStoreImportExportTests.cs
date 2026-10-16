@@ -111,7 +111,7 @@ public class DataStoreImportExportTests
         Assert.True(result.Success);
         Assert.Equal(1, count);
         Assert.Equal(3, store.Users.Count);
-        Assert.Contains(store.Users, u => u.Identifiant == "a.b");
+        Assert.Contains(store.Users, u => u.Identifiant == "a");
     }
 
     [Fact]
