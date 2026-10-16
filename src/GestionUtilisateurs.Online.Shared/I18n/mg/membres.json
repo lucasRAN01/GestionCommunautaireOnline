@@ -325,5 +325,11 @@
   "Rien à traiter pour le moment.": "Tsy misy tokony hokarakaraina amin'izao fotoana izao.",
   "{0} fiche(s) en double à vérifier": "Taratasy mitovy roa {0} hojerena",
   "Utilisateurs › fusionner les doublons": "Mpikambana › hampiraisina ny mitovy roa",
-  "Demain": "Rahampitso"
+  "Demain": "Rahampitso",
+  "{0} identifiant(s) à mettre à la règle du prénom.": "Anarana fidirana {0} tokony havaozina araka ny fanampin'anarana.",
+  "Identifiants par prénom": "Anarana fidirana araka ny fanampin'anarana",
+  "Chaque identifiant devient le prénom du membre (deux prénoms : jean.pierre). Les homonymes reçoivent un numéro dans l'ordre d'inscription : lucas, lucas1, lucas2. Cotisations, messages, tâches et autres données suivent le nouvel identifiant.": "Ny anarana fidirana dia lasa ny fanampin'anaran'ny mpikambana (fanampin'anarana roa : jean.pierre). Ireo mitovy fanampin'anarana dia omena laharana araka ny filaharan'ny fisoratana anarana : lucas, lucas1, lucas2. Manaraka ny anarana fidirana vaovao ny latsakemboka, hafatra, asa ary angona hafa.",
+  "Renommer {0} identifiant(s)": "Ovay ny anarana fidirana {0}",
+  "{0} identifiant(s) renommé(s).": "Anarana fidirana {0} voaova.",
+  "Action réservée aux administrateurs.": "Ho an'ny mpitantana ihany."
 }

@@ -85,7 +85,7 @@ public sealed class OnlineSession : IDisposable
     public async Task<string?> SignInAsync(string email, string password)
     {
         var res = await _api.SignInAsync(email, password);
-        if (!res.Ok) return res.Error ?? L.T("Connexion impossible.");
+        if (!res.Ok) return L.T(res.Error ?? "Connexion impossible.");
         var user = await _api.GetSessionAsync();
         if (user == null) return L.T("Connexion impossible.");
         await EnterAsync(user);

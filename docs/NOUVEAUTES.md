@@ -4,6 +4,28 @@ Les nouveautés de la version en ligne, de la plus récente à la plus ancienne.
 Après chaque mise à jour, le site affiche un bandeau « Nouvelle version
 disponible » : un clic sur **Mettre à jour** suffit.
 
+## 16 octobre 2026 (identifiants, connexion, geste retour)
+
+**Identifiants par prénom**
+- Un nouveau membre reçoit son prénom comme identifiant : « lucas »,
+  « jean.pierre » pour deux prénoms. Les homonymes reçoivent un numéro dans
+  l'ordre d'inscription : lucas, lucas1, lucas2.
+- Utilisateurs : un bandeau propose aux administrateurs de mettre les
+  identifiants existants à cette règle. La liste « ancien → nouveau » est
+  affichée avant de confirmer. Cotisations, prêts, tâches, messages, réunions,
+  votes, documents, événements et liens de famille suivent le nouvel
+  identifiant. L'historique d'activité ne change pas.
+
+**Connexion par identifiant**
+- L'écran de connexion accepte l'identifiant ou l'e-mail. Après 5 essais faux
+  en 15 minutes, l'identifiant est bloqué 15 minutes ; l'e-mail reste
+  utilisable. Nécessite le script `0004_connexion_identifiant.sql`.
+
+**Geste retour d'Android**
+- Dans l'application installée, le geste retour (ou le bouton Précédent du
+  navigateur) ferme d'abord la fenêtre ou le menu ouvert, puis revient à la
+  page précédente. Depuis l'accueil, il quitte l'application.
+
 ## 16 octobre 2026 (nom de l'application, ordre des menus)
 
 **Nom de l'application partout**
