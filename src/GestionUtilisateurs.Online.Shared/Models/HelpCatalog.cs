@@ -203,7 +203,7 @@ public static class HelpCatalog
                     "Chaque nouvelle inscription apparaît en haut de la liste avec le statut « en attente ».",
                     "Choisissez le rôle puis « Valider » pour ouvrir l'accès, ou « Refuser » pour le bloquer.",
                     "Un compte validé se désactive ou se réactive depuis sa fiche dans « Utilisateurs ».",
-                    "Mot de passe oublié : « Nouveau mot de passe » définit un mot de passe provisoire à transmettre au membre."
+                    "Mot de passe oublié : la demande envoyée depuis l'écran de connexion apparaît dans « Mots de passe oubliés ». « Donner un mot de passe provisoire » le définit ; transmettez-le au membre, qui devra choisir le sien à sa connexion suivante."
                 }),
                 new HelpSection("Bon à savoir", new[]
                 {

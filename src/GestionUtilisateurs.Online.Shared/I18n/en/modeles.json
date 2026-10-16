@@ -251,7 +251,7 @@
   "Chaque nouvelle inscription apparaît en haut de la liste avec le statut « en attente ».": "Each new sign-up appears at the top of the list with the status “pending”.",
   "Choisissez le rôle puis « Valider » pour ouvrir l'accès, ou « Refuser » pour le bloquer.": "Choose the role, then “Approve” to grant access, or “Reject” to block it.",
   "Un compte validé se désactive ou se réactive depuis sa fiche dans « Utilisateurs ».": "An approved account is deactivated or reactivated from its record in “Members”.",
-  "Mot de passe oublié : « Nouveau mot de passe » définit un mot de passe provisoire à transmettre au membre.": "Forgotten password: “New password” sets a temporary password to pass on to the member.",
+  "Mot de passe oublié : la demande envoyée depuis l'écran de connexion apparaît dans « Mots de passe oubliés ». « Donner un mot de passe provisoire » le définit ; transmettez-le au membre, qui devra choisir le sien à sa connexion suivante.": "Forgotten password: a request sent from the sign-in screen appears under “Forgotten passwords”. “Give a temporary password” sets one; pass it on to the member, who will have to choose their own at their next sign-in.",
   "Un e-mail GitHub prévient l'administrateur quand des comptes attendent une validation.": "A GitHub email notifies the administrator when accounts are waiting for approval.",
   "Le premier compte créé est automatiquement administrateur.": "The first account created is automatically an administrator.",
   "Chaque rôle possède une liste de permissions activables/désactivables.": "Each role has a list of permissions that can be switched on or off.",

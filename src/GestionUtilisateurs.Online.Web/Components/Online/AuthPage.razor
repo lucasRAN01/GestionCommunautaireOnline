@@ -37,7 +37,7 @@
             {
                 <h1 class="online-auth-mobile-name">@L.T(_communaute)</h1>
             }
-            <p class="login-subtitle">@(_signup ? L.T("Créez votre compte membre") : L.T("Connectez-vous à votre espace membre"))</p>
+            <p class="login-subtitle">@(_signup ? L.T("Créez votre compte membre") : _forgot ? L.T("Mot de passe oublié") : L.T("Connectez-vous à votre espace membre"))</p>
         </div>
 
         <div class="login-card">
@@ -50,6 +50,32 @@
             {
                 <div class="login-global-error" role="alert">@_error</div>
             }
+
+            @if (_forgot)
+            {
+                @if (_forgotSent)
+                {
+                    <div class="login-info login-success" role="status">
+                        <p><strong>@L.T("Demande envoyée.")</strong></p>
+                        <p>@L.T("Un administrateur va vous communiquer un mot de passe provisoire (par téléphone, SMS ou de vive voix). Connectez-vous avec ce mot de passe : l'application vous demandera alors de choisir le vôtre.")</p>
+                    </div>
+                }
+                else
+                {
+                    <p class="login-forgot-intro">@L.T("Saisissez l'adresse e-mail de votre compte. Votre demande sera transmise à l'administrateur, qui vous donnera un mot de passe provisoire.")</p>
+                    <div class="form-group">
+                        <label for="forgot-email">@L.T("E-mail")</label>
+                        <input id="forgot-email" type="email" autocomplete="email" placeholder="@L.T("vous@exemple.fr")"
+                               value="@_email" @oninput="e => _email = e.Value?.ToString() ?? string.Empty" @onkeydown="OnForgotKeyDown" />
+                    </div>
+                    <button type="button" class="btn btn-primary btn-block" disabled="@_busy" @onclick="SendForgotAsync">
+                        @(_busy ? L.T("Veuillez patienter…") : L.T("Envoyer la demande à l'administrateur"))
+                    </button>
+                }
+                <button type="button" class="login-forgot" @onclick="() => ShowForgot(false)">← @L.T("Retour à la connexion")</button>
+            }
+            else
+            {
 
             @if (_signup)
             {
@@ -101,19 +127,14 @@
 
             @if (!_signup)
             {
-                <button type="button" class="login-forgot" @onclick="() => _forgot = !_forgot">@L.T("Mot de passe oublié ?")</button>
-                @if (_forgot)
-                {
-                    <div class="login-info">
-                        <p>@L.T("Contactez un administrateur de la communauté : il vous donnera un nouveau mot de passe, que vous pourrez changer ensuite depuis « Mes informations ».")</p>
-                    </div>
-                }
+                <button type="button" class="login-forgot" @onclick="() => ShowForgot(true)">@L.T("Mot de passe oublié ?")</button>
             }
             else
             {
                 <div class="login-info">
                     <p>@L.T("Après l'inscription, un administrateur valide votre compte et vous attribue un rôle. Vous aurez accès à l'application dès la validation.")</p>
                 </div>
+            }
             }
         </div>
     </div>
@@ -177,10 +198,42 @@
     private string _telephone = "";
     private string? _error;
 
+    private bool _forgotSent;
+
     private void Switch(bool signup)
     {
         _signup = signup;
+        _forgot = false;
         _error = null;
+    }
+
+    private void ShowForgot(bool show)
+    {
+        _forgot = show;
+        _forgotSent = false;
+        _error = null;
+    }
+
+    private async Task OnForgotKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter") await SendForgotAsync();
+    }
+
+    private async Task SendForgotAsync()
+    {
+        if (_busy) return;
+        _error = string.IsNullOrWhiteSpace(_email) || !_email.Contains('@') ? L.T("Saisissez une adresse e-mail valide.") : null;
+        if (_error != null) return;
+        _busy = true;
+        try
+        {
+            _error = await Session.RequestPasswordHelpAsync(_email);
+            _forgotSent = _error == null;
+        }
+        finally
+        {
+            _busy = false;
+        }
     }
 
     private async Task OnKeyDown(KeyboardEventArgs e)

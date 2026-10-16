@@ -40,6 +40,10 @@ public sealed class OnlineProfile
     [JsonPropertyName("created_at")] public DateTimeOffset? CreatedAt { get; set; }
     [JsonPropertyName("validated_at")] public DateTimeOffset? ValidatedAt { get; set; }
     [JsonPropertyName("last_seen_at")] public DateTimeOffset? LastSeenAt { get; set; }
+    /// <summary>Mot de passe oublié : date de la demande envoyée depuis l'écran de connexion.</summary>
+    [JsonPropertyName("mdp_demande_at")] public DateTimeOffset? MdpDemandeAt { get; set; }
+    /// <summary>Mot de passe donné par un administrateur : le membre doit le changer.</summary>
+    [JsonPropertyName("mdp_provisoire")] public bool MdpProvisoire { get; set; }
 
     public string NomComplet => (Nom.ToUpperInvariant() + " " + Prenom).Trim();
     public bool IsActive => Statut == OnlineStatuts.Actif;

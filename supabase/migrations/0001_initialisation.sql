@@ -28,7 +28,9 @@ create table if not exists public.profiles (
     created_at    timestamptz not null default now(),
     validated_at  timestamptz,
     validated_by  uuid,
-    last_seen_at  timestamptz
+    last_seen_at  timestamptz,
+    mdp_demande_at timestamptz,                          -- mot de passe oublié : demande en attente
+    mdp_provisoire boolean not null default false        -- mot de passe donné par un administrateur
 );
 
 -- Données de l'application, une ligne par collection (membres, calendrier,
@@ -323,6 +325,7 @@ begin
            updated_at = now()
      where id = p_id;
     if not found then raise exception 'Compte introuvable.'; end if;
+    update public.profiles set mdp_provisoire = true, mdp_demande_at = null where id = p_id;
 end;
 $$;
 
@@ -612,13 +615,14 @@ create or replace function public.capacity_status()
 returns jsonb language plpgsql stable security definer set search_path = public as $$
 begin
     if not public.gu_is_admin() then
-        return jsonb_build_object('open_alerts', 0, 'level', 'ok', 'pending_accounts', 0);
+        return jsonb_build_object('open_alerts', 0, 'level', 'ok', 'pending_accounts', 0, 'password_requests', 0);
     end if;
     return jsonb_build_object(
         'open_alerts', (select count(*) from public.admin_alerts where acknowledged_at is null),
         'level', coalesce((select case when bool_or(level = 'critique') then 'critique' else 'attention' end
-                             from public.admin_alerts where acknowledged_at is null), 'ok'),
-        'pending_accounts', (select count(*) from public.profiles where statut = 'en_attente'));
+                             from public.admin_alerts where acknowledged_at is null having count(*) > 0), 'ok'),
+        'pending_accounts', (select count(*) from public.profiles where statut = 'en_attente'),
+        'password_requests', (select count(*) from public.profiles where statut = 'actif' and mdp_demande_at is not null));
 end;
 $$;
 
@@ -694,3 +698,46 @@ grant execute on function public.public_branding(), public.gu_logo_object() to a
 drop policy if exists gu_fichiers_logo_public on storage.objects;
 create policy gu_fichiers_logo_public on storage.objects for select to anon
     using (bucket_id = 'fichiers' and name = public.gu_logo_object());
+
+-- Mot de passe oublié (voir 0003_mot_de_passe_oublie.sql).
+
+alter table public.profiles add column if not exists mdp_demande_at timestamptz;
+alter table public.profiles add column if not exists mdp_provisoire boolean not null default false;
+
+-- Demande envoyée depuis l'écran de connexion (sans compte connecté).
+-- La réponse est toujours la même, que l'e-mail existe ou non, pour ne pas
+-- révéler qui est inscrit. Une demande déjà en attente garde sa date.
+create or replace function public.request_password_help(p_email text)
+returns void language plpgsql security definer set search_path = public as $$
+begin
+    if length(coalesce(p_email, '')) between 3 and 254 then
+        update public.profiles
+           set mdp_demande_at = now()
+         where lower(email) = lower(trim(p_email))
+           and statut = 'actif'
+           and mdp_demande_at is null;
+    end if;
+end;
+$$;
+
+-- L'administrateur écarte une demande (par exemple déjà réglée de vive voix).
+create or replace function public.dismiss_password_request(p_id uuid)
+returns void language plpgsql security definer set search_path = public as $$
+begin
+    if not public.gu_is_admin() then
+        raise exception 'Accès refusé' using errcode = '42501';
+    end if;
+    update public.profiles set mdp_demande_at = null where id = p_id;
+end;
+$$;
+
+-- Le membre a choisi son propre mot de passe : il n'est plus provisoire.
+create or replace function public.password_changed()
+returns void language sql security definer set search_path = public as $$
+    update public.profiles set mdp_provisoire = false, mdp_demande_at = null where id = auth.uid();
+$$;
+
+revoke execute on function public.request_password_help(text), public.dismiss_password_request(uuid),
+    public.password_changed() from public;
+grant execute on function public.request_password_help(text) to anon, authenticated;
+grant execute on function public.dismiss_password_request(uuid), public.password_changed() to authenticated;

@@ -432,5 +432,17 @@
   "Feuille de présence": "Attendance sheet",
   "Situation particulière": "Special situation",
   "Vote interne": "Internal vote",
-  "Vote exprimé": "Vote cast"
+  "Vote exprimé": "Vote cast",
+  "8 caractères minimum. Notez-le avant d'enregistrer.": "At least 8 characters. Write it down before saving.",
+  "Ces membres ont demandé un nouveau mot de passe depuis l'écran de connexion. Donnez-leur un mot de passe provisoire et transmettez-le-leur vous-même (téléphone, SMS ou de vive voix) : à la connexion suivante, ils devront choisir leur propre mot de passe.": "These members asked for a new password from the sign-in screen. Give them a temporary password and pass it on yourself (phone, text message or in person): next time they sign in, they will have to choose their own password.",
+  "et transmettez-le-lui (téléphone, SMS ou de vive voix). À sa prochaine connexion, l'application lui demandera de choisir son propre mot de passe.": "and pass it on (phone, text message or in person). Next time they sign in, the app will ask them to choose their own password.",
+  "Demande de {0} écartée.": "{0}'s request dismissed.",
+  "Demande du {0}": "Requested on {0}",
+  "Donner un mot de passe provisoire": "Give a temporary password",
+  "Générer": "Generate",
+  "Ignorer": "Dismiss",
+  "Le membre doit encore choisir son propre mot de passe.": "The member still has to choose their own password.",
+  "Mot de passe provisoire de {0} : {1}. Transmettez-le-lui.": "Temporary password for {0}: {1}. Pass it on to them.",
+  "Mots de passe oubliés": "Forgotten passwords",
+  "Téléphone du membre : {0}": "Member's phone: {0}"
 }

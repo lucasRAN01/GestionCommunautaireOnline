@@ -432,5 +432,17 @@
   "Feuille de présence": "Lisitry ny fanatrehana",
   "Situation particulière": "Toe-javatra manokana",
   "Vote interne": "Fifidianana anatiny",
-  "Vote exprimé": "Latsa-bato voalatsaka"
+  "Vote exprimé": "Latsa-bato voalatsaka",
+  "8 caractères minimum. Notez-le avant d'enregistrer.": "Litera 8 farafahakeliny. Soraty aloha vao tehirizina.",
+  "Ces membres ont demandé un nouveau mot de passe depuis l'écran de connexion. Donnez-leur un mot de passe provisoire et transmettez-le-leur vous-même (téléphone, SMS ou de vive voix) : à la connexion suivante, ils devront choisir leur propre mot de passe.": "Nangataka teny miafina vaovao avy amin'ny pejy fidirana ireo mpikambana ireo. Omeo teny miafina vonjimaika izy ireo ary ianao no mampita izany (telefaona, SMS na mivantana): amin'ny fidirana manaraka dia tsy maintsy misafidy ny teny miafin'izy ireo manokana izy ireo.",
+  "et transmettez-le-lui (téléphone, SMS ou de vive voix). À sa prochaine connexion, l'application lui demandera de choisir son propre mot de passe.": "ary ampitao aminy (telefaona, SMS na mivantana). Amin'ny fidirany manaraka dia hangataka azy hisafidy ny teny miafiny manokana ny rindranasa.",
+  "Demande de {0} écartée.": "Nesorina ny fangatahan'i {0}.",
+  "Demande du {0}": "Fangatahana tamin'ny {0}",
+  "Donner un mot de passe provisoire": "Hanome teny miafina vonjimaika",
+  "Générer": "Hamorona",
+  "Ignorer": "Tsy hiraharaha",
+  "Le membre doit encore choisir son propre mot de passe.": "Mbola tsy maintsy misafidy ny teny miafiny manokana ny mpikambana.",
+  "Mot de passe provisoire de {0} : {1}. Transmettez-le-lui.": "Teny miafina vonjimaika an'i {0}: {1}. Ampitao aminy.",
+  "Mots de passe oubliés": "Teny miafina hadino",
+  "Téléphone du membre : {0}": "Telefaonin'ny mpikambana: {0}"
 }
