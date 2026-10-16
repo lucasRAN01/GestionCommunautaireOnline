@@ -14,6 +14,8 @@ disponible » : un clic sur **Mettre à jour** suffit.
   le site (cela peut prendre quelques jours), ou en la réinstallant.
 - Champ mot de passe : un seul œil pour afficher le mot de passe (Edge en
   ajoutait un second).
+- L'icône et le nom sont pris à jour même sur un téléphone qui gardait
+  l'ancienne version du site en mémoire.
 
 ## 16 octobre 2026 (identifiants, connexion, geste retour)
 
