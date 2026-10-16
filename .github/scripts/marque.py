@@ -77,9 +77,30 @@ def icone(source, cible, taille, marge=0.8):
                     "-extent", f"{taille}x{taille}", "-depth", "8", cible], check=True)
 
 
+def versionner_icones(www, version):
+    # Les icônes portent l'empreinte du nom et du logo : un téléphone dont
+    # l'ancienne version du site est encore en cache télécharge quand même
+    # la nouvelle icône à l'installation.
+    chemin = os.path.join(www, "manifest.webmanifest")
+    with open(chemin, encoding="utf-8") as f:
+        manifeste = json.load(f)
+    for i in manifeste.get("icons", []):
+        i["src"] = i["src"].split("?")[0] + "?v=" + version
+    with open(chemin, "w", encoding="utf-8") as f:
+        json.dump(manifeste, f, ensure_ascii=False, indent=2)
+    chemin = os.path.join(www, "index.html")
+    with open(chemin, encoding="utf-8") as f:
+        page = f.read()
+    page = re.sub(r'href="(manifest\.webmanifest|favicon\.png|icon-\d+\.png)"', rf'href="\1?v={version}"', page)
+    with open(chemin, "w", encoding="utf-8") as f:
+        f.write(page)
+
+
 def appliquer(www, marque):
+    version = empreinte(marque)
     with open(os.path.join(www, "marque.txt"), "w") as f:
-        f.write(empreinte(marque) + "\n")
+        f.write(version + "\n")
+    versionner_icones(www, version)
     nom = marque["nom"]
     if nom:
         chemin = os.path.join(www, "manifest.webmanifest")
