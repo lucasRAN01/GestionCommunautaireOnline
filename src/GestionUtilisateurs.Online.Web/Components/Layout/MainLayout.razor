@@ -125,6 +125,17 @@
                 <button type="button" class="btn btn-secondary btn-sm" @onclick='() => Go("comptes")'>@L.T("Valider")</button>
             </div>
         }
+        @if (Online.Admin.PasswordRequests > 0 && Online.IsAdmin && State.CurrentPage != "comptes")
+        {
+            <div class="quota-banner online-pending-banner" role="status">
+                <span class="quota-banner-icon" aria-hidden="true">🔑</span>
+                <div class="quota-banner-main">
+                    <strong>@L.F("{0} demande(s) de mot de passe oublié", Online.Admin.PasswordRequests)</strong>
+                    <span>@L.T("Donnez un mot de passe provisoire à ces membres dans « Comptes en ligne ».")</span>
+                </div>
+                <button type="button" class="btn btn-secondary btn-sm" @onclick='() => Go("comptes")'>@L.T("Traiter")</button>
+            </div>
+        }
         @if (false && _storageLevel != "ok")
         {
             <div class="quota-banner @(_storageLevel == "critical" ? "quota-banner-critical" : "")" role="alert">
@@ -217,8 +228,13 @@
         </div>
     }
 
-    <Modal Title="@L.T("Changer mon mot de passe")" Show="_pwdOpen" OnClose="() => _pwdOpen = false">
+    <Modal Title="@(Online.MustChangePassword ? L.T("Choisissez votre mot de passe") : L.T("Changer mon mot de passe"))"
+           Show="_pwdOpen || Online.MustChangePassword" Closable="!Online.MustChangePassword" OnClose="ClosePassword">
         <ChildContent>
+            @if (Online.MustChangePassword)
+            {
+                <p class="online-force-pwd-intro">@L.T("Vous vous êtes connecté avec un mot de passe provisoire donné par l'administrateur. Choisissez maintenant votre propre mot de passe : vous l'utiliserez pour vos prochaines connexions.")</p>
+            }
             <div class="form-group">
                 <label for="me-pwd">@L.T("Nouveau mot de passe")</label>
                 <input id="me-pwd" type="password" autocomplete="new-password" @bind="_pwd1" />
@@ -230,7 +246,14 @@
             </div>
         </ChildContent>
         <FooterContent>
-            <button type="button" class="btn btn-secondary" @onclick="() => _pwdOpen = false">@L.T("Annuler")</button>
+            @if (Online.MustChangePassword)
+            {
+                <button type="button" class="btn btn-secondary" @onclick="() => Online.SignOutAsync()">@L.T("Se déconnecter")</button>
+            }
+            else
+            {
+                <button type="button" class="btn btn-secondary" @onclick="() => _pwdOpen = false">@L.T("Annuler")</button>
+            }
             <button type="button" class="btn btn-primary" disabled="@_pwdBusy" @onclick="SavePasswordAsync">@L.T("Enregistrer")</button>
         </FooterContent>
     </Modal>
@@ -393,7 +416,8 @@
 </div>
 
 
-<OnboardingGuide Show="_showOnboarding" OnClose="CloseOnboarding" />
+@* Le mot de passe provisoire se remplace d'abord ; le guide s'affiche ensuite. *@
+<OnboardingGuide Show="_showOnboarding && !Online.MustChangePassword" OnClose="CloseOnboarding" />
 
 @code {
     [Parameter] public RenderFragment? ChildContent { get; set; }
@@ -678,7 +702,7 @@
                     n = Store.Documents.Count(d => d.Supprime);
                     break;
                 case "comptes":
-                    n = Online.Admin.PendingAccounts;
+                    n = Online.Admin.PendingAccounts + Online.Admin.PasswordRequests;
                     break;
                 case "capacite":
                     n = Online.Admin.OpenAlerts;
@@ -999,6 +1023,12 @@
     private bool _pwdBusy;
     private string _pwd1 = "";
     private string _pwd2 = "";
+
+    /// <summary>Un mot de passe provisoire doit être remplacé : la fenêtre ne se ferme pas.</summary>
+    private void ClosePassword()
+    {
+        if (!Online.MustChangePassword) _pwdOpen = false;
+    }
 
     private void OpenPassword()
     {

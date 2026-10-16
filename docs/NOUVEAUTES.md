@@ -4,6 +4,21 @@ Les nouveautés de la version en ligne, de la plus récente à la plus ancienne.
 Après chaque mise à jour, le site affiche un bandeau « Nouvelle version
 disponible » : un clic sur **Mettre à jour** suffit.
 
+## 16 octobre 2026 (mot de passe oublié)
+
+**Mot de passe oublié**
+- Sur l'écran de connexion, « Mot de passe oublié ? » permet de saisir son
+  e-mail et d'envoyer la demande à l'administrateur.
+- L'administrateur la voit dans Comptes en ligne › « Mots de passe oubliés »,
+  avec un bandeau, un badge et un ticket GitHub quotidien. Il donne un mot de
+  passe provisoire (bouton « Générer ») et le transmet au membre.
+- À la connexion suivante, le membre doit choisir son propre mot de passe
+  avant d'utiliser l'application.
+- Le bandeau « Espace serveur à surveiller » ne s'affiche plus quand aucune
+  alerte n'est ouverte.
+- Nécessite le script `supabase/migrations/0003_mot_de_passe_oublie.sql`
+  (voir `docs/MISE-EN-LIGNE.md`).
+
 ## 16 octobre 2026
 
 **Écran de connexion**

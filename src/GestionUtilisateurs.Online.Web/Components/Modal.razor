@@ -11,7 +11,10 @@
                 {
                     <h3>@Title</h3>
                 }
-                <button type="button" class="modal-close" aria-label="@L.T("Fermer")" @onclick="() => _ = OnClose.InvokeAsync()">&times;</button>
+                @if (Closable)
+                {
+                    <button type="button" class="modal-close" aria-label="@L.T("Fermer")" @onclick="() => _ = OnClose.InvokeAsync()">&times;</button>
+                }
             </div>
             <div class="modal-body">
                 @ChildContent
@@ -33,6 +36,8 @@
     [Parameter] public RenderFragment? ChildContent { get; set; }
     [Parameter] public RenderFragment? FooterContent { get; set; }
     [Parameter] public EventCallback OnClose { get; set; }
+    /// <summary>false : pas de bouton « × » (fenêtre qu'il faut remplir, comme un mot de passe provisoire).</summary>
+    [Parameter] public bool Closable { get; set; } = true;
 
     private bool _scrollLocked;
 

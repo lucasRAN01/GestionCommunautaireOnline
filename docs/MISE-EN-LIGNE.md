@@ -118,6 +118,11 @@ script peut être relancé sans danger.
   appareil qui ne s'est jamais connecté. Seuls ce nom et ce logo deviennent
   lisibles sans compte. Sans ce script, l'écran de connexion montre le nom et
   le logo gardés lors de la dernière connexion sur l'appareil.
+- `supabase/migrations/0003_mot_de_passe_oublie.sql` (16 octobre 2026) :
+  « Mot de passe oublié » sur l'écran de connexion, envoi de la demande aux
+  administrateurs et changement obligatoire du mot de passe provisoire. Sans ce
+  script, la demande ne peut pas être envoyée (le membre est invité à contacter
+  un administrateur).
 
 ### Installer le site sur un téléphone
 
@@ -143,10 +148,18 @@ les fichiers exportés hors du téléphone.
 4. Ensuite, le rôle d'un membre ou la désactivation de son compte se gèrent
    depuis sa fiche dans **Utilisateurs**, et les droits dans
    **Rôles et permissions** : ces droits sont aussi appliqués par le serveur.
-5. Mot de passe oublié : il n'y a pas d'envoi d'e-mail. Un administrateur
-   ouvre **Comptes en ligne > Nouveau mot de passe**, définit un mot de passe
-   provisoire et le transmet ; le membre le change ensuite depuis son menu
-   (**Changer mon mot de passe**).
+5. Mot de passe oublié (script `0003_mot_de_passe_oublie.sql`) : il n'y a pas
+   d'envoi d'e-mail aux membres.
+   - Sur l'écran de connexion, le membre touche **Mot de passe oublié ?**, saisit
+     son e-mail et envoie la demande.
+   - Les administrateurs la voient dans **Comptes en ligne > Mots de passe
+     oubliés** (avec un bandeau et un badge). La veille quotidienne ouvre aussi un
+     ticket GitHub, donc un e-mail.
+   - L'administrateur choisit **Donner un mot de passe provisoire** et le
+     transmet lui-même (téléphone, SMS, de vive voix).
+   - À la connexion suivante, l'application oblige le membre à choisir son
+     propre mot de passe.
+   - **Nouveau mot de passe** reste disponible pour tout compte actif.
 
 ---
 

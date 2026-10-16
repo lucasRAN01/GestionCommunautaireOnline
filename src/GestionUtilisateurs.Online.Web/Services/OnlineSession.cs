@@ -23,6 +23,8 @@ public sealed class AdminStatus
     public int OpenAlerts { get; set; }
     public string Level { get; set; } = "ok";
     public int PendingAccounts { get; set; }
+    /// <summary>Demandes « mot de passe oublié » en attente d'un mot de passe provisoire.</summary>
+    public int PasswordRequests { get; set; }
 }
 
 /// <summary>
@@ -132,10 +134,31 @@ public sealed class OnlineSession : IDisposable
         }
     }
 
+    /// <summary>Le membre a besoin de choisir son propre mot de passe (provisoire donné par un administrateur).</summary>
+    public bool MustChangePassword => State == OnlineSessionState.Ready && Profile?.MdpProvisoire == true;
+
     public async Task<string?> ChangePasswordAsync(string password)
     {
         var res = await _api.UpdatePasswordAsync(password);
-        return res.Ok ? null : res.Error ?? L.T("Modification impossible.");
+        if (!res.Ok) return res.Error ?? L.T("Modification impossible.");
+        // Le mot de passe n'est plus provisoire (sans effet si le script SQL 0003 n'est pas installé).
+        await _api.RpcAsync<object>("password_changed");
+        if (Profile != null && Profile.MdpProvisoire)
+        {
+            Profile.MdpProvisoire = false;
+            Changed?.Invoke();
+        }
+        return null;
+    }
+
+    /// <summary>
+    /// « Mot de passe oublié » depuis l'écran de connexion : la demande est
+    /// transmise aux administrateurs, qui donnent un mot de passe provisoire.
+    /// </summary>
+    public async Task<string?> RequestPasswordHelpAsync(string email)
+    {
+        var res = await _api.RpcAsync<object>("request_password_help", new { p_email = email.Trim() });
+        return res.Ok ? null : L.T("La demande n'a pas pu être envoyée. Contactez directement un administrateur de la communauté.");
     }
 
     /// <summary>Met à jour le résumé administrateur (badges et bandeau de saturation).</summary>
@@ -150,7 +173,8 @@ public sealed class OnlineSession : IDisposable
         {
             OpenAlerts = res.Data.open_alerts,
             Level = res.Data.level ?? "ok",
-            PendingAccounts = res.Data.pending_accounts
+            PendingAccounts = res.Data.pending_accounts,
+            PasswordRequests = res.Data.password_requests
         };
         Changed?.Invoke();
     }
@@ -160,6 +184,7 @@ public sealed class OnlineSession : IDisposable
         public int open_alerts { get; set; }
         public string? level { get; set; }
         public int pending_accounts { get; set; }
+        public int password_requests { get; set; }
     }
 
     private async Task EnterAsync(OnlineAuthUser user)

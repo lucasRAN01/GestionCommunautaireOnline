@@ -261,5 +261,17 @@
   "Vous pouvez revoir ce guide à tout moment depuis « Guide utilisateur », ici dans le menu. Bon usage !": "You can view this guide again at any time from “User guide”, right here in the menu. Enjoy!",
   "Pour revoir ce guide, ouvrez « ⋮ » puis « Guide utilisateur ». Astuce : glissez du bord gauche vers la droite pour revenir en arrière.": "To view this guide again, open “⋮” then “User guide”. Tip: swipe from the left edge to the right to go back.",
   "Histoire de {0}": "Story of {0}",
-  "Histoire d'{0}": "Story of {0}"
+  "Histoire d'{0}": "Story of {0}",
+  "Envoyer la demande à l'administrateur": "Send the request to the administrator",
+  "La demande n'a pas pu être envoyée. Contactez directement un administrateur de la communauté.": "The request could not be sent. Please contact a community administrator directly.",
+  "Saisissez l'adresse e-mail de votre compte. Votre demande sera transmise à l'administrateur, qui vous donnera un mot de passe provisoire.": "Enter your account's e-mail address. Your request will be sent to the administrator, who will give you a temporary password.",
+  "Un administrateur va vous communiquer un mot de passe provisoire (par téléphone, SMS ou de vive voix). Connectez-vous avec ce mot de passe : l'application vous demandera alors de choisir le vôtre.": "An administrator will give you a temporary password (by phone, text message or in person). Sign in with it: the app will then ask you to choose your own.",
+  "Vous vous êtes connecté avec un mot de passe provisoire donné par l'administrateur. Choisissez maintenant votre propre mot de passe : vous l'utiliserez pour vos prochaines connexions.": "You signed in with a temporary password given by the administrator. Choose your own password now: you will use it to sign in from now on.",
+  "Choisissez votre mot de passe": "Choose your password",
+  "Demande envoyée.": "Request sent.",
+  "Donnez un mot de passe provisoire à ces membres dans « Comptes en ligne ».": "Give these members a temporary password in “Online accounts”.",
+  "Mot de passe oublié": "Forgotten password",
+  "Retour à la connexion": "Back to sign-in",
+  "Traiter": "Handle",
+  "{0} demande(s) de mot de passe oublié": "{0} forgotten password request(s)"
 }

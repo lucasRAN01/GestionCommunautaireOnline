@@ -169,4 +169,21 @@ public class AccountService
 
     public async Task<string?> SetPasswordAsync(OnlineProfile profile, string password)
         => (await _api.RpcAsync<object>("admin_set_password", new { p_id = profile.Id, p_password = password })).Error;
+
+    /// <summary>Écarte une demande de mot de passe oublié (déjà réglée autrement).</summary>
+    public async Task<string?> DismissPasswordRequestAsync(OnlineProfile profile)
+        => (await _api.RpcAsync<object>("dismiss_password_request", new { p_id = profile.Id })).Error;
+
+    /// <summary>Mot de passe provisoire facile à dicter (sans 0/O, 1/l/I).</summary>
+    public static string GenerateTemporaryPassword()
+    {
+        const string lettres = "abcdefghjkmnpqrstuvwxyz";
+        const string chiffres = "23456789";
+        static int rnd(int max) => System.Security.Cryptography.RandomNumberGenerator.GetInt32(max);
+        var mot = new System.Text.StringBuilder();
+        mot.Append(char.ToUpperInvariant(lettres[rnd(lettres.Length)]));
+        for (var i = 0; i < 5; i++) mot.Append(lettres[rnd(lettres.Length)]);
+        for (var i = 0; i < 4; i++) mot.Append(chiffres[rnd(chiffres.Length)]);
+        return mot.ToString();
+    }
 }

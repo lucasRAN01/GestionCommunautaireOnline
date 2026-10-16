@@ -23,6 +23,37 @@ else
     }
     else
     {
+        @if (Store.IsAdmin && PasswordRequests.Count > 0)
+        {
+            <section class="card online-section online-password-requests">
+                <div class="online-section-head">
+                    <h3>🔑 @L.T("Mots de passe oubliés")</h3>
+                    <span class="online-count online-count-hot">@PasswordRequests.Count</span>
+                </div>
+                <p class="text-muted">@L.T("Ces membres ont demandé un nouveau mot de passe depuis l'écran de connexion. Donnez-leur un mot de passe provisoire et transmettez-le-leur vous-même (téléphone, SMS ou de vive voix) : à la connexion suivante, ils devront choisir leur propre mot de passe.")</p>
+                <div class="online-account-list">
+                    @foreach (var p in PasswordRequests)
+                    {
+                        var profile = p;
+                        <div class="online-account">
+                            <div class="online-account-main">
+                                <Avatar UserName="@profile.NomComplet" Seed="@profile.Email" Size="sm" />
+                                <div>
+                                    <strong>@profile.NomComplet</strong>
+                                    <div class="text-muted online-account-meta">@profile.Email@(string.IsNullOrWhiteSpace(profile.Telephone) ? "" : " · " + profile.Telephone)</div>
+                                    <div class="text-muted online-account-meta">@L.F("Demande du {0}", Date(profile.MdpDemandeAt))</div>
+                                </div>
+                            </div>
+                            <div class="online-account-actions">
+                                <button type="button" class="btn btn-primary btn-sm" disabled="@_busy" @onclick="() => OpenPassword(profile)">@L.T("Donner un mot de passe provisoire")</button>
+                                <button type="button" class="btn btn-secondary btn-sm" disabled="@_busy" @onclick="() => DismissAsync(profile)">@L.T("Ignorer")</button>
+                            </div>
+                        </div>
+                    }
+                </div>
+            </section>
+        }
+
         <section class="card online-section">
             <div class="online-section-head">
                 <h3>@L.T("Demandes en attente")</h3>
@@ -92,6 +123,10 @@ else
                             <div>
                                 <strong>@profile.NomComplet</strong>
                                 <span class="online-status-pill online-status-@profile.Statut">@L.T(OnlineStatuts.Label(profile.Statut))</span>
+                                @if (profile.MdpProvisoire)
+                                {
+                                    <span class="online-status-pill online-status-provisoire" title="@L.T("Le membre doit encore choisir son propre mot de passe.")">@L.T("Mot de passe provisoire")</span>
+                                }
                                 <div class="text-muted online-account-meta">@profile.Email · @L.T(profile.Role)</div>
                                 <div class="text-muted online-account-meta">@L.F("Dernière visite : {0}", Date(profile.LastSeenAt))</div>
                             </div>
@@ -117,11 +152,18 @@ else
 
 <Modal Title="@L.T("Nouveau mot de passe")" Show="_pwdFor != null" OnClose="() => _pwdFor = null">
     <ChildContent>
-        <p>@L.T("Définissez un mot de passe provisoire pour") <strong>@_pwdFor?.NomComplet</strong> @L.T("et transmettez-le-lui. Il pourra le changer depuis « Mes informations ».")</p>
+        <p>@L.T("Définissez un mot de passe provisoire pour") <strong>@_pwdFor?.NomComplet</strong> @L.T("et transmettez-le-lui (téléphone, SMS ou de vive voix). À sa prochaine connexion, l'application lui demandera de choisir son propre mot de passe.")</p>
         <div class="form-group">
             <label for="new-pwd">@L.T("Mot de passe provisoire")</label>
-            <input id="new-pwd" type="text" autocomplete="off" @bind="_newPassword" />
-            <span class="field-hint">@L.T("8 caractères minimum.")</span>
+            <div class="online-temp-password">
+                <input id="new-pwd" type="text" autocomplete="off" spellcheck="false" @bind="_newPassword" />
+                <button type="button" class="btn btn-secondary btn-sm" @onclick="() => _newPassword = AccountService.GenerateTemporaryPassword()">@L.T("Générer")</button>
+            </div>
+            <span class="field-hint">@L.T("8 caractères minimum. Notez-le avant d'enregistrer.")</span>
+            @if (!string.IsNullOrWhiteSpace(_pwdFor?.Telephone))
+            {
+                <span class="field-hint">@L.F("Téléphone du membre : {0}", _pwdFor!.Telephone)</span>
+            }
         </div>
     </ChildContent>
     <FooterContent>
@@ -147,6 +189,9 @@ else
 
     private List<OnlineProfile> Pending => _profiles.Where(p => p.Statut == OnlineStatuts.EnAttente).ToList();
     private List<OnlineProfile> Others => _profiles.Where(p => p.Statut != OnlineStatuts.EnAttente).ToList();
+    private List<OnlineProfile> PasswordRequests => _profiles
+        .Where(p => p.Statut == OnlineStatuts.Actif && p.MdpDemandeAt != null && p.Id != Session.Profile?.Id)
+        .OrderBy(p => p.MdpDemandeAt).ToList();
 
     /// <summary>Un gestionnaire ne peut pas nommer d'administrateur (vérifié aussi par le serveur).</summary>
     private IEnumerable<string> AssignableRoles => Store.IsAdmin
@@ -218,8 +263,18 @@ else
 
     private void OpenPassword(OnlineProfile profile)
     {
-        _newPassword = "";
+        _newPassword = AccountService.GenerateTemporaryPassword();
         _pwdFor = profile;
+    }
+
+    private async Task DismissAsync(OnlineProfile profile)
+    {
+        _busy = true;
+        var error = await Accounts.DismissPasswordRequestAsync(profile);
+        _busy = false;
+        if (error != null) { State.NotifyError(error); return; }
+        State.NotifyInfo(L.F("Demande de {0} écartée.", profile.NomComplet));
+        await LoadAsync();
     }
 
     private async Task SavePasswordAsync()
@@ -230,8 +285,9 @@ else
         var error = await Accounts.SetPasswordAsync(_pwdFor, _newPassword);
         _busy = false;
         if (error != null) { State.NotifyError(error); return; }
-        State.NotifySuccess(L.F("Mot de passe de {0} modifié. Transmettez-le-lui.", _pwdFor.NomComplet));
+        State.NotifySuccess(L.F("Mot de passe provisoire de {0} : {1}. Transmettez-le-lui.", _pwdFor.NomComplet, _newPassword));
         _pwdFor = null;
+        await LoadAsync();
     }
 
     private static string Date(DateTimeOffset? d) => d == null ? L.T("jamais") : L.F("{0:dd/MM/yyyy} à {0:HH:mm}", d.Value.ToLocalTime());

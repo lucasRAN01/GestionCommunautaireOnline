@@ -6,7 +6,8 @@
 #  3. ouvre (ou met à jour) un ticket GitHub « Alerte capacité Supabase »
 #     pour prévenir aussi par e-mail GitHub ;
 #  4. ouvre un ticket « Comptes en attente de validation » tant que des
-#     inscriptions attendent un administrateur, et le ferme ensuite ;
+#     inscriptions attendent un administrateur, et le ferme ensuite ; de même
+#     pour les demandes « mot de passe oublié » (script SQL 0003) ;
 #  5. modifie un petit fichier du dépôt si rien n'a changé depuis 50 jours :
 #     GitHub suspend les tâches programmées d'un dépôt public après 60 jours
 #     sans activité, ce qui arrêterait la veille et les sauvegardes.
@@ -93,6 +94,39 @@ jobs:
           body="$PENDING personne(s) se sont inscrites et attendent qu'un administrateur valide leur compte.
 
           Ouvrez l'application > menu > **Comptes en ligne** pour accepter ou refuser chaque demande. Ce ticket se fermera tout seul ensuite."
+          if [ -z "${number:-}" ]; then
+            gh issue create --title "$new_title" --body "$body"
+          elif [ "$title" != "$new_title" ]; then
+            gh issue edit "$number" --title "$new_title"
+            gh issue comment "$number" --body "$body"
+          fi
+
+      - name: Prévenir des demandes de mot de passe oublié
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          SUPABASE_URL: ${{ vars.SUPABASE_URL }}
+          SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: |
+          set -uo pipefail
+          # Seul le nombre est publié (le dépôt est public) : ni nom ni e-mail.
+          if ! curl -sS --fail-with-body "$SUPABASE_URL/rest/v1/profiles?select=id&statut=eq.actif&mdp_demande_at=not.is.null" \
+               -H "apikey: $SERVICE_KEY" -H "Authorization: Bearer $SERVICE_KEY" -o demandes.json; then
+            echo "Script SQL 0003 pas encore installé : étape ignorée."; exit 0
+          fi
+          COUNT=$(jq 'length' demandes.json 2>/dev/null || echo 0)
+          read -r number title < <(gh issue list --state open --search 'in:title "mot de passe oublié"' \
+            --json number,title -q '.[0] | "\(.number) \(.title)"' || true) || true
+          if [ "$COUNT" -eq 0 ]; then
+            if [ -n "${number:-}" ]; then
+              gh issue close "$number" --comment "Plus aucune demande en attente. Merci !"
+            fi
+            exit 0
+          fi
+          new_title="$COUNT demande(s) de mot de passe oublié"
+          body="$COUNT membre(s) ont demandé un nouveau mot de passe depuis l'écran de connexion.
+
+          Ouvrez l'application > menu > **Comptes en ligne** > « Mots de passe oubliés » : donnez un mot de passe provisoire et transmettez-le au membre (téléphone, SMS ou de vive voix). Ce ticket se fermera tout seul ensuite."
           if [ -z "${number:-}" ]; then
             gh issue create --title "$new_title" --body "$body"
           elif [ "$title" != "$new_title" ]; then

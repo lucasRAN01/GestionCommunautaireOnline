@@ -445,3 +445,13 @@
     .online-auth-hero h2 { overflow-wrap: anywhere; }
     .online-auth-main.is-signup { padding-top: 28px; padding-bottom: 28px; }
 }
+
+/* Mot de passe oublié (écran de connexion) et mot de passe provisoire */
+.login-forgot-intro { margin: 0 0 14px; font-size: 13.5px; color: var(--text-muted); line-height: 1.5; }
+.login-info.login-success { padding: 12px 14px; border-radius: var(--radius-sm, 10px); background: var(--success-soft, #d1fae5); color: var(--text, #0f172a); text-align: left; font-size: 13px; }
+.login-info.login-success p + p { margin-top: 6px; }
+.online-password-requests { border-color: color-mix(in srgb, var(--warning, #d97706) 45%, var(--border)); }
+.online-status-pill.online-status-provisoire { background: var(--warning-soft, #fef3c7); color: var(--warning, #b45309); }
+.online-temp-password { display: flex; gap: 8px; }
+.online-temp-password input { flex: 1; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 17px; letter-spacing: .04em; }
+.online-force-pwd-intro { margin: 0 0 14px; line-height: 1.5; }
