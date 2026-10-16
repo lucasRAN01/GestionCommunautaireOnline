@@ -41,7 +41,7 @@ else
                             }
                             else
                             {
-                                <div class="cmc-logo cmc-logo-fallback">GU</div>
+                                <div class="cmc-logo cmc-logo-fallback">@L.InitialesApplication()</div>
                             }
                             <div class="cmc-brand-text">
                                 <strong>@Store.Settings.AppName</strong>
@@ -86,7 +86,7 @@ else
                         }
                         else
                         {
-                            <div class="cmc-logo cmc-logo-fallback">GU</div>
+                            <div class="cmc-logo cmc-logo-fallback">@L.InitialesApplication()</div>
                         }
                         <strong>@Store.Settings.AppName</strong>
                     </div>
@@ -353,7 +353,7 @@ else
         var photo = user.Photo ?? "";
         return "<div class=\"card\"><span class=\"wave\"></span>"
             + "<svg class=\"leaf\" viewBox=\"0 0 120 120\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.6\"><path d=\"M12 108C12 60 52 20 108 12c-4 56-44 96-96 96z\"/><path d=\"M108 12C76 34 48 62 24 96\"/></svg>"
-            + "<div class=\"head\"><div class=\"logo\">" + (string.IsNullOrWhiteSpace(logo) ? "GU" : "<img src=\"" + logo + "\" alt=\"\" />") + "</div>"
+            + "<div class=\"head\"><div class=\"logo\">" + (string.IsNullOrWhiteSpace(logo) ? L.InitialesApplication() : "<img src=\"" + logo + "\" alt=\"\" />") + "</div>"
             + "<div class=\"brand\"><strong>" + H(appName) + "</strong><span>" + H(slogan) + "</span></div></div>"
             + "<div class=\"body\"><div class=\"id\"><div class=\"photo\">" + (string.IsNullOrWhiteSpace(photo) ? H(Initials(user)) : "<img src=\"" + photo + "\" alt=\"\" />") + "</div>"
             + "<div class=\"idtext\"><div class=\"name\">" + H(user.NomComplet) + "</div>"
@@ -373,7 +373,7 @@ else
         var signature = user.Signature ?? "";
         var resp = Store.ResponsableAffiche(user);
         return "<div class=\"card back\"><span class=\"wave\" style=\"background:rgba(30,79,176,.08)\"></span>"
-            + "<div class=\"head\"><div class=\"logo\">" + (string.IsNullOrWhiteSpace(logo) ? "GU" : "<img src=\"" + logo + "\" alt=\"\" />") + "</div>"
+            + "<div class=\"head\"><div class=\"logo\">" + (string.IsNullOrWhiteSpace(logo) ? L.InitialesApplication() : "<img src=\"" + logo + "\" alt=\"\" />") + "</div>"
             + "<div class=\"brand\"><strong>" + H(appName) + "</strong></div></div>"
             + (string.IsNullOrWhiteSpace(citation) ? "" : "<blockquote class=\"quote\">" + H(citation) + "</blockquote>")
             + "<p class=\"usage\">" + H(L.T("Carte personnelle et non transférable. Elle doit être présentée lors des activités de la communauté. En cas de perte ou de vol, veuillez en informer l'administration.")) + "</p>"

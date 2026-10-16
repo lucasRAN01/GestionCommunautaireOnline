@@ -1,6 +1,8 @@
 @implements IDisposable
 @inject OnlineSession Session
 @inject JavascriptBridge Js
+@inject DataStore Store
+@inject IJSRuntime JS
 
 @switch (Session.State)
 {
@@ -10,7 +12,7 @@
             <div class="splash-rings">
                 <div class="splash-ring splash-ring-outer"></div>
                 <div class="splash-ring splash-ring-inner"></div>
-                <div class="splash-brand">GU</div>
+                <div class="splash-brand">@L.InitialesApplication()</div>
             </div>
             @if (Session.State == OnlineSessionState.Loading)
             {
@@ -32,8 +34,23 @@
 <Toaster />
 
 @code {
+    /// <summary>Nom de la communauté gardé sur l'appareil (écran de connexion), avant le chargement des données.</summary>
+    public static string? NomGarde { get; set; }
+
+    private sealed record MarqueGardee(string? Nom);
+
+    private static readonly string NomParDefaut = new AppSettings().AppName;
+
     protected override async Task OnInitializedAsync()
     {
+        // Les textes qui parlent de « la communauté » citent le nom de l'application.
+        try { NomGarde ??= ((IJSInProcessRuntime)JS).Invoke<MarqueGardee>("guMarque.lire")?.Nom; } catch { }
+        L.NomApplication = () =>
+        {
+            var nom = Store.Settings.AppName?.Trim();
+            if (string.IsNullOrEmpty(nom) || nom == NomParDefaut) nom = NomGarde?.Trim();
+            return string.IsNullOrEmpty(nom) || nom == NomParDefaut ? null : nom;
+        };
         Session.Changed += OnChanged;
         await Session.InitializeAsync();
     }

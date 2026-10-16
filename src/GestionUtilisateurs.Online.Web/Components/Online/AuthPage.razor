@@ -147,16 +147,7 @@
     private string _logo = "";
 
     /// <summary>Initiales du nom de la communauté (GU par défaut).</summary>
-    private string Initiales
-    {
-        get
-        {
-            var mots = L.T(_communaute).Split(' ', StringSplitOptions.RemoveEmptyEntries).Where(m => char.IsLetter(m[0])).ToList();
-            if (mots.Count == 0) return "GU";
-            var ini = mots.Count == 1 ? mots[0][..Math.Min(2, mots[0].Length)] : $"{mots[0][0]}{mots[^1][0]}";
-            return ini.ToUpperInvariant();
-        }
-    }
+    private string Initiales => L.Initiales(L.T(_communaute));
 
     /// <summary>Nom et logo de la communauté : ceux gardés sur l'appareil, puis ceux du serveur.</summary>
     protected override async Task OnInitializedAsync()
@@ -182,7 +173,11 @@
     private void Appliquer(Marque? m)
     {
         if (m == null) return;
-        if (!string.IsNullOrWhiteSpace(m.Nom)) _communaute = m.Nom.Trim();
+        if (!string.IsNullOrWhiteSpace(m.Nom))
+        {
+            _communaute = m.Nom.Trim();
+            Root.NomGarde = _communaute;
+        }
         _logo = m.Logo?.StartsWith("data:image/", StringComparison.Ordinal) == true ? m.Logo : "";
     }
 

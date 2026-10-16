@@ -281,6 +281,12 @@ Chaque ligne a la forme `"Texte français": "traduction"` :
 
 Un texte absent du fichier s'affiche simplement en français.
 
+Les textes qui parlent de « la communauté » citent le nom de l'application
+(Paramètres › Apparence) dès qu'il est choisi. Leurs versions avec le nom sont
+dans `src/GestionUtilisateurs.Online.Shared/I18n/nom/` (`fr.json`, `en.json`,
+`mg.json`) : `{app}` y est remplacé par le nom, et `{de_app}` (en français
+seulement) par « de Nom » ou « d'Nom ».
+
 ---
 
 ## Limites connues de cette première version

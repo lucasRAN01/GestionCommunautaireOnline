@@ -27,6 +27,14 @@ public static class L
     };
 
     private static readonly Dictionary<string, Dictionary<string, string>> Dicos = Charger();
+    private static readonly Dictionary<string, Dictionary<string, string>> AvecNom = ChargerAvecNom();
+
+    /// <summary>
+    /// Nom de l'application (Paramètres › Apparence), ou null tant qu'il n'est pas choisi.
+    /// Quand il est connu, les textes qui parlent de « la communauté » le citent à la place
+    /// (fichiers I18n/nom/&lt;langue&gt;.json, avec {app} et {de_app} pour « de X » / « d'X »).
+    /// </summary>
+    public static Func<string?>? NomApplication { get; set; }
 
     public static string Langue { get; private set; } = Fr;
 
@@ -51,7 +59,13 @@ public static class L
     /// <summary>Traduit un texte français (le texte lui-même si aucune traduction n'existe).</summary>
     public static string T(string? fr)
     {
-        if (string.IsNullOrEmpty(fr) || Langue == Fr || _enFrancais) return fr ?? "";
+        if (string.IsNullOrEmpty(fr) || _enFrancais) return fr ?? "";
+        if (AvecNom.TryGetValue(Langue, out var variantes) && variantes.TryGetValue(fr, out var modele))
+        {
+            var nom = NomApplication?.Invoke()?.Trim();
+            if (!string.IsNullOrEmpty(nom)) return AvecLeNom(modele, nom);
+        }
+        if (Langue == Fr) return fr;
         return Dicos.TryGetValue(Langue, out var d) && d.TryGetValue(fr, out var t) && !string.IsNullOrEmpty(t) ? t : fr;
     }
 
@@ -99,6 +113,30 @@ public static class L
         ? Majuscule(Jour(d.DayOfWeek)) + " " + d.Day + " " + Majuscule(Mois(d.Month)) + " " + d.Year
         : Jour(d.DayOfWeek) + " " + d.Day + " " + Mois(d.Month) + " " + d.Year;
 
+    /// <summary>Remplace {app} par le nom et {de_app} par « de Nom » ou « d'Nom » (élision devant voyelle ou h).</summary>
+    public static string AvecLeNom(string modele, string nom)
+        => modele.Replace("{de_app}", (Elision(nom) ? "d'" : "de ") + nom).Replace("{app}", nom);
+
+    /// <summary>Initiales d'un nom (« Avotra Ambohimanarina » → « AA », « Fanantenana » → « FA ») ; « GU » sans nom.</summary>
+    public static string Initiales(string? nom)
+    {
+        var mots = (nom ?? "").Split(' ', StringSplitOptions.RemoveEmptyEntries).Where(m => char.IsLetter(m[0])).ToList();
+        if (mots.Count == 0) return "GU";
+        var ini = mots.Count == 1 ? mots[0][..Math.Min(2, mots[0].Length)] : $"{mots[0][0]}{mots[^1][0]}";
+        return ini.ToUpperInvariant();
+    }
+
+    /// <summary>Initiales du nom de l'application (pastille affichée à la place du logo).</summary>
+    public static string InitialesApplication() => Initiales(NomApplication?.Invoke());
+
+    /// <summary>« d' » plutôt que « de » devant une voyelle ou un h.</summary>
+    public static bool Elision(string nom)
+        => nom.Length > 0 && "aeiouyhàâäéèêëîïôöùûüAEIOUYHÀÂÄÉÈÊËÎÏÔÖÙÛÜ".Contains(nom[0]);
+
+    /// <summary>Textes « avec le nom de l'application » d'une langue (tests et suivi).</summary>
+    public static IReadOnlyDictionary<string, string> VariantesAvecNom(string langue)
+        => AvecNom.TryGetValue(langue, out var d) ? d : new Dictionary<string, string>();
+
     public static string Majuscule(string s) => string.IsNullOrEmpty(s) ? s : char.ToUpper(s[0]) + s[1..];
 
     private static Dictionary<string, Dictionary<string, string>> Charger()
@@ -110,7 +148,7 @@ public static class L
             var chemin = nom.Replace('\\', '/');
             if (!chemin.StartsWith("i18n/", StringComparison.Ordinal) || !chemin.EndsWith(".json", StringComparison.Ordinal)) continue;
             var parts = chemin.Split('/');
-            if (parts.Length < 3) continue;
+            if (parts.Length < 3 || parts[1] == "nom") continue;
             var langue = parts[1];
             try
             {
@@ -127,6 +165,27 @@ public static class L
             {
                 // Fichier de traduction mal formé : ignoré, les textes restent en français.
             }
+        }
+        return result;
+    }
+
+    /// <summary>I18n/nom/&lt;langue&gt;.json : texte français → même texte citant le nom de l'application.</summary>
+    private static Dictionary<string, Dictionary<string, string>> ChargerAvecNom()
+    {
+        var result = new Dictionary<string, Dictionary<string, string>>(StringComparer.Ordinal);
+        var asm = typeof(L).Assembly;
+        foreach (var nom in asm.GetManifestResourceNames())
+        {
+            var chemin = nom.Replace('\\', '/');
+            if (!chemin.StartsWith("i18n/nom/", StringComparison.Ordinal) || !chemin.EndsWith(".json", StringComparison.Ordinal)) continue;
+            var langue = Path.GetFileNameWithoutExtension(chemin);
+            try
+            {
+                using var flux = asm.GetManifestResourceStream(nom);
+                var dico = flux == null ? null : JsonSerializer.Deserialize<Dictionary<string, string>>(flux);
+                if (dico != null) result[langue] = new Dictionary<string, string>(dico.Where(kv => !string.IsNullOrEmpty(kv.Value)), StringComparer.Ordinal);
+            }
+            catch (JsonException) { }
         }
         return result;
     }
