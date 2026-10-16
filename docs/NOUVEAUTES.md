@@ -4,6 +4,21 @@ Les nouveautés de la version en ligne, de la plus récente à la plus ancienne.
 Après chaque mise à jour, le site affiche un bandeau « Nouvelle version
 disponible » : un clic sur **Mettre à jour** suffit.
 
+## 16 octobre 2026
+
+**Écran de connexion**
+- Le nom et le logo de la communauté (Paramètres › Apparence) remplacent le
+  titre « Gestion communautaire » et « Votre communauté, en ligne ».
+- Logo plus grand ; l'inscription tient sur un écran, sur ordinateur comme
+  sur téléphone.
+- Pour que le nom et le logo s'affichent aussi sur un appareil qui ne s'est
+  jamais connecté, l'administrateur exécute une fois
+  `supabase/migrations/0002_marque_publique.sql` (voir `docs/MISE-EN-LIGNE.md`).
+
+**Mini-guide**
+- La dernière étape montre le menu « Guide utilisateur », quelle que soit sa
+  place dans le menu (Paramètres seulement s'il a été masqué).
+
 ## 15 octobre 2026 (langues)
 
 **Trois langues : français, anglais, malgache**
