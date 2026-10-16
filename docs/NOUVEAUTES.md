@@ -23,6 +23,8 @@ disponible » : un clic sur **Mettre à jour** suffit.
   données, Capacité du serveur).
 - Un ordre déjà réglé dans Paramètres › Ordre du menu est conservé. Pour
   adopter le nouvel ordre : « Réinitialiser l'ordre d'origine ».
+- « Gestion de données » apparaît maintenant dans Paramètres › Ordre du menu
+  (administrateurs) : on peut la déplacer ou la masquer comme les autres.
 
 ## 16 octobre 2026 (mot de passe oublié)
 

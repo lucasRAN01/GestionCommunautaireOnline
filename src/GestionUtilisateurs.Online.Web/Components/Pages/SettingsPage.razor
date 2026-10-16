@@ -496,6 +496,7 @@
         "archive" => Store.IsAdmin,
         "comptes" => Store.Can(Permissions.UsersManage),
         "capacite" => Store.IsAdmin,
+        "data" => Store.IsAdmin && !Store.IsBaseAdmin,
         "documents" => !Store.IsBaseAdmin,
         "roles" => Store.Can(Permissions.RolesManage),
         "messagerie" => Store.Can(Permissions.MessagerieUse),
