@@ -17,6 +17,26 @@ disponible » : un clic sur **Mettre à jour** suffit.
 - Une case n'apparaît que si le menu est accessible au membre et n'est pas
   masqué dans les paramètres.
 
+## 16 octobre 2026
+
+**Écran de connexion**
+- Le nom et le logo de la communauté (Paramètres › Apparence) remplacent le
+  titre « Gestion communautaire » et « Votre communauté, en ligne ».
+- Logo plus grand ; l'inscription tient sur un écran, sur ordinateur comme
+  sur téléphone.
+- Pour que le nom et le logo s'affichent aussi sur un appareil qui ne s'est
+  jamais connecté, l'administrateur exécute une fois
+  `supabase/migrations/0002_marque_publique.sql` (voir `docs/MISE-EN-LIGNE.md`).
+
+**Menu**
+- « Histoire de la communauté » porte le nom de l'application, par exemple
+  « Histoire de Fikambanana Fanantenana » (dès que le nom est réglé dans
+  Paramètres).
+
+**Mini-guide**
+- La dernière étape montre le menu « Guide utilisateur », quelle que soit sa
+  place dans le menu (Paramètres seulement s'il a été masqué).
+
 ## 15 octobre 2026 (langues)
 
 **Trois langues : français, anglais, malgache**

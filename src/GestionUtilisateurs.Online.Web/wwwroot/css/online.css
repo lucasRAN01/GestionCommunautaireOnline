@@ -411,3 +411,37 @@
 .lang-chip { border: 1px solid var(--border); background: var(--surface, #fff); color: inherit; border-radius: 999px; padding: 6px 14px; font-size: 13.5px; font-weight: 600; cursor: pointer; }
 .lang-chip.active { background: var(--accent); border-color: var(--accent); color: #fff; }
 .lang-picker-auth { justify-content: center; margin: 0 auto 14px; display: flex; }
+
+/* Écran de connexion : logo et nom de la communauté, inscription plus compacte */
+.online-auth-main .login-logo { margin-bottom: 18px; }
+.online-auth-main .online-auth-mobile-logo { width: 112px; height: 112px; border-radius: 30px; font-size: 38px; margin-bottom: 12px; }
+.online-auth-main img.online-auth-mobile-logo { object-fit: cover; background: var(--surface); }
+.online-auth-mobile-name { margin: 0; font-size: 22px; font-weight: 700; line-height: 1.25; overflow-wrap: anywhere; }
+.online-auth-main.is-signup { padding-top: 16px; padding-bottom: 16px; }
+.online-auth-main.is-signup .lang-picker-auth { margin-bottom: 10px; }
+.online-auth-main.is-signup .login-logo { margin-bottom: 12px; }
+.online-auth-main.is-signup .online-auth-mobile-logo { width: 80px; height: 80px; border-radius: 22px; font-size: 28px; margin-bottom: 8px; }
+.online-auth-main.is-signup .online-auth-mobile-name { font-size: 19px; }
+.online-auth-main.is-signup .login-card { padding: 18px; }
+.online-auth-main.is-signup .form-group { margin-bottom: 11px; }
+.online-auth-main.is-signup .form-group label { margin-bottom: 4px; }
+.online-auth-main.is-signup .login-info { margin-top: 10px; }
+.online-auth-main.is-signup .login-info p { font-size: 12.5px; }
+
+@media (min-width: 1024px) {
+    /* Le panneau de gauche porte le logo et le nom : la colonne du formulaire défile seule. */
+    .online-auth { align-items: flex-start; }
+    .online-auth-hero { position: sticky; top: 0; height: 100vh; }
+    .online-auth-main { min-height: 100vh; justify-content: safe center; }
+    .online-auth-main .online-auth-mobile-logo,
+    .online-auth-main .online-auth-mobile-name { display: none; }
+    .online-auth-main .login-subtitle { font-size: 15px; font-weight: 600; color: var(--text); }
+    .online-auth-logo {
+        width: 132px; height: 132px; border-radius: 34px; object-fit: cover; display: block;
+        background: #fff; border: 3px solid rgba(255, 255, 255, .5);
+        box-shadow: 0 18px 40px rgba(0, 0, 0, .18); margin-bottom: 30px;
+    }
+    .online-auth-hero .online-auth-brand { width: 112px; height: 112px; border-radius: 30px; font-size: 38px; }
+    .online-auth-hero h2 { overflow-wrap: anywhere; }
+    .online-auth-main.is-signup { padding-top: 28px; padding-bottom: 28px; }
+}

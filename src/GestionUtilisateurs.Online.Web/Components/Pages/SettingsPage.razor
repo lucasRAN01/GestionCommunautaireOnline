@@ -133,16 +133,16 @@
             var idx = i;
             var key = visibleMenu[i];
             var hidden = IsMenuHidden(key);
-            var hideLabel = hidden ? L.F("Afficher {0}", L.T(def.Label)) : L.F("Masquer {0}", L.T(def.Label));
+            var hideLabel = hidden ? L.F("Afficher {0}", MenuLabel(def)) : L.F("Masquer {0}", MenuLabel(def));
             var hideTitle = hidden ? L.T("Afficher") : L.T("Masquer");
             var hideIcon = hidden ? "🙈" : "👁";
             <div class="menu-order-item @(hidden ? "menu-hidden" : "")" data-rkey="@key" style="@(hidden ? "opacity:.55" : "")">
                 <span class="reorder-handle" aria-hidden="true" title="@L.T("Glisser pour réordonner")">⋮⋮</span>
                 <span class="menu-order-icon" aria-hidden="true">@def.Icon</span>
-                <span class="menu-order-label">@L.T(def.Label) @(hidden ? L.T("(masqué)") : "")</span>
+                <span class="menu-order-label">@MenuLabel(def) @(hidden ? L.T("(masqué)") : "")</span>
                 <div class="menu-order-actions">
-                    <button type="button" class="btn btn-secondary btn-sm menu-order-btn" disabled="@(idx == 0)" aria-label="@L.F("Monter {0}", L.T(def.Label))" @onclick="() => MoveMenuVisible(idx, -1)">▲</button>
-                    <button type="button" class="btn btn-secondary btn-sm menu-order-btn" disabled="@(idx >= visibleMenu.Count - 1)" aria-label="@L.F("Descendre {0}", L.T(def.Label))" @onclick="() => MoveMenuVisible(idx, 1)">▼</button>
+                    <button type="button" class="btn btn-secondary btn-sm menu-order-btn" disabled="@(idx == 0)" aria-label="@L.F("Monter {0}", MenuLabel(def))" @onclick="() => MoveMenuVisible(idx, -1)">▲</button>
+                    <button type="button" class="btn btn-secondary btn-sm menu-order-btn" disabled="@(idx >= visibleMenu.Count - 1)" aria-label="@L.F("Descendre {0}", MenuLabel(def))" @onclick="() => MoveMenuVisible(idx, 1)">▼</button>
                     <button type="button" class="btn btn-secondary btn-sm menu-order-btn" aria-label="@hideLabel" title="@hideTitle" @onclick="() => ToggleMenuHidden(key)">@hideIcon</button>
                 </div>
             </div>
@@ -391,6 +391,9 @@
 </Modal>
 
 @code {
+    /// <summary>Nom affiché d'une entrée du menu (l'histoire porte le nom de l'application).</summary>
+    private string MenuLabel(AppMenus.MenuDef def) => def.Key == "community" ? Store.LibelleHistoire() : L.T(def.Label);
+
 
     private string _name = "Gestion des utilisateurs";    private string _theme = "light";
     private string _color = "#4f46e5";

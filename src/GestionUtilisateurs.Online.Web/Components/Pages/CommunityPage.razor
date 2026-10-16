@@ -21,7 +21,7 @@
 @if (_editing && CanEdit)
 {
     <div class="card" style="margin-bottom:12px">
-        <h3>@L.T("Histoire de la communauté")</h3>
+        <h3>@Store.LibelleHistoire()</h3>
         <div class="form-group">
             <label for="cm-titre">@L.T("Titre *")</label>
             <input id="cm-titre" type="text" value="@_storyTitre" @oninput="e => _storyTitre = e.Value?.ToString() ?? string.Empty" />

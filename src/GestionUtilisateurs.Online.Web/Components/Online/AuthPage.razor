@@ -1,10 +1,18 @@
 @inject OnlineSession Session
+@inject IJSRuntime JS
 
 <div class="online-auth">
     <aside class="online-auth-hero" aria-hidden="true">
         <div class="online-auth-hero-inner">
-            <div class="online-auth-brand">GU</div>
-            <h2>@L.T("Votre communauté, en ligne")</h2>
+            @if (_logo.Length > 0)
+            {
+                <img class="online-auth-logo" src="@_logo" alt="" />
+            }
+            else
+            {
+                <div class="online-auth-brand">@Initiales</div>
+            }
+            <h2>@(_communaute.Length > 0 ? L.T(_communaute) : L.T("Votre communauté, en ligne"))</h2>
             <p>@L.T("Membres, calendrier, documents, finances, votes et messagerie, partagés en toute sécurité.")</p>
             <ul>
                 <li>@L.T("Un compte personnel pour chaque membre")</li>
@@ -14,11 +22,21 @@
         </div>
     </aside>
 
-    <div class="login-view online-auth-main">
+    <div class="login-view online-auth-main @(_signup ? "is-signup" : "")">
         <LanguePicker CssClass="lang-picker-auth" />
         <div class="login-logo">
-            <div class="login-logo-mark">GU</div>
-            <h1>@L.T("Gestion communautaire")</h1>
+            @if (_logo.Length > 0)
+            {
+                <img class="login-logo-img online-auth-mobile-logo" src="@_logo" alt="@L.T("Logo de la communauté")" />
+            }
+            else
+            {
+                <div class="login-logo-mark online-auth-mobile-logo">@Initiales</div>
+            }
+            @if (_communaute.Length > 0)
+            {
+                <h1 class="online-auth-mobile-name">@L.T(_communaute)</h1>
+            }
             <p class="login-subtitle">@(_signup ? L.T("Créez votre compte membre") : L.T("Connectez-vous à votre espace membre"))</p>
         </div>
 
@@ -102,6 +120,51 @@
 </div>
 
 @code {
+    private sealed record Marque(string? Nom, string? Logo, string? Error = null);
+
+    private string _communaute = "";
+    private string _logo = "";
+
+    /// <summary>Initiales du nom de la communauté (GU par défaut).</summary>
+    private string Initiales
+    {
+        get
+        {
+            var mots = L.T(_communaute).Split(' ', StringSplitOptions.RemoveEmptyEntries).Where(m => char.IsLetter(m[0])).ToList();
+            if (mots.Count == 0) return "GU";
+            var ini = mots.Count == 1 ? mots[0][..Math.Min(2, mots[0].Length)] : $"{mots[0][0]}{mots[^1][0]}";
+            return ini.ToUpperInvariant();
+        }
+    }
+
+    /// <summary>Nom et logo de la communauté : ceux gardés sur l'appareil, puis ceux du serveur.</summary>
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var gardee = await JS.InvokeAsync<Marque>("guMarque.lire");
+            Appliquer(gardee);
+        }
+        catch { }
+        try
+        {
+            var serveur = await JS.InvokeAsync<Marque>("guOnline.marque");
+            if (serveur.Error == null)
+            {
+                Appliquer(serveur);
+                await JS.InvokeVoidAsync("guMarque.ecrire", _communaute, _logo);
+            }
+        }
+        catch { }
+    }
+
+    private void Appliquer(Marque? m)
+    {
+        if (m == null) return;
+        if (!string.IsNullOrWhiteSpace(m.Nom)) _communaute = m.Nom.Trim();
+        _logo = m.Logo?.StartsWith("data:image/", StringComparison.Ordinal) == true ? m.Logo : "";
+    }
+
     private bool _signup;
     private bool _busy;
     private bool _showPwd;
