@@ -14,6 +14,11 @@ disponible » : un clic sur **Mettre à jour** suffit.
   réduite davantage au lieu d'être refusée.
 - Au démarrage, un seul écran de chargement : le logo et le nom de
   l'application, jusqu'à l'ouverture de l'application.
+- Le logo SAFIAF est livré avec le site : il sert d'icône, d'écran de
+  démarrage et de logo de l'écran de connexion tant qu'aucun autre logo n'est
+  choisi dans Paramètres › Apparence.
+- Écran de connexion : le champ identifiant affiche « Votre identifiant ou
+  votre e-mail ».
 
 ## 16 octobre 2026 (icône de l'application installée)
 

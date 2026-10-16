@@ -13,14 +13,7 @@
             <div class="splash-rings">
                 <div class="splash-ring splash-ring-outer"></div>
                 <div class="splash-ring splash-ring-inner"></div>
-                @if (!string.IsNullOrEmpty(_logo))
-                {
-                    <img class="splash-logo" src="@_logo" alt="" />
-                }
-                else
-                {
-                    <div class="splash-brand">@L.InitialesApplication()</div>
-                }
+                <img class="splash-logo" src="@(string.IsNullOrEmpty(_logo) ? LogoParDefaut : _logo)" alt="" />
             </div>
             <div class="splash-title">@(string.IsNullOrWhiteSpace(NomGarde) ? "Gestion communautaire" : NomGarde)</div>
             <div class="splash-dots"><span></span><span></span><span></span></div>
@@ -42,6 +35,9 @@
 @code {
     /// <summary>Nom de la communauté gardé sur l'appareil (écran de connexion), avant le chargement des données.</summary>
     public static string? NomGarde { get; set; }
+
+    /// <summary>Logo SAFIAF livré avec le site, tant qu'aucun logo n'est réglé dans Apparence.</summary>
+    public const string LogoParDefaut = "logo.png";
 
     private sealed record MarqueGardee(string? Nom, string? Logo);
 

@@ -136,8 +136,8 @@ def appliquer(www, marque):
             chemin = os.path.join(www, "index.html")
             with open(chemin, encoding="utf-8") as f:
                 page = f.read()
-            page = page.replace('<img id="splash-logo" class="splash-logo" alt="" />',
-                                f'<img id="splash-logo" class="splash-logo" alt="" src="icon-512.png?v={empreinte(marque)}" />', 1)
+            page = re.sub(r'<img id="splash-logo"[^>]*/>',
+                          f'<img id="splash-logo" class="splash-logo" alt="" src="icon-512.png?v={empreinte(marque)}" />', page, count=1)
             with open(chemin, "w", encoding="utf-8") as f:
                 f.write(page)
             print("Logo de l'application : icônes générées.")
