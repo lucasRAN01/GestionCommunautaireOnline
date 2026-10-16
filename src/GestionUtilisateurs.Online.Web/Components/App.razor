@@ -74,6 +74,7 @@
         {
             _activityStarted = true;
             try { await Js.NotifySplashReadyAsync(); } catch { }
+            MettreIdentifiantsALaRegle();
             try
             {
                 _activityRef = DotNetObjectReference.Create(this);
@@ -82,6 +83,30 @@
             catch { }
             await CheckAutoExportAsync();
         }
+    }
+
+    /// <summary>
+    /// Identifiants = prénom (lucas, jean.pierre, puis lucas1, lucas2… pour les
+    /// homonymes) : dès qu'un administrateur ouvre l'application, les identifiants
+    /// qui ne suivent pas encore la règle sont renommés, données comprises.
+    /// </summary>
+    private void MettreIdentifiantsALaRegle()
+    {
+        try
+        {
+            if (!Store.IsAdmin || Store.IsBaseAdmin) return;
+            var n = Store.IdentifiantsARenommer().Count;
+            if (n == 0) return;
+            var res = Store.AppliquerIdentifiantsParPrenom();
+            // Message affiché après l'écran de chargement (au moins 5 s).
+            if (res.Success)
+                _ = InvokeAsync(async () =>
+                {
+                    await Task.Delay(5500);
+                    State.NotifySuccess(L.F("{0} identifiant(s) renommé(s).", n));
+                });
+        }
+        catch { }
     }
 
     private async Task CheckAutoExportAsync()

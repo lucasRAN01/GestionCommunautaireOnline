@@ -4,6 +4,17 @@ Les nouveautés de la version en ligne, de la plus récente à la plus ancienne.
 Après chaque mise à jour, le site affiche un bandeau « Nouvelle version
 disponible » : un clic sur **Mettre à jour** suffit.
 
+## 16 octobre 2026 (identifiants au prénom, images, chargement)
+
+- Les identifiants sont mis au prénom automatiquement (« lucas », puis
+  « lucas1 », « lucas2 » pour les homonymes) dès qu'un administrateur ouvre
+  l'application : plus besoin de passer par le bandeau d'Utilisateurs.
+- Toute image de plus de 5 Mo est réduite automatiquement avant l'envoi, y
+  compris les photos sans type reconnu ; une image encore trop lourde est
+  réduite davantage au lieu d'être refusée.
+- Au démarrage, un seul écran de chargement : le logo et le nom de
+  l'application, jusqu'à l'ouverture de l'application.
+
 ## 16 octobre 2026 (icône de l'application installée)
 
 - Le nom et le logo réglés dans Paramètres › Apparence deviennent le nom et
