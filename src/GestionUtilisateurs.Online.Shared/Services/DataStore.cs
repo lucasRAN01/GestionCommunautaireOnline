@@ -918,11 +918,7 @@ case "settings":
         {
             if (!autoIdentifiant)
                 return new UserOperationResult { Success = false, Error = L.T("Cet identifiant existe déjà. Aucun utilisateur n'a été ajouté.") };
-            var suffix = 2;
-            var baseId = draft.Identifiant;
-            while (_users.Any(u => u.Identifiant.Equals(baseId + "." + suffix, StringComparison.OrdinalIgnoreCase)))
-                suffix++;
-            draft.Identifiant = baseId + "." + suffix;
+            draft.Identifiant = IdentifiantLibre(draft.Identifiant);
         }
         if (OnlineMode)
             draft.MotDePasse = ""; // géré par Supabase, jamais copié dans les données partagées
@@ -948,7 +944,8 @@ case "settings":
         return new UserOperationResult { Success = true, UserId = draft.Id };
     }
 
-    /// <summary>Génère un identifiant unique (prénom.nom) depuis le nom complet.</summary>
+    /// <summary>Identifiant de base : le prénom (« jean.pierre » pour deux prénoms),
+    /// ou le nom quand il n'y a pas de prénom. <see cref="IdentifiantLibre(string)"/> ajoute 1, 2… aux homonymes.</summary>
     public static string GenerateIdentifiant(string prenom, string nom)
     {
         static string Clean(string s)
@@ -961,12 +958,12 @@ case "settings":
                 if (char.IsLetterOrDigit(ch) || ch is '.' or '-' or '_') sb.Append(ch);
                 else if (char.IsWhiteSpace(ch)) sb.Append('.');
             }
-            var t = sb.ToString().Replace("--", "-").Trim('.');
+            var t = System.Text.RegularExpressions.Regex.Replace(sb.ToString(), @"\.{2,}", ".").Replace("--", "-").Trim('.');
             return string.IsNullOrWhiteSpace(t) ? "utilisateur" : t;
         }
 
-        var baseName = Clean(prenom) + "." + Clean(nom);
-        return baseName.Trim('.');
+        if (!string.IsNullOrWhiteSpace(prenom)) return Clean(prenom);
+        return Clean(nom);
     }
 
     public UserOperationResult UpdateUser(string userId, UserAccount draft, bool passwordChanged)
@@ -2158,18 +2155,30 @@ if (string.IsNullOrWhiteSpace(draft.Prenom)) Add("prenom", L.T("Le prénom est o
             return (OperationResult.Fail(L.T("Aucun utilisateur à importer.")), 0);
 
         var seen = new HashSet<string>(_users.Select(u => u.Identifiant.ToLowerInvariant()));
+        var nomParIdentifiant = _users.GroupBy(u => u.Identifiant.ToLowerInvariant())
+            .ToDictionary(g => g.Key, g => CleNom(g.First().Prenom, g.First().Nom));
         // Même personne déjà présente (même e-mail, téléphone ou matricule) : pas de doublon.
         // Les homonymes sont importés ; ils apparaissent ensuite dans « Doublons possibles ».
         var contacts = new HashSet<string>(_users.SelectMany(ClesContact));
         var added = 0;
         foreach (var imp in imported)
         {
-            var key = (imp.Identifiant ?? "").ToLowerInvariant();
-            if (string.IsNullOrWhiteSpace(key) || seen.Contains(key)) continue;
+            var key = (imp.Identifiant ?? "").Trim().ToLowerInvariant();
+            if (string.IsNullOrWhiteSpace(key)) continue;
             var siennes = ClesContact(imp).ToList();
             if (siennes.Any(contacts.Contains)) continue;
+            var cleNom = CleNom(imp.Prenom, imp.Nom);
+            if (seen.Contains(key))
+            {
+                // Même identifiant et même nom : c'est la même personne. Sinon c'est un
+                // homonyme de prénom, qui reçoit le premier numéro libre (jean1, jean2…).
+                if (nomParIdentifiant.TryGetValue(key, out var autreNom) && autreNom == cleNom) continue;
+                key = IdentifiantLibre(key, seen.Contains);
+                imp.Identifiant = key;
+            }
             contacts.UnionWith(siennes);
             seen.Add(key);
+            nomParIdentifiant[key] = cleNom;
             _users.Add(CloneImportUser(imp));
             added++;
         }

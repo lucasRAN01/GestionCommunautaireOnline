@@ -123,6 +123,11 @@ script peut être relancé sans danger.
   administrateurs et changement obligatoire du mot de passe provisoire. Sans ce
   script, la demande ne peut pas être envoyée (le membre est invité à contacter
   un administrateur).
+- `supabase/migrations/0004_connexion_identifiant.sql` (16 octobre 2026) :
+  connexion avec l'identifiant (« lucas », « jean.pierre »…) en plus de
+  l'e-mail. Le serveur ne révèle l'e-mail d'un compte que si le mot de passe
+  est juste, et bloque un identifiant 15 minutes après 5 essais faux. Sans ce
+  script, l'écran de connexion demande d'utiliser l'e-mail.
 
 ### Installer le site sur un téléphone
 

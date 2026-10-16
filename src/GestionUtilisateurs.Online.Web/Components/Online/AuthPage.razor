@@ -96,8 +96,17 @@
             }
 
             <div class="form-group">
-                <label for="auth-email">@L.T("E-mail")</label>
-                <input id="auth-email" type="email" autocomplete="email" placeholder="@L.T("vous@exemple.fr")" @bind="_email" />
+                @if (_signup)
+                {
+                    <label for="auth-email">@L.T("E-mail")</label>
+                    <input id="auth-email" type="email" autocomplete="email" placeholder="@L.T("vous@exemple.fr")" @bind="_email" />
+                }
+                else
+                {
+                    <label for="auth-email">@L.T("Identifiant ou e-mail")</label>
+                    <input id="auth-email" type="text" autocomplete="username" autocapitalize="none" spellcheck="false"
+                           placeholder="@L.T("lucas ou vous@exemple.fr")" @bind="_email" />
+                }
             </div>
 
             <div class="form-group">
@@ -260,9 +269,13 @@
 
     private string? Validate()
     {
+        if (!_signup)
+        {
+            if (string.IsNullOrWhiteSpace(_email)) return L.T("Saisissez votre identifiant ou votre e-mail.");
+            return string.IsNullOrEmpty(_password) ? L.T("Saisissez votre mot de passe.") : null;
+        }
         if (string.IsNullOrWhiteSpace(_email) || !_email.Contains('@')) return L.T("Saisissez une adresse e-mail valide.");
         if (string.IsNullOrEmpty(_password)) return L.T("Saisissez votre mot de passe.");
-        if (!_signup) return null;
         if (string.IsNullOrWhiteSpace(_prenom) || string.IsNullOrWhiteSpace(_nom)) return L.T("Le prénom et le nom sont obligatoires.");
         if (_password.Length < 8) return L.T("Le mot de passe doit contenir au moins 8 caractères.");
         if (_password != _confirm) return L.T("Les deux mots de passe ne correspondent pas.");

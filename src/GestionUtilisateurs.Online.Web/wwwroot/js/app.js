@@ -145,6 +145,69 @@ window.guNav = {
     }
 };
 
+// Retour du système (geste « retour » d'Android, retour prédictif, bouton
+// Précédent du navigateur). L'application n'a pas d'adresses par page : on garde
+// une seule entrée d'historique « de garde » tant qu'il y a quelque chose à
+// fermer ou une page précédente. Le retour ferme d'abord la fenêtre ouverte,
+// sinon revient à la page précédente ; sans rien de tout cela, il quitte l'app.
+window.guRetour = {
+    _ref: null,
+    _bound: false,
+    _garde: false,
+    _ignorer: 0,
+    _pagePrecedente: false,
+    _minuteur: null,
+    _ouvert: function () {
+        var o = document.querySelectorAll('.modal-overlay, .more-overlay, .photo-overlay');
+        return o.length ? o[o.length - 1] : null;
+    },
+    _sync: function () {
+        var r = window.guRetour;
+        if (!r._ref) return;
+        var besoin = r._pagePrecedente || !!r._ouvert();
+        try {
+            if (besoin && !r._garde) {
+                history.pushState({ guRetour: 1 }, '');
+                r._garde = true;
+            } else if (!besoin && r._garde) {
+                r._garde = false;
+                r._ignorer++;
+                history.back();
+            }
+        } catch (_) { }
+    },
+    _plusTard: function () {
+        var r = window.guRetour;
+        clearTimeout(r._minuteur);
+        r._minuteur = setTimeout(r._sync, 60);
+    },
+    enable: function (dotnetRef) {
+        var r = window.guRetour;
+        r._ref = dotnetRef;
+        if (!r._bound) {
+            r._bound = true;
+            window.addEventListener('popstate', function () {
+                if (r._ignorer > 0) { r._ignorer--; return; }
+                if (!r._garde || !r._ref) return;
+                r._garde = false;
+                var o = r._ouvert();
+                if (o) o.click();
+                else if (r._pagePrecedente) { try { r._ref.invokeMethodAsync('OnSwipeBack'); } catch (_) { } }
+                r._plusTard();
+            });
+            new MutationObserver(r._plusTard).observe(document.body, { childList: true, subtree: true });
+        }
+        r._plusTard();
+    },
+    pagePrecedente: function (oui) {
+        window.guRetour._pagePrecedente = !!oui;
+        window.guRetour._plusTard();
+    },
+    disable: function () {
+        window.guRetour._ref = null;
+    }
+};
+
 // Navigation de l'histoire de la communauté par balayage horizontal
 // (gauche → chapitre suivant, droite → chapitre précédent), uniquement
 // depuis la zone du lecteur (.community-reader). guNav ignore cette zone.

@@ -273,5 +273,11 @@
   "Mot de passe oublié": "Teny miafina hadino",
   "Retour à la connexion": "Hiverina amin'ny fidirana",
   "Traiter": "Karakarao",
-  "{0} demande(s) de mot de passe oublié": "Fangatahana teny miafina hadino {0}"
+  "{0} demande(s) de mot de passe oublié": "Fangatahana teny miafina hadino {0}",
+  "Identifiant ou e-mail": "Anarana fidirana na mailaka",
+  "lucas ou vous@exemple.fr": "lucas na ianao@ohatra.mg",
+  "Saisissez votre identifiant ou votre e-mail.": "Ampidiro ny anarana fidirana na ny mailakao.",
+  "Trop d'essais avec cet identifiant. Réessayez dans 15 minutes, ou connectez-vous avec votre e-mail.": "Be loatra ny andrana tamin'io anarana fidirana io. Andramo indray afaka 15 minitra, na midira amin'ny mailakao.",
+  "La connexion par identifiant n'est pas encore activée : utilisez votre e-mail.": "Mbola tsy mandeha ny fidirana amin'ny anarana fidirana : ampiasao ny mailakao.",
+  "E-mail ou mot de passe incorrect.": "Diso ny mailaka na ny tenimiafina."
 }
