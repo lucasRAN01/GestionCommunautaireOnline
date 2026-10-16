@@ -310,5 +310,20 @@
   "Échec de l'enregistrement du fichier.": "Tsy voatahiry ny rakitra.",
   "Écrire pour chercher un membre…": "Soraty eto hitadiavana mpikambana…",
   "Éditeur de champ": "Fanovana saha",
-  "Événement d'anniversaire créé dans le calendrier.": "Voaforona ao amin'ny kalandrie ny hetsika tsingerin-taona."
+  "Événement d'anniversaire créé dans le calendrier.": "Voaforona ao amin'ny kalandrie ny hetsika tsingerin-taona.",
+  "Pour vous": "Ho anao",
+  "Messages non lus": "Hafatra tsy mbola voavaky",
+  "Votes qui attendent votre voix": "Fifidianana miandry ny feonao",
+  "Mes tâches ({0} en retard)": "Ny asako ({0} tara)",
+  "Mes tâches à faire": "Ny asako tokony hatao",
+  "Événements aujourd'hui": "Hetsika anio",
+  "Ma cotisation à régler": "Ny latsakembokako tsy mbola voaloa",
+  "Les 7 prochains jours": "Ny 7 andro ho avy",
+  "Rien de prévu cette semaine.": "Tsy misy voalahatra amin'ity herinandro ity.",
+  "À traiter": "Tokony hokarakaraina",
+  "Tout voir ({0})": "Hijery ny rehetra ({0})",
+  "Rien à traiter pour le moment.": "Tsy misy tokony hokarakaraina amin'izao fotoana izao.",
+  "{0} fiche(s) en double à vérifier": "Taratasy mitovy roa {0} hojerena",
+  "Utilisateurs › fusionner les doublons": "Mpikambana › hampiraisina ny mitovy roa",
+  "Demain": "Rahampitso"
 }
