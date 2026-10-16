@@ -6,6 +6,10 @@ on:
   push:
     branches: [main]
   workflow_dispatch:
+  # Toutes les heures : si le nom ou le logo (Paramètres › Apparence) a changé,
+  # le site est republié pour mettre à jour l'icône de l'application installée.
+  schedule:
+    - cron: "41 * * * *"
 
 permissions:
   contents: read
@@ -17,9 +21,31 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  deploy:
+  verifier:
     runs-on: ubuntu-latest
     if: ${{ vars.SUPABASE_URL != '' }}
+    outputs:
+      publier: ${{ steps.marque.outputs.publier }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Comparer le nom et le logo avec le site en ligne
+        id: marque
+        env:
+          SUPABASE_URL: ${{ vars.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ vars.SUPABASE_ANON_KEY }}
+          EVENEMENT: ${{ github.event_name }}
+        run: |
+          if [ "$EVENEMENT" != "schedule" ]; then echo "publier=true" >> "$GITHUB_OUTPUT"; exit 0; fi
+          voulu=$(python3 .github/scripts/marque.py empreinte) || { echo "Nom et logo non lus : rien à faire."; echo "publier=false" >> "$GITHUB_OUTPUT"; exit 0; }
+          site="https://${GITHUB_REPOSITORY_OWNER,,}.github.io/${GITHUB_REPOSITORY#*/}/marque.txt"
+          en_ligne=$(curl -sS --fail "$site?t=$(date +%s)" 2>/dev/null | tr -d '[:space:]' || true)
+          echo "Site : ${en_ligne:-aucune}, réglages : $voulu"
+          if [ "$voulu" = "$en_ligne" ]; then echo "publier=false" >> "$GITHUB_OUTPUT"; else echo "publier=true" >> "$GITHUB_OUTPUT"; fi
+
+  deploy:
+    needs: verifier
+    runs-on: ubuntu-latest
+    if: ${{ needs.verifier.outputs.publier == 'true' }}
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
@@ -49,6 +75,13 @@ jobs:
           sed -i "s|const base = \"/\";|const base = \"$base\";|" "$www/service-worker.published.js"
           grep -q "<base href=\"$base\" />" "$www/index.html"
           grep -q "const base = \"$base\";" "$www/service-worker.published.js"
+      - name: Nom et logo de l'application installée (Paramètres › Apparence)
+        env:
+          SUPABASE_URL: ${{ vars.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ vars.SUPABASE_ANON_KEY }}
+        run: |
+          command -v convert >/dev/null || { sudo apt-get update -qq && sudo apt-get install -y -qq imagemagick; }
+          python3 .github/scripts/marque.py appliquer src/GestionUtilisateurs.Online.Web/wwwroot
       - name: Publier
         run: dotnet publish src/GestionUtilisateurs.Online.Web -c Release -o publish
       - name: Préparer pour GitHub Pages

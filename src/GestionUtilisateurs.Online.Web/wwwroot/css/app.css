@@ -966,6 +966,9 @@ input, select, textarea { font-family: var(--font); }
     cursor: pointer;
 }
 .password-toggle:active { color: var(--accent); }
+/* Edge (Windows) ajoute son propre œil dans les champs mot de passe : on ne garde que le nôtre. */
+input[type="password"]::-ms-reveal,
+input[type="password"]::-ms-clear { display: none; }
 
 .form-error { color: var(--danger); font-size: 12px; display: block; min-height: 15px; margin-top: 4px; }
 .field-hint { font-size: 11.5px; color: var(--text-muted); margin: 4px 0 0; display: block; }

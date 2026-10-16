@@ -131,6 +131,11 @@ Ouvrez l'adresse du site dans Chrome (Android) ou Safari (iPhone), puis
 s'ouvre alors comme une application, avec les mêmes comptes et les mêmes
 données que sur ordinateur. Il a besoin d'Internet pour enregistrer.
 
+Le nom et l'icône de l'application installée sont ceux de Paramètres ›
+Apparence (nom et logo de l'application). Le workflow « Déploiement du site »
+vérifie chaque heure s'ils ont changé et republie alors le site ; il faut que
+le script `0002_marque_publique.sql` soit installé.
+
 L'application mobile hors ligne (fichier APK du dépôt *GestionUtilisateurs2*)
 est une application différente : ses données restent dans le téléphone et ne
 sont pas reliées au site. Si vous l'utilisez encore, activez son export
