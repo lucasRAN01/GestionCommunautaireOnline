@@ -277,6 +277,7 @@ public static class AppMenus
         new MenuDef("comptes", "Comptes en ligne", "👤"),
         new MenuDef("roles", "Rôles et permissions", "🛡"),
         new MenuDef("archive", "Archives des utilisateurs", "🗃"),
+        new MenuDef("data", "Gestion de données", "🗄"),
         new MenuDef("capacite", "Capacité du serveur", "📊")
     };
 }
