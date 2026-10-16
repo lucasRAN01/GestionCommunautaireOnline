@@ -15,6 +15,11 @@ disponible » : un clic sur **Mettre à jour** suffit.
   jamais connecté, l'administrateur exécute une fois
   `supabase/migrations/0002_marque_publique.sql` (voir `docs/MISE-EN-LIGNE.md`).
 
+**Menu**
+- « Histoire de la communauté » porte le nom de l'application, par exemple
+  « Histoire de Fikambanana Fanantenana » (dès que le nom est réglé dans
+  Paramètres).
+
 **Mini-guide**
 - La dernière étape montre le menu « Guide utilisateur », quelle que soit sa
   place dans le menu (Paramètres seulement s'il a été masqué).

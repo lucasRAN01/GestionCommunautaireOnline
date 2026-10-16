@@ -176,4 +176,18 @@ public class DataStoreDoublonsTests
         Assert.Empty(store.Famille(a).Parents);
         Assert.Single(store.Famille(pere).Enfants);
     }
+
+    [Fact]
+    public void HistoireDeLaCommunaute_PorteLeNomDeLApplication()
+    {
+        var store = NewAdminStore();
+        Assert.Equal("Histoire de la communauté", store.LibelleHistoire());
+        var s = store.Settings;
+        s.AppName = "Fikambanana Fanantenana";
+        store.SaveSettings(s);
+        Assert.Equal("Histoire de Fikambanana Fanantenana", store.LibelleHistoire());
+        s.AppName = "Avotra";
+        store.SaveSettings(s);
+        Assert.Equal("Histoire d'Avotra", store.LibelleHistoire());
+    }
 }

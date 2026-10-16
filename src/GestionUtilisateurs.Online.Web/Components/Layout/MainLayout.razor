@@ -141,7 +141,7 @@
             <div class="help-banner" role="status">
                 <span class="help-banner-icon" aria-hidden="true">@ctx.Icon</span>
                 <div class="help-banner-main">
-                    <strong>@ctx.Title</strong>
+                    <strong>@TitreAide(ctx)</strong>
                     <p>@ctx.Summary</p>
                 </div>
                 <div class="help-banner-actions">
@@ -357,7 +357,7 @@
         </FooterContent>
     </Modal>
 
-    <Modal Title="@(_helpModal == null ? L.T("Aide") : _helpModal.Title)" Show="_helpModal != null" OnClose="() => _helpModal = null">
+    <Modal Title="@(_helpModal == null ? L.T("Aide") : TitreAide(_helpModal))" Show="_helpModal != null" OnClose="() => _helpModal = null">
         <ChildContent>
             @if (_helpModal != null)
             {
@@ -365,7 +365,7 @@
                     <div class="help-modal-head">
                         <span class="help-modal-icon" aria-hidden="true">@_helpModal.Icon</span>
                         <div>
-                            <div class="help-modal-title">@_helpModal.Title</div>
+                            <div class="help-modal-title">@TitreAide(_helpModal)</div>
                             <div class="help-modal-summary">@_helpModal.Summary</div>
                         </div>
                     </div>
@@ -434,7 +434,7 @@
         "documents" => L.T("Documents"),
         "data" => L.T("Gestion de données"),
         "archive" => L.T("Archives des utilisateurs"),
-        "community" => L.T("Communauté"),
+        "community" => Store.LibelleHistoire(),
         "comptes" => L.T("Comptes en ligne"),
         "capacite" => L.T("Capacité du serveur"),
         "roles" => L.T("Rôles et permissions"),
@@ -546,6 +546,9 @@
         _menuOpen = !_menuOpen;
     }
 
+    /// <summary>Titre d'une fiche d'aide (l'histoire porte le nom de l'application).</summary>
+    private string TitreAide(HelpEntry e) => e.Key == "community" ? Store.LibelleHistoire() : e.Title;
+
     /// <summary>Entrées du menu « … » : grandes cartes centrées. Les Paramètres sont dans la barre du bas.</summary>
     private sealed record MoreItem(string Key, string Label, string Icon, string IconClass, Func<bool> Visible, Action Act);
 
@@ -558,7 +561,7 @@
         // la gestion directe des données est ouverte aux administrateurs.
         new("data", L.T("Gestion de données"), "🗄", "menu-data", () => Store.IsAdmin && !Store.IsBaseAdmin, () => Go("data")),
         new("documents", L.T("Gestion documentaire"), "📄", "menu-docs", () => !Store.IsBaseAdmin, () => Go("documents")),
-        new("community", L.T("Histoire de la communauté"), "📖", "menu-community", () => true, () => Go("community")),
+        new("community", Store.LibelleHistoire(), "📖", "menu-community", () => true, () => Go("community")),
         new("roles", L.T("Rôles et permissions"), "🛡", "menu-roles", () => Store.Can(Permissions.RolesManage), () => Go("roles")),
         new("messagerie", L.T("Messagerie"), "✉", "menu-msg", () => Store.Can(Permissions.MessagerieUse), () => Go("messagerie")),
         new("taches", L.T("Tâches et suivi"), "☑", "menu-tasks", () => Store.Can(Permissions.TachesUse), () => Go("taches")),

@@ -2475,6 +2475,19 @@ if (string.IsNullOrWhiteSpace(draft.Prenom)) Add("prenom", L.T("Le prénom est o
 
     public CommunityStory Community => _community;
 
+    /// <summary>
+    /// Nom du menu « Histoire de … » avec le vrai nom de l'application
+    /// (« Histoire de la communauté » tant que le nom par défaut est gardé).
+    /// </summary>
+    public string LibelleHistoire()
+    {
+        var nom = (_settings.AppName ?? "").Trim();
+        if (nom.Length == 0 || nom == new AppSettings().AppName) return L.T("Histoire de la communauté");
+        return "aeiouyhàâäéèêëîïôöùûüAEIOUYHÀÂÄÉÈÊËÎÏÔÖÙÛÜ".Contains(nom[0])
+            ? L.F("Histoire d'{0}", nom)
+            : L.F("Histoire de {0}", nom);
+    }
+
     public OperationResult SaveCommunityStory(string titre, string sousTitre)
     {
         _community.Titre = string.IsNullOrWhiteSpace(titre) ? "Histoire de notre communauté" : titre.Trim();
