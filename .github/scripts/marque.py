@@ -115,6 +115,8 @@ def appliquer(www, marque):
         with open(chemin, encoding="utf-8") as f:
             page = f.read()
         page = re.sub(r"<title>.*?</title>", "<title>" + html.escape(nom) + "</title>", page, count=1)
+        # Écran de chargement : le nom est affiché dès la première visite.
+        page = re.sub(r'(<div class="splash-title">).*?(</div>)', lambda m: m.group(1) + html.escape(nom) + m.group(2), page, count=1)
         with open(chemin, "w", encoding="utf-8") as f:
             f.write(page)
         print(f"Nom de l'application : {nom} (sous l'icône : {nom_court(nom)})")
@@ -130,6 +132,14 @@ def appliquer(www, marque):
             icone(t.name, os.path.join(www, "icon-512.png"), 512)
             icone(t.name, os.path.join(www, "icon-192.png"), 192)
             icone(t.name, os.path.join(www, "favicon.png"), 64, marge=1.0)
+            # Écran de chargement : le logo est affiché dès la première visite.
+            chemin = os.path.join(www, "index.html")
+            with open(chemin, encoding="utf-8") as f:
+                page = f.read()
+            page = re.sub(r'<img id="splash-logo"[^>]*/>',
+                          f'<img id="splash-logo" class="splash-logo" alt="" src="icon-512.png?v={empreinte(marque)}" />', page, count=1)
+            with open(chemin, "w", encoding="utf-8") as f:
+                f.write(page)
             print("Logo de l'application : icônes générées.")
         except Exception as e:
             print(f"::warning::Logo illisible ({e}) : icône par défaut.")

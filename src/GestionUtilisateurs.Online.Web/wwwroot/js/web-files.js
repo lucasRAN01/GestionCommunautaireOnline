@@ -25,28 +25,59 @@ window.guWebFiles = (function () {
         });
     }
 
-    function compressible(type) {
-        return /^image\/(jpeg|png|webp|heic|heif|bmp)$/i.test(type || '');
+    // Image décodée : <img> d'abord, puis createImageBitmap (certains formats ou
+    // fichiers sans type passent mieux par là).
+    async function decodeImage(file, dataUrl) {
+        try {
+            var img = await loadImage(dataUrl);
+            if (img.naturalWidth && img.naturalHeight) return { source: img, w: img.naturalWidth, h: img.naturalHeight };
+        } catch (e) { }
+        if (window.createImageBitmap) {
+            try {
+                var bmp = await createImageBitmap(file);
+                if (bmp.width && bmp.height) return { source: bmp, w: bmp.width, h: bmp.height };
+            } catch (e) { }
+        }
+        return null;
+    }
+
+    var IMAGE_EXT = /\.(jpe?g|png|webp|gif|bmp|heic|heif|avif|tiff?)$/i;
+
+    // Toute image (sauf SVG), y compris un fichier sans type dont le nom est celui d'une image.
+    function compressible(file) {
+        var type = file.type || '';
+        if (/^image\/svg/i.test(type)) return false;
+        if (/^image\//i.test(type)) return true;
+        return !type && IMAGE_EXT.test(file.name || '');
+    }
+
+    function sizeOf(dataUrl) {
+        return Math.round((dataUrl.length - dataUrl.indexOf(',') - 1) * 3 / 4);
     }
 
     // Réduit une image (côté le plus long ≤ 1600 px) et la ré-encode en JPEG.
-    // Garde l'original s'il est déjà plus léger que la version compressée.
-    async function compressImage(file, dataUrl) {
+    // Si le résultat dépasse encore la taille maximale, l'image est réduite
+    // davantage. Garde l'original s'il est déjà plus léger que la version compressée.
+    async function compressImage(file, dataUrl, maxBytes) {
         try {
-            var img = await loadImage(dataUrl);
-            var w = img.naturalWidth, h = img.naturalHeight;
-            if (!w || !h) return null;
-            var scale = Math.min(1, MAX_SIDE / Math.max(w, h));
-            var canvas = document.createElement('canvas');
-            canvas.width = Math.round(w * scale);
-            canvas.height = Math.round(h * scale);
-            var ctx = canvas.getContext('2d');
-            ctx.fillStyle = '#ffffff';
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
-            ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-            var out = canvas.toDataURL('image/jpeg', JPEG_QUALITY);
-            var outSize = Math.round((out.length - out.indexOf(',') - 1) * 3 / 4);
-            if (outSize >= file.size && scale === 1) return null;
+            var img = await decodeImage(file, dataUrl);
+            if (!img) return null;
+            var essais = [[MAX_SIDE, JPEG_QUALITY], [1280, 0.7], [1024, 0.6], [800, 0.5]];
+            var out = null, scale = 1;
+            for (var i = 0; i < essais.length; i++) {
+                scale = Math.min(1, essais[i][0] / Math.max(img.w, img.h));
+                var canvas = document.createElement('canvas');
+                canvas.width = Math.round(img.w * scale);
+                canvas.height = Math.round(img.h * scale);
+                var ctx = canvas.getContext('2d');
+                ctx.fillStyle = '#ffffff';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                ctx.drawImage(img.source, 0, 0, canvas.width, canvas.height);
+                out = canvas.toDataURL('image/jpeg', essais[i][1]);
+                if (!maxBytes || sizeOf(out) <= maxBytes) break;
+            }
+            var outSize = sizeOf(out);
+            if (outSize >= file.size && scale === 1 && (!maxBytes || file.size <= maxBytes)) return null;
             var name = (file.name || 'photo').replace(/\.[^.]+$/, '') + '.jpg';
             return { name: name, type: 'image/jpeg', size: outSize, dataUrl: out };
         } catch (e) {
@@ -91,8 +122,10 @@ window.guWebFiles = (function () {
         if (!file.size) return { error: 'Le fichier est vide.' };
         var dataUrl = await readAsDataUrl(file);
         var result = { name: file.name, type: file.type || '', size: file.size, dataUrl: dataUrl };
-        if (compress && compressible(file.type)) {
-            var small = await compressImage(file, dataUrl);
+        // Une image animée (GIF) n'est réduite que si elle dépasse la taille maximale.
+        var gif = /gif/i.test(file.type || '') || /\.gif$/i.test(file.name || '');
+        if (compress && compressible(file) && (!gif || (maxBytes && file.size > maxBytes))) {
+            var small = await compressImage(file, dataUrl, maxBytes);
             if (small) result = small;
         }
         if (maxBytes && result.size > maxBytes) {

@@ -8,16 +8,15 @@
 {
     case OnlineSessionState.Starting:
     case OnlineSessionState.Loading:
+        @* Même écran que celui de index.html (logo et nom) : un seul écran de chargement. *@
         <div class="splash-loading" role="status" aria-live="polite">
             <div class="splash-rings">
                 <div class="splash-ring splash-ring-outer"></div>
                 <div class="splash-ring splash-ring-inner"></div>
-                <div class="splash-brand">@L.InitialesApplication()</div>
+                <img class="splash-logo" src="@(string.IsNullOrEmpty(_logo) ? LogoParDefaut : _logo)" alt="" />
             </div>
-            @if (Session.State == OnlineSessionState.Loading)
-            {
-                <p class="online-splash-text">@L.T("Chargement des données de la communauté…")</p>
-            }
+            <div class="splash-title">@(string.IsNullOrWhiteSpace(NomGarde) ? "Gestion communautaire" : NomGarde)</div>
+            <div class="splash-dots"><span></span><span></span><span></span></div>
         </div>
         break;
     case OnlineSessionState.SignedOut:
@@ -37,14 +36,25 @@
     /// <summary>Nom de la communauté gardé sur l'appareil (écran de connexion), avant le chargement des données.</summary>
     public static string? NomGarde { get; set; }
 
-    private sealed record MarqueGardee(string? Nom);
+    /// <summary>Logo SAFIAF livré avec le site, tant qu'aucun logo n'est réglé dans Apparence.</summary>
+    public const string LogoParDefaut = "logo.png";
+
+    private sealed record MarqueGardee(string? Nom, string? Logo);
+
+    private string _logo = "";
 
     private static readonly string NomParDefaut = new AppSettings().AppName;
 
     protected override async Task OnInitializedAsync()
     {
         // Les textes qui parlent de « la communauté » citent le nom de l'application.
-        try { NomGarde ??= ((IJSInProcessRuntime)JS).Invoke<MarqueGardee>("guMarque.lire")?.Nom; } catch { }
+        try
+        {
+            var gardee = ((IJSInProcessRuntime)JS).Invoke<MarqueGardee>("guMarque.lire");
+            if (string.IsNullOrWhiteSpace(NomGarde)) NomGarde = gardee?.Nom;
+            if (gardee?.Logo?.StartsWith("data:image/", StringComparison.Ordinal) == true) _logo = gardee.Logo;
+        }
+        catch { }
         L.NomApplication = () =>
         {
             var nom = Store.Settings.AppName?.Trim();
@@ -59,9 +69,9 @@
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        // L'écran de démarrage de index.html s'efface dès que la session est connue
-        // (connexion, compte en attente…), sans attendre l'application complète.
-        if (Session.State != OnlineSessionState.Starting)
+        // L'écran de démarrage de index.html (logo et nom) reste affiché jusqu'à ce
+        // que les données soient chargées : il n'y a qu'un seul écran de chargement.
+        if (Session.State is not (OnlineSessionState.Starting or OnlineSessionState.Loading))
         {
             try { await Js.NotifySplashReadyAsync(); } catch { }
         }

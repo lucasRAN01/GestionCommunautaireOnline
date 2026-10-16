@@ -4,14 +4,7 @@
 <div class="online-auth">
     <aside class="online-auth-hero" aria-hidden="true">
         <div class="online-auth-hero-inner">
-            @if (_logo.Length > 0)
-            {
-                <img class="online-auth-logo" src="@_logo" alt="" />
-            }
-            else
-            {
-                <div class="online-auth-brand">@Initiales</div>
-            }
+            <img class="online-auth-logo" src="@LogoAffiche" alt="" />
             <h2>@(_communaute.Length > 0 ? L.T(_communaute) : L.T("Votre communauté, en ligne"))</h2>
             <p>@L.T("Membres, calendrier, documents, finances, votes et messagerie, partagés en toute sécurité.")</p>
             <ul>
@@ -25,14 +18,7 @@
     <div class="login-view online-auth-main @(_signup ? "is-signup" : "")">
         <LanguePicker CssClass="lang-picker-auth" />
         <div class="login-logo">
-            @if (_logo.Length > 0)
-            {
-                <img class="login-logo-img online-auth-mobile-logo" src="@_logo" alt="@L.T("Logo de la communauté")" />
-            }
-            else
-            {
-                <div class="login-logo-mark online-auth-mobile-logo">@Initiales</div>
-            }
+            <img class="login-logo-img online-auth-mobile-logo" src="@LogoAffiche" alt="@L.T("Logo de la communauté")" />
             @if (_communaute.Length > 0)
             {
                 <h1 class="online-auth-mobile-name">@L.T(_communaute)</h1>
@@ -105,7 +91,7 @@
                 {
                     <label for="auth-email">@L.T("Identifiant ou e-mail")</label>
                     <input id="auth-email" type="text" autocomplete="username" autocapitalize="none" spellcheck="false"
-                           placeholder="@L.T("lucas ou vous@exemple.fr")" @bind="_email" />
+                           placeholder="@L.T("Votre identifiant ou votre e-mail")" @bind="_email" />
                 }
             </div>
 
@@ -155,8 +141,8 @@
     private string _communaute = "";
     private string _logo = "";
 
-    /// <summary>Initiales du nom de la communauté (GU par défaut).</summary>
-    private string Initiales => L.Initiales(L.T(_communaute));
+    /// <summary>Logo réglé dans Apparence, sinon le logo SAFIAF livré avec le site.</summary>
+    private string LogoAffiche => _logo.Length > 0 ? _logo : Root.LogoParDefaut;
 
     /// <summary>Nom et logo de la communauté : ceux gardés sur l'appareil, puis ceux du serveur.</summary>
     protected override async Task OnInitializedAsync()
