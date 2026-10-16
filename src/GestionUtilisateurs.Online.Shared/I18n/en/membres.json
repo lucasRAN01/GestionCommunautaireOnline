@@ -310,5 +310,20 @@
   "Échec de l'enregistrement du fichier.": "Failed to save the file.",
   "Écrire pour chercher un membre…": "Type to search for a member…",
   "Éditeur de champ": "Field editor",
-  "Événement d'anniversaire créé dans le calendrier.": "Birthday event created in the calendar."
+  "Événement d'anniversaire créé dans le calendrier.": "Birthday event created in the calendar.",
+  "Pour vous": "For you",
+  "Messages non lus": "Unread messages",
+  "Votes qui attendent votre voix": "Votes waiting for you",
+  "Mes tâches ({0} en retard)": "My tasks ({0} overdue)",
+  "Mes tâches à faire": "My tasks to do",
+  "Événements aujourd'hui": "Events today",
+  "Ma cotisation à régler": "My dues to pay",
+  "Les 7 prochains jours": "The next 7 days",
+  "Rien de prévu cette semaine.": "Nothing planned this week.",
+  "À traiter": "To handle",
+  "Tout voir ({0})": "See all ({0})",
+  "Rien à traiter pour le moment.": "Nothing to handle right now.",
+  "{0} fiche(s) en double à vérifier": "{0} duplicate record(s) to check",
+  "Utilisateurs › fusionner les doublons": "Members › merge duplicates",
+  "Demain": "Tomorrow"
 }

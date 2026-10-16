@@ -4,6 +4,19 @@ Les nouveautés de la version en ligne, de la plus récente à la plus ancienne.
 Après chaque mise à jour, le site affiche un bandeau « Nouvelle version
 disponible » : un clic sur **Mettre à jour** suffit.
 
+## 16 octobre 2026 (accueil)
+
+**Page d'accueil**
+- Les cartes repliables Finances, Tâches & rappels et Matériel & médias
+  ont disparu de l'accueil (ces informations restent dans leurs menus).
+- Nouvelle carte « Pour vous » : messages non lus, votes qui attendent votre
+  voix, vos tâches (et celles en retard), événements du jour et votre
+  cotisation à régler. Chaque case ouvre le menu correspondant.
+- « Les 7 prochains jours » : les événements du calendrier de la semaine.
+- « À traiter » : les rappels les plus urgents et les fiches en double.
+- Une case n'apparaît que si le menu est accessible au membre et n'est pas
+  masqué dans les paramètres.
+
 ## 15 octobre 2026 (langues)
 
 **Trois langues : français, anglais, malgache**
