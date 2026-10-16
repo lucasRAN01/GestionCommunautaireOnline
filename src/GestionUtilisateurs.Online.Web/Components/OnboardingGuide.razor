@@ -92,6 +92,9 @@
         var appName = string.IsNullOrWhiteSpace(Store.Settings.AppName)
             ? L.T("Gestion des utilisateurs") : Store.Settings.AppName;
         var steps = new List<Step>();
+        // Le dernier écran montre le menu « Guide utilisateur », quelle que soit sa
+        // place dans le menu ; Paramètres seulement s'il a été masqué du menu.
+        var guide = !Store.IsMenuHidden("guide");
         if (desktop)
         {
             steps.Add(new("", L.T("En haut à gauche : le logo"),
@@ -102,8 +105,11 @@
                 L.T("Cliquez sur votre photo pour ouvrir Mes informations, changer votre mot de passe ou vous déconnecter."), ".avatar-button"));
             steps.Add(new("", L.T("Sur chaque écran : l'aide ⓘ"),
                 L.T("Ce bouton, à côté de votre avatar, ouvre l'aide de la page en cours. En cas de doute, il sait quoi faire."), ".topbar-help-btn"));
-            steps.Add(new("ready", L.T("Vous êtes prêt·e !"),
-                L.T("Vous pouvez revoir ce guide à tout moment depuis Paramètres, ici dans le menu. Bon usage !"), ".web-nav-item[data-nav=\"settings\"]", Side: true));
+            steps.Add(guide
+                ? new("ready", L.T("Vous êtes prêt·e !"),
+                    L.T("Vous pouvez revoir ce guide à tout moment depuis « Guide utilisateur », ici dans le menu. Bon usage !"), ".web-nav-item[data-nav=\"guide\"]", Side: true)
+                : new("ready", L.T("Vous êtes prêt·e !"),
+                    L.T("Vous pouvez revoir ce guide à tout moment depuis Paramètres, ici dans le menu. Bon usage !"), ".web-nav-item[data-nav=\"settings\"]", Side: true));
         }
         else
         {
@@ -118,7 +124,10 @@
             steps.Add(new("", L.T("Sur chaque écran : l'aide ⓘ"),
                 L.T("Ce bouton ouvre l'aide de la page en cours. En cas de doute, il sait quoi faire."), ".topbar-help-btn"));
             steps.Add(new("ready", L.T("Vous êtes prêt·e !"),
-                L.T("Pour revoir ce guide, ouvrez « ⋮ » puis Paramètres. Astuce : glissez du bord gauche vers la droite pour revenir en arrière."), "[aria-label=\"" + L.T("Plus d'options") + "\"]"));
+                guide
+                    ? L.T("Pour revoir ce guide, ouvrez « ⋮ » puis « Guide utilisateur ». Astuce : glissez du bord gauche vers la droite pour revenir en arrière.")
+                    : L.T("Pour revoir ce guide, ouvrez « ⋮ » puis Paramètres. Astuce : glissez du bord gauche vers la droite pour revenir en arrière."),
+                "[aria-label=\"" + L.T("Plus d'options") + "\"]"));
         }
         steps.Insert(0, new("welcome", L.F("Bienvenue sur {0}", appName),
             L.F("Votre gestion communautaire en ligne, partagée avec tous les membres. Laissez-vous guider en {0} étapes.", steps.Count), null));

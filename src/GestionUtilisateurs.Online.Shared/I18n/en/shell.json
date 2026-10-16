@@ -257,5 +257,9 @@
   "Audio": "Audio",
   "Image": "Image",
   "Fichier": "File",
-  "Fichier Excel": "Excel file"
+  "Fichier Excel": "Excel file",
+  "Vous pouvez revoir ce guide à tout moment depuis « Guide utilisateur », ici dans le menu. Bon usage !": "You can view this guide again at any time from “User guide”, right here in the menu. Enjoy!",
+  "Pour revoir ce guide, ouvrez « ⋮ » puis « Guide utilisateur ». Astuce : glissez du bord gauche vers la droite pour revenir en arrière.": "To view this guide again, open “⋮” then “User guide”. Tip: swipe from the left edge to the right to go back.",
+  "Histoire de {0}": "Story of {0}",
+  "Histoire d'{0}": "Story of {0}"
 }

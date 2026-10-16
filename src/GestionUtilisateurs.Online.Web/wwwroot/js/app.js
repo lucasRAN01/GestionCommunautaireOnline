@@ -12,6 +12,21 @@ window.guLangue = {
     }
 };
 
+// Nom et logo de la communauté pour l'écran de connexion (gardés depuis la
+// dernière visite, puis mis à jour par le serveur).
+window.guMarque = {
+    lire: function () {
+        try { return { nom: localStorage.getItem('gu_app_name') || '', logo: localStorage.getItem('gu_logo') || '' }; }
+        catch (e) { return { nom: '', logo: '' }; }
+    },
+    ecrire: function (nom, logo) {
+        try {
+            if (nom) localStorage.setItem('gu_app_name', nom);
+            if (logo) localStorage.setItem('gu_logo', logo); else localStorage.removeItem('gu_logo');
+        } catch (e) { }
+    }
+};
+
 window.guTheme = {
     apply: function (theme, color, appName, logoDataUrl) {
         var root = document.documentElement;

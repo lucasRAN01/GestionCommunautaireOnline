@@ -107,6 +107,18 @@ Si un membre ne voit pas le bandeau (ancienne version d'avant ce bandeau),
 il suffit de fermer tous les onglets du site, ou l'application installée sur
 le téléphone, puis de le rouvrir.
 
+### Mises à jour de la base (scripts SQL)
+
+Certaines mises à jour demandent d'exécuter une fois un petit script dans
+Supabase (**SQL Editor > New query**, coller le contenu, **Run**). Chaque
+script peut être relancé sans danger.
+
+- `supabase/migrations/0002_marque_publique.sql` (16 octobre 2026) : affiche
+  le nom et le logo de la communauté sur l'écran de connexion, même sur un
+  appareil qui ne s'est jamais connecté. Seuls ce nom et ce logo deviennent
+  lisibles sans compte. Sans ce script, l'écran de connexion montre le nom et
+  le logo gardés lors de la dernière connexion sur l'appareil.
+
 ### Installer le site sur un téléphone
 
 Ouvrez l'adresse du site dans Chrome (Android) ou Safari (iPhone), puis

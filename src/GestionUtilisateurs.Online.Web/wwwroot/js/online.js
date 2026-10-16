@@ -228,6 +228,22 @@ window.guOnline = (function () {
             return { data: JSON.stringify(r.data === undefined ? null : r.data) };
         },
 
+        // Nom et logo de la communauté pour l'écran de connexion (sans compte).
+        marque: async function () {
+            var r = await client.rpc('public_branding');
+            if (r.error || !r.data) return { error: r.error ? err(r.error) : 'vide' };
+            var nom = r.data.nom || '', logo = r.data.logo || '';
+            var m = REF.exec(logo);
+            if (m) {
+                logo = '';
+                try {
+                    var dl = await client.storage.from(BUCKET).download('f/' + m[1]);
+                    if (!dl.error) logo = await blobToDataUrl(dl.data, m[2]);
+                } catch (_) { }
+            }
+            return { nom: nom, logo: logo.startsWith('data:image/') ? logo : '' };
+        },
+
         removeFiles: async function (names) {
             var r = await client.storage.from(BUCKET).remove(names);
             return r.error ? { ok: false, error: err(r.error) } : { ok: true };
