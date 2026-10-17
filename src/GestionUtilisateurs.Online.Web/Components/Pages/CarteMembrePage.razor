@@ -2,6 +2,7 @@
 @inject DataStore Store
 @inject AppState State
 @inject NativeFileSaver Saver
+@inject NavigationManager Nav
 
 @if (!Store.Can(Permissions.CarteMembreView))
 {
@@ -35,14 +36,7 @@ else
                     </div>
                     <div class="cmc-front-head">
                         <div class="cmc-brand">
-                            @if (!string.IsNullOrWhiteSpace(Store.Settings.Logo))
-                            {
-                                <img class="cmc-logo" src="@Store.Settings.Logo" alt="@L.T("Logo de la communauté")" />
-                            }
-                            else
-                            {
-                                <div class="cmc-logo cmc-logo-fallback">@L.InitialesApplication()</div>
-                            }
+                            <img class="cmc-logo" src="@Root.LogoOuDefaut(Store.Settings.Logo)" alt="@L.T("Logo de la communauté")" />
                             <div class="cmc-brand-text">
                                 <strong>@Store.Settings.AppName</strong>
                                 @if (!string.IsNullOrWhiteSpace(Store.Settings.CarteSlogan))
@@ -80,14 +74,7 @@ else
                 <div class="cmc-face cmc-back">
                     <span class="cmc-wave cmc-wave-back" aria-hidden="true"></span>
                     <div class="cmc-back-head">
-                        @if (!string.IsNullOrWhiteSpace(Store.Settings.Logo))
-                        {
-                            <img class="cmc-logo" src="@Store.Settings.Logo" alt="" />
-                        }
-                        else
-                        {
-                            <div class="cmc-logo cmc-logo-fallback">@L.InitialesApplication()</div>
-                        }
+                        <img class="cmc-logo" src="@Root.LogoOuDefaut(Store.Settings.Logo)" alt="" />
                         <strong>@Store.Settings.AppName</strong>
                     </div>
                     @if (!string.IsNullOrWhiteSpace(Store.Settings.CarteCitation))
@@ -288,6 +275,11 @@ else
 
     private static double MmToPt(double mm) => mm * 72.0 / 25.4;
 
+    /// <summary>Logo de la carte imprimée : adresse complète, la fenêtre d'impression n'a pas l'adresse du site.</summary>
+    private string LogoPourImpression => string.IsNullOrWhiteSpace(Store.Settings.Logo)
+        ? Nav.ToAbsoluteUri(Root.LogoParDefaut).ToString()
+        : Store.Settings.Logo;
+
     private string BuildCardFrontHtml() => CardDocHead() + CardFrontBody() + "</body></html>";
 
     private string BuildCardBackHtml() => CardDocHead() + CardBackBody() + "</body></html>";
@@ -347,13 +339,13 @@ else
     {
         var user = Current!;
         var memberCode = MemberCode(user);
-        var logo = Store.Settings.Logo;
+        var logo = LogoPourImpression;
         var appName = Store.Settings.AppName;
         var slogan = Store.Settings.CarteSlogan;
         var photo = user.Photo ?? "";
         return "<div class=\"card\"><span class=\"wave\"></span>"
             + "<svg class=\"leaf\" viewBox=\"0 0 120 120\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.6\"><path d=\"M12 108C12 60 52 20 108 12c-4 56-44 96-96 96z\"/><path d=\"M108 12C76 34 48 62 24 96\"/></svg>"
-            + "<div class=\"head\"><div class=\"logo\">" + (string.IsNullOrWhiteSpace(logo) ? L.InitialesApplication() : "<img src=\"" + logo + "\" alt=\"\" />") + "</div>"
+            + "<div class=\"head\"><div class=\"logo\">" + "<img src=\"" + logo + "\" alt=\"\" />" + "</div>"
             + "<div class=\"brand\"><strong>" + H(appName) + "</strong><span>" + H(slogan) + "</span></div></div>"
             + "<div class=\"body\"><div class=\"id\"><div class=\"photo\">" + (string.IsNullOrWhiteSpace(photo) ? H(Initials(user)) : "<img src=\"" + photo + "\" alt=\"\" />") + "</div>"
             + "<div class=\"idtext\"><div class=\"name\">" + H(user.NomComplet) + "</div>"
@@ -367,13 +359,13 @@ else
     {
         var user = Current!;
         var memberCode = MemberCode(user);
-        var logo = Store.Settings.Logo;
+        var logo = LogoPourImpression;
         var appName = Store.Settings.AppName;
         var citation = Store.Settings.CarteCitation;
         var signature = user.Signature ?? "";
         var resp = Store.ResponsableAffiche(user);
         return "<div class=\"card back\"><span class=\"wave\" style=\"background:rgba(30,79,176,.08)\"></span>"
-            + "<div class=\"head\"><div class=\"logo\">" + (string.IsNullOrWhiteSpace(logo) ? L.InitialesApplication() : "<img src=\"" + logo + "\" alt=\"\" />") + "</div>"
+            + "<div class=\"head\"><div class=\"logo\">" + "<img src=\"" + logo + "\" alt=\"\" />" + "</div>"
             + "<div class=\"brand\"><strong>" + H(appName) + "</strong></div></div>"
             + (string.IsNullOrWhiteSpace(citation) ? "" : "<blockquote class=\"quote\">" + H(citation) + "</blockquote>")
             + "<p class=\"usage\">" + H(L.T("Carte personnelle et non transférable. Elle doit être présentée lors des activités de la communauté. En cas de perte ou de vol, veuillez en informer l'administration.")) + "</p>"
