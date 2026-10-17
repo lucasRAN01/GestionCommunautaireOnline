@@ -98,12 +98,36 @@
             </button>
             <button class="user-menu-item" @onclick='() => Go("profile")'><span class="menu-icon menu-profile" aria-hidden="true"><svg viewBox="0 0 24 24" width="18" height="18"><circle cx="12" cy="8" r="3.6" fill="currentColor" opacity=".25"/><circle cx="12" cy="8" r="3.6" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M4.5 20c1.4-3.4 4.2-5 7.5-5s6.1 1.6 7.5 5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></span><span class="menu-label">@L.T("Mes informations")</span></button>
             <button class="user-menu-item" @onclick="OpenPassword"><span class="menu-icon" aria-hidden="true">🔑</span><span class="menu-label">@L.T("Changer mon mot de passe")</span></button>
+            @if (Store.EstAdministrateurReel)
+            {
+                <div class="user-menu-section">@L.T("Voir l'application en tant que")</div>
+                @foreach (var role in DataStore.RolesApercu)
+                {
+                    var r = role;
+                    <button class="user-menu-item @(Store.RoleApercu == r ? "active" : "")" @onclick="() => CommencerApercu(r)"><span class="menu-icon" aria-hidden="true">@(r == Roles.Gestionnaire ? "🧰" : "👤")</span><span class="menu-label">@L.T(r)</span></button>
+                }
+                @if (Store.EnApercu)
+                {
+                    <button class="user-menu-item" @onclick="TerminerApercu"><span class="menu-icon" aria-hidden="true">↩</span><span class="menu-label">@L.T("Quitter l'aperçu")</span></button>
+                }
+            }
             <button class="user-menu-item danger" @onclick="AskLogout"><span class="menu-icon menu-logout" aria-hidden="true"><svg viewBox="0 0 24 24" width="18" height="18"><path d="M14 4H6a1 1 0 0 0-1 1v14a1 1 0 0 0 1 1h8" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/><path d="M10 12h10m-3-3 3 3-3 3" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span class="menu-label">@L.T("Déconnexion")</span></button>
         </div>
     }
 
     <main class="app-content" @onmousedown="CloseMenuFromOutside">
-        @if (Online.IsAdmin && Online.Admin.Level != "ok")
+        @if (Store.EnApercu)
+        {
+            <div class="quota-banner apercu-banner" role="status">
+                <span class="quota-banner-icon" aria-hidden="true">👁</span>
+                <div class="quota-banner-main">
+                    <strong>@L.F("Aperçu en tant que {0}", L.T(Store.RoleApercu))</strong>
+                    <span>@L.T("Vous voyez les menus et les boutons de ce rôle. Ce que vous faites pendant l'aperçu est réellement enregistré.")</span>
+                </div>
+                <button type="button" class="btn btn-secondary btn-sm" @onclick="TerminerApercu">@L.T("Quitter l'aperçu")</button>
+            </div>
+        }
+        @if (Online.IsAdmin && Store.IsAdmin && Online.Admin.Level != "ok")
         {
             <div class="quota-banner @(Online.Admin.Level == "critique" ? "quota-banner-critical" : "")" role="alert">
                 <span class="quota-banner-icon" aria-hidden="true">@(Online.Admin.Level == "critique" ? "⛔" : "⚠")</span>
@@ -125,7 +149,7 @@
                 <button type="button" class="btn btn-secondary btn-sm" @onclick='() => Go("comptes")'>@L.T("Valider")</button>
             </div>
         }
-        @if (Online.Admin.PasswordRequests > 0 && Online.IsAdmin && State.CurrentPage != "comptes")
+        @if (Online.Admin.PasswordRequests > 0 && Online.IsAdmin && Store.IsAdmin && State.CurrentPage != "comptes")
         {
             <div class="quota-banner online-pending-banner" role="status">
                 <span class="quota-banner-icon" aria-hidden="true">🔑</span>
@@ -1058,6 +1082,19 @@
     }
 
     private void OnOnlineChanged() => _ = InvokeAsync(StateHasChanged);
+
+    private void CommencerApercu(string role)
+    {
+        var res = Store.CommencerApercu(role);
+        if (!res.Success) { State.NotifyError(res.Error ?? L.T("Action impossible.")); return; }
+        Go("dashboard");
+    }
+
+    private void TerminerApercu()
+    {
+        Store.TerminerApercu();
+        Go("dashboard");
+    }
 
     private void Go(string page)
     {

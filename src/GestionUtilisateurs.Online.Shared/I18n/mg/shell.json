@@ -279,5 +279,9 @@
   "Saisissez votre identifiant ou votre e-mail.": "Ampidiro ny anarana fidirana na ny mailakao.",
   "Trop d'essais avec cet identifiant. Réessayez dans 15 minutes, ou connectez-vous avec votre e-mail.": "Be loatra ny andrana tamin'io anarana fidirana io. Andramo indray afaka 15 minitra, na midira amin'ny mailakao.",
   "La connexion par identifiant n'est pas encore activée : utilisez votre e-mail.": "Mbola tsy mandeha ny fidirana amin'ny anarana fidirana : ampiasao ny mailakao.",
-  "E-mail ou mot de passe incorrect.": "Diso ny mailaka na ny tenimiafina."
+  "E-mail ou mot de passe incorrect.": "Diso ny mailaka na ny tenimiafina.",
+  "Voir l'application en tant que": "Hijery ny rindrankajy ho",
+  "Quitter l'aperçu": "Hiala amin'ny topi-maso",
+  "Aperçu en tant que {0}": "Topi-maso ho {0}",
+  "Vous voyez les menus et les boutons de ce rôle. Ce que vous faites pendant l'aperçu est réellement enregistré.": "Hitanao ny menio sy ny bokotra an'io andraikitra io. Voatahiry tokoa izay ataonao mandritra ny topi-maso."
 }

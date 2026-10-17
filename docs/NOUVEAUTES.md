@@ -4,6 +4,15 @@ Les nouveautés de la version en ligne, de la plus récente à la plus ancienne.
 Après chaque mise à jour, le site affiche un bandeau « Nouvelle version
 disponible » : un clic sur **Mettre à jour** suffit.
 
+## 17 octobre 2026 (aperçu par rôle)
+
+- Un administrateur peut voir l'application comme un Gestionnaire ou un
+  Utilisateur : menu du compte (photo en haut à droite) › « Voir
+  l'application en tant que ». Menus, pages et boutons suivent ce rôle et la
+  matrice Rôles et permissions. Un bandeau rappelle l'aperçu et permet d'en
+  sortir ; il s'arrête aussi au rechargement ou à la déconnexion. Ce qui est
+  fait pendant l'aperçu est réellement enregistré.
+
 ## 16 octobre 2026 (identifiants au prénom, images, chargement)
 
 - Les identifiants sont mis au prénom automatiquement (« lucas », puis
