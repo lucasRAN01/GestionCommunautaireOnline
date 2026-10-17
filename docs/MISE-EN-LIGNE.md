@@ -97,15 +97,21 @@ attendent sans erreur.
 
 ### Après une mise à jour du site
 
-Le navigateur garde l'application en cache pour qu'elle s'ouvre vite. Quand
-une nouvelle version est publiée, les membres voient apparaître en bas de
-l'écran un bandeau **« Nouvelle version disponible »** : un clic sur
-**Mettre à jour** recharge le site avec la nouvelle version. Le site vérifie
-s'il y a du nouveau à chaque ouverture, puis toutes les 30 minutes.
+Le navigateur garde l'application en cache pour qu'elle s'ouvre vite. La
+mise à jour est obligatoire et ne peut pas être ignorée :
 
-Si un membre ne voit pas le bandeau (ancienne version d'avant ce bandeau),
-il suffit de fermer tous les onglets du site, ou l'application installée sur
-le téléphone, puis de le rouvrir.
+- si la nouvelle version est trouvée pendant l'écran de chargement, elle
+  s'installe aussitôt ;
+- si l'application est déjà ouverte, un écran **« Nouvelle version
+  disponible »** bloque l'application : un clic sur **Mettre à jour**
+  recharge le site, sinon la mise à jour se fait seule après 15 secondes.
+
+Le site vérifie s'il y a du nouveau à chaque ouverture, quand on revient sur
+l'application, puis toutes les 30 minutes.
+
+Si un membre a encore une version d'avant cette règle, il suffit de fermer
+tous les onglets du site, ou l'application installée sur le téléphone, puis
+de le rouvrir.
 
 ### Mises à jour de la base (scripts SQL)
 

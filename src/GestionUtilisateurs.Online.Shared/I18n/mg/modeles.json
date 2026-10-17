@@ -302,6 +302,6 @@
   "Videz la corbeille des documents et supprimez les médias inutiles pour libérer de l'espace.": "Diovy ny daba fakon'ny antontan-taratasy ary fafao ireo haino aman-jery tsy ilaina mba hanafahana toerana.",
   "Le sommaire en haut permet d'aller directement au module recherché.": "Ny lohahevitra eo ambony dia mitondra anao mivantana any amin'ny modely tadiavinao.",
   "Chaque fiche explique le rôle du module puis les actions principales.": "Ny takelaka tsirairay dia manazava ny anjara asan'ny modely, avy eo ireo asa fototra.",
-  "Quand une nouvelle version du site est publiée, un bandeau « Nouvelle version disponible » propose de mettre à jour en un clic.": "Rehefa misy dikan-teny vaovao amin'ny tranonkala navoaka, misy sora-baventy « Misy dikan-teny vaovao » manolotra fanavaozana amin'ny tsindry iray monja.",
+  "Quand une nouvelle version du site est publiée, elle s'installe d'elle-même : à l'ouverture, ou après un court message « Nouvelle version disponible » si l'application est déjà ouverte.": "Rehefa misy dikan-teny vaovao amin'ny tranonkala navoaka, dia mametraka ho azy izy : rehefa sokafana ny rindranasa, na aorian'ny hafatra fohy « Misy dikan-teny vaovao » raha efa misokatra ny rindranasa.",
   "« Ma langue » : français, anglais ou malgache, au choix de chacun ; elle se choisit aussi sur l'écran de connexion.": "« Ny fiteniko »: frantsay, anglisy na malagasy, araka ny safidin'ny tsirairay; azo safidiana eo amin'ny efijery fidirana ihany koa."
 }

@@ -1,8 +1,17 @@
 # Historique des versions du site
 
 Les nouveautés de la version en ligne, de la plus récente à la plus ancienne.
-Après chaque mise à jour, le site affiche un bandeau « Nouvelle version
-disponible » : un clic sur **Mettre à jour** suffit.
+Chaque nouvelle version s'installe d'elle-même : la mise à jour est
+obligatoire.
+
+## 17 octobre 2026 (mise à jour obligatoire)
+
+- La mise à jour du site ne peut plus être ignorée. À l'ouverture, la
+  nouvelle version s'installe aussitôt. Si l'application est déjà ouverte, un
+  écran « Nouvelle version disponible » la bloque : **Mettre à jour**, ou mise
+  à jour automatique après 15 secondes.
+- Le site cherche aussi une nouvelle version quand on revient sur
+  l'application installée.
 
 ## 17 octobre 2026 (aperçu par rôle)
 
