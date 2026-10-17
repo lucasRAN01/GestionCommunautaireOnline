@@ -4,6 +4,11 @@ Les nouveautés de la version en ligne, de la plus récente à la plus ancienne.
 Chaque nouvelle version s'installe d'elle-même : la mise à jour est
 obligatoire.
 
+## 17 octobre 2026 (nouveau logo SAFIAF 1993)
+
+- Nouvelle version du logo SAFIAF 1993, plus nette, découpée en cercle :
+  logo de l'application, icônes de l'écran d'accueil et icône d'onglet.
+
 ## 17 octobre 2026 (logo net)
 
 - Le logo livré avec le site est maintenant en haute résolution (1024 px) :
