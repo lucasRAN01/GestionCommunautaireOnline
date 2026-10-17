@@ -375,7 +375,7 @@ public static class HelpCatalog
                 {
                     "Le sommaire en haut permet d'aller directement au module recherché.",
                     "Chaque fiche explique le rôle du module puis les actions principales.",
-                    "Quand une nouvelle version du site est publiée, un bandeau « Nouvelle version disponible » propose de mettre à jour en un clic."
+                    "Quand une nouvelle version du site est publiée, elle s'installe d'elle-même : à l'ouverture, ou après un court message « Nouvelle version disponible » si l'application est déjà ouverte."
                 })
             })
     };
