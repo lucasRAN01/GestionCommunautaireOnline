@@ -50,16 +50,9 @@
         <div class="form-group">
             <label>@L.T("Logo de l'application")</label>
             <div class="photo-control">
-                @if (!string.IsNullOrWhiteSpace(_logo))
-                {
-                    <button type="button" class="logo-btn" aria-label="@L.T("Voir le logo en grand")" @onclick="() => _logoPreview = true">
-                        <img class="settings-logo-preview" src="@_logo" alt="@L.T("Logo de l'application")" />
-                    </button>
-                }
-                else
-                {
-                    <div class="photo-placeholder">@L.InitialesApplication()</div>
-                }
+                <button type="button" class="logo-btn" aria-label="@L.T("Voir le logo en grand")" @onclick="() => _logoPreview = true">
+                    <img class="settings-logo-preview" src="@Root.LogoOuDefaut(_logo)" alt="@L.T("Logo de l'application")" />
+                </button>
                 <div class="photo-actions">
                     <button type="button" class="btn btn-secondary btn-sm" @onclick="CaptureLogo">@L.T("📷 Prendre une photo")</button>
                     <button type="button" class="btn btn-secondary btn-sm" @onclick="PickLogo">@L.T("🖼 Choisir une image")</button>
@@ -69,7 +62,7 @@
                     }
                 </div>
             </div>
-            <span class="field-hint">@L.T("Touchez le logo pour l'agrandir.")</span>
+            <span class="field-hint">@(string.IsNullOrWhiteSpace(_logo) ? L.T("Logo par défaut du site. Touchez le logo pour l'agrandir.") : L.T("Touchez le logo pour l'agrandir."))</span>
         </div>
         <div class="form-group">
             <label>@L.T("Couleur d'accent")</label>
@@ -378,14 +371,7 @@
 <Modal Title="" Show="_logoPreview" OnClose="() => _logoPreview = false">
     <ChildContent>
         <div class="logo-preview-wrap">
-            @if (!string.IsNullOrWhiteSpace(_logo))
-            {
-                <img class="logo-preview-img" src="@_logo" alt="" />
-            }
-            else
-            {
-                <div class="login-logo-mark" aria-hidden="true">@L.InitialesApplication()</div>
-            }
+            <img class="logo-preview-img" src="@Root.LogoOuDefaut(_logo)" alt="" />
         </div>
     </ChildContent>
 </Modal>

@@ -126,9 +126,6 @@ public static class L
         return ini.ToUpperInvariant();
     }
 
-    /// <summary>Initiales du nom de l'application (pastille affichée à la place du logo).</summary>
-    public static string InitialesApplication() => Initiales(NomApplication?.Invoke());
-
     /// <summary>« d' » plutôt que « de » devant une voyelle ou un h.</summary>
     public static bool Elision(string nom)
         => nom.Length > 0 && "aeiouyhàâäéèêëîïôöùûüAEIOUYHÀÂÄÉÈÊËÎÏÔÖÙÛÜ".Contains(nom[0]);

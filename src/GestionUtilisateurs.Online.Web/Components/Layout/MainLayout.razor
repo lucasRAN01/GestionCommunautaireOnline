@@ -10,14 +10,7 @@
     <aside class="web-sidebar" aria-label="@L.T("Navigation principale")">
         <div class="web-sidebar-brand">
             <button type="button" class="web-sidebar-logo" aria-label="@L.T("Afficher le logo et l'histoire de la communauté")" @onclick="OpenLogo">
-                @if (!string.IsNullOrWhiteSpace(Store.Settings.Logo))
-                {
-                    <img src="@Store.Settings.Logo" alt="" />
-                }
-                else
-                {
-                    <span class="web-sidebar-mark" aria-hidden="true">@L.InitialesApplication()</span>
-                }
+                <img src="@Root.LogoOuDefaut(Store.Settings.Logo)" alt="" />
             </button>
             <span class="web-sidebar-name">@L.T(Store.Settings.AppName)</span>
         </div>
@@ -51,18 +44,9 @@
                 <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" d="M15 18l-6-6 6-6"/></svg>
             </button>
         }
-        @if (!string.IsNullOrWhiteSpace(Store.Settings.Logo))
-        {
-            <button type="button" class="logo-btn" aria-label="@L.T("Afficher le logo et l'histoire de la communauté")" @onclick="OpenLogo">
-                <img class="topbar-logo" src="@Store.Settings.Logo" alt="@L.T("Logo")" />
-            </button>
-        }
-        else
-        {
-            <button type="button" class="logo-btn" aria-label="@L.T("Afficher le logo et l'histoire de la communauté")" @onclick="OpenLogo">
-                <span class="topbar-logo-mark" aria-hidden="true">@L.InitialesApplication()</span>
-            </button>
-        }
+        <button type="button" class="logo-btn" aria-label="@L.T("Afficher le logo et l'histoire de la communauté")" @onclick="OpenLogo">
+            <img class="topbar-logo" src="@Root.LogoOuDefaut(Store.Settings.Logo)" alt="@L.T("Logo")" />
+        </button>
         <h2 class="page-title">@PageTitle</h2>
         <div class="topbar-actions">
             <div class="dropdown-wrap">
@@ -290,14 +274,7 @@
     <Modal Title="" Show="_logoOpen" OnClose="() => _logoOpen = false">
         <ChildContent>
             <div class="logo-modal">
-                @if (!string.IsNullOrWhiteSpace(Store.Settings.Logo))
-                {
-                    <img class="logo-modal-img" src="@Store.Settings.Logo" alt="@L.T("Logo de la communauté")" />
-                }
-                else
-                {
-                    <div class="logo-modal-mark" aria-hidden="true">@L.InitialesApplication()</div>
-                }
+                <img class="logo-modal-img" src="@Root.LogoOuDefaut(Store.Settings.Logo)" alt="@L.T("Logo de la communauté")" />
                 @if (_logoHasStory)
                 {
                     <div class="logo-modal-story">

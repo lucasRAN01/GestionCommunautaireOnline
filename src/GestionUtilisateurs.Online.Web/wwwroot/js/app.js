@@ -36,11 +36,17 @@ window.guTheme = {
         if (appName) document.title = appName;
         var meta = document.querySelector('meta[name="theme-color"]');
         if (meta) meta.setAttribute('content', color || '#4f46e5');
+        var icon = document.querySelector('link[rel="icon"]');
+        if (icon && !icon.dataset.defaut) icon.dataset.defaut = icon.getAttribute('href');
         if (logoDataUrl) {
-            var icon = document.querySelector('link[rel="icon"]');
             if (icon) icon.href = logoDataUrl;
             try { localStorage.setItem('gu_logo', logoDataUrl); } catch (e) { }
             window.guSplash.setLogo(logoDataUrl);
+        } else {
+            // Logo retiré dans Apparence : on revient au logo livré avec le site,
+            // y compris pour l'écran de chargement des prochaines ouvertures.
+            if (icon) icon.href = icon.dataset.defaut;
+            try { localStorage.removeItem('gu_logo'); } catch (e) { }
         }
         if (appName) {
             try { localStorage.setItem('gu_app_name', appName); } catch (e) { }

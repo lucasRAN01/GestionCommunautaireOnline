@@ -4,6 +4,14 @@ Les nouveautés de la version en ligne, de la plus récente à la plus ancienne.
 Chaque nouvelle version s'installe d'elle-même : la mise à jour est
 obligatoire.
 
+## 17 octobre 2026 (logo par défaut)
+
+- Sans logo dans Paramètres › Apparence, l'application affiche partout le logo
+  SAFIAF livré avec le site (en-tête, histoire, carte de membre, aperçu dans
+  Apparence) au lieu des initiales « SA ».
+- Retirer le logo dans Apparence efface aussi l'ancien logo gardé sur
+  l'appareil : l'écran de chargement repasse au logo par défaut.
+
 ## 17 octobre 2026 (mise à jour obligatoire)
 
 - La mise à jour du site ne peut plus être ignorée. À l'ouverture, la
