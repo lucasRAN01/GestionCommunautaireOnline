@@ -40,7 +40,7 @@
     public static string? LogoGarde { get; set; }
 
     /// <summary>Logo SAFIAF livré avec le site, tant qu'aucun logo n'est réglé dans Apparence.</summary>
-    public const string LogoParDefaut = "logo.png";
+    public const string LogoParDefaut = "logo.webp";
 
     /// <summary>Logo à afficher : celui d'Apparence, sinon le logo livré avec le site.</summary>
     public static string LogoOuDefaut(string? logo) => string.IsNullOrWhiteSpace(logo) ? LogoParDefaut : logo;

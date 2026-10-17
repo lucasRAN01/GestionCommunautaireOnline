@@ -4,6 +4,12 @@ Les nouveautés de la version en ligne, de la plus récente à la plus ancienne.
 Chaque nouvelle version s'installe d'elle-même : la mise à jour est
 obligatoire.
 
+## 17 octobre 2026 (logo net)
+
+- Le logo livré avec le site est maintenant en haute résolution (1024 px) :
+  il reste net sur les écrans de téléphone, même en grand dans « Histoire ».
+  Le fichier est aussi plus léger qu'avant.
+
 ## 17 octobre 2026 (logo par défaut)
 
 - Sans logo dans Paramètres › Apparence, l'application affiche partout le logo
