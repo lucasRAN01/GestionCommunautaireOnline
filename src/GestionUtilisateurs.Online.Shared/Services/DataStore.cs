@@ -481,6 +481,7 @@ var usersNormalized = false;
         if (u != null)
             LogActivity(ActivityTypes.Logout, "Déconnexion de l'utilisateur " + u.Identifiant, u.Identifiant);
         _session = null;
+        RoleApercu = null;
         SaveSession();
         SessionChanged?.Invoke();
     }
@@ -519,13 +520,14 @@ var usersNormalized = false;
         SaveSession();
     }
 
-    public bool IsAdmin => Roles.IsAdmin(GetCurrentUser()?.Role);
+    public bool IsAdmin => Roles.IsAdmin(CurrentRole);
 
-    public bool IsBaseAdmin => GetCurrentUser()?.Role == Roles.BaseAdmin;
+    public bool IsBaseAdmin => CurrentRole == Roles.BaseAdmin;
 
-    public bool IsManager => IsAdmin || GetCurrentUser()?.Role == Roles.Gestionnaire;
+    public bool IsManager => IsAdmin || CurrentRole == Roles.Gestionnaire;
 
-    public string? CurrentRole => GetCurrentUser()?.Role;
+    /// <summary>Rôle qui décide de ce que l'on voit : celui du compte, ou celui de l'aperçu.</summary>
+    public string? CurrentRole => RoleApercu ?? GetCurrentUser()?.Role;
 
 /// <summary>Vérifie le mot de passe de l'utilisateur connecté (ex. déverrouiller la zone dangereuse).</summary>
     public bool VerifyPassword(string? password)
@@ -984,7 +986,7 @@ case "settings":
             draft.Role = existing.Role;
             draft.Actif = existing.Actif;
         }
-        if (current?.Role == Roles.Utilisateur)
+        if (current != null && CurrentRole == Roles.Utilisateur)
         {
             if (current.Id != userId)
                 return new UserOperationResult { Success = false, Error = L.T("Vous pouvez modifier uniquement vos propres informations.") };
@@ -2632,7 +2634,7 @@ if (string.IsNullOrWhiteSpace(draft.Prenom)) Add("prenom", L.T("Le prénom est o
     }
 
     /// <summary>L'utilisateur connecté possède-t-il la permission ?</summary>
-    public bool Can(string permission) => HasPermission(GetCurrentUser()?.Role, permission);
+    public bool Can(string permission) => HasPermission(CurrentRole, permission);
 
     /// <summary>Enregistre la matrice (réservé aux administrateurs, anti-blocage inclus).</summary>
     public OperationResult SaveRolePermissions(List<RolePermissionSet> sets)
